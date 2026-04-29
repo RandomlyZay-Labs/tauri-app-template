@@ -1,0 +1,42 @@
+{
+	"$schema": "../gen/schemas/desktop-schema.json",
+	"identifier": "default",
+	"description": "Capability for the main window",
+	"windows": ["main"],
+	"permissions": [
+		"core:default",
+		"dialog:default",
+		"opener:default",
+		{
+			"identifier": "opener:allow-open-path",
+			"allow": [
+				{
+					"path": "$APP_DATA/**"
+				},
+				{
+					"path": "$APP_CONFIG/**"
+				},
+				{
+					"path": "$APP_LOG/**"
+				}
+			]
+		},
+		"clipboard-manager:default",
+		"clipboard-manager:allow-write-text",
+		"log:default",
+		"notification:default",
+		"notification:allow-notify",
+		"process:default",
+		"store:default",
+		"updater:default",
+		"os:default",
+		"core:window:allow-set-decorations",
+		"core:window:allow-start-dragging",
+		"core:window:allow-minimize",
+		"core:window:allow-toggle-maximize",
+		"core:window:allow-close",
+		"core:window:allow-is-fullscreen",
+		"core:window:allow-set-fullscreen",
+		"better-posthog:default"
+	]
+}

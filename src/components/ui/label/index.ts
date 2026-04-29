@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: MIT
+import Root from "./label.svelte";
+
+export {
+	Root,
+	//
+	Root as Label,
+};

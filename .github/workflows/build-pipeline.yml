@@ -1,0 +1,479 @@
+name: Build Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: 'Select platform to build'
+        required: true
+        type: string
+        default: 'all'
+      version:
+        description: 'Target release version to inject'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  # -----------------------------------------------------------------------
+  # JOB 0: The Brain (Configuration)
+  # -----------------------------------------------------------------------
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      build_windows: ${{ steps.set-config.outputs.build_windows }}
+      build_linux: ${{ steps.set-config.outputs.build_linux }}
+    steps:
+      - id: set-config
+        env:
+          PLATFORM_INPUT: ${{ inputs.platform }}
+        run: |
+          INPUT="$PLATFORM_INPUT"
+          if [ -z "$INPUT" ]; then INPUT="all"; fi
+          
+          echo "Selected Platform: $INPUT"
+
+          if [ "$INPUT" == "windows" ] || [ "$INPUT" == "all" ]; then
+            echo "build_windows=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_windows=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$INPUT" == "linux" ] || [ "$INPUT" == "all" ]; then
+            echo "build_linux=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_linux=false" >> $GITHUB_OUTPUT
+          fi
+
+  # -----------------------------------------------------------------------
+  # JOB 1: Windows Build (x64 & ARM64)
+  # -----------------------------------------------------------------------
+  build-windows:
+    needs: setup
+    if: needs.setup.outputs.build_windows == 'true'
+    name: Windows Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            arch: x64
+            runner: windows-latest
+          - target: aarch64-pc-windows-msvc
+            arch: arm64
+            runner: windows-11-arm
+    
+    steps:
+      - name: Disable Windows Defender
+        shell: pwsh
+        run: |
+          Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE
+          Add-MpPreference -ExclusionPath "$env:USERPROFILE\.cargo"
+          Write-Host "Excluded workspace and Cargo home from Windows Defender"
+
+      - uses: actions/checkout@v6
+      
+      # -- Tooling Setup --
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Update Version
+        if: ${{ inputs.version != '' }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          echo "Updating version in files to $VERSION"
+          node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = process.env.VERSION; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"' + process.env.VERSION + '\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> src-tauri/target'
+          key: windows-${{ matrix.target }}-${{ matrix.arch }}
+      
+      # -- Build --
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build Frontend & Prune
+        run: pnpm run build:prod
+      
+      - name: Build App
+        shell: pwsh
+        env:
+          SQLX_OFFLINE: true
+          RUSTFLAGS: "-C linker=rust-lld -C target-feature=+crt-static"
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          $config = '{\"build\":{\"beforeBuildCommand\":\"\"}}'
+          pnpm tauri build --target $env:TARGET --config $config
+
+      - name: Build CLI Binary
+        shell: pwsh
+        env:
+          SQLX_OFFLINE: true
+          RUSTFLAGS: "-C linker=rust-lld -C target-feature=+crt-static"
+          TARGET: ${{ matrix.target }}
+        run: |
+          Push-Location src-tauri
+          cargo build --bin tauri-app-template-cli --release --target $env:TARGET
+          Pop-Location
+
+      - name: Upload GUI Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-bundle-${{ matrix.arch }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe.sig
+          retention-days: 1
+
+      - name: Upload CLI Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cli-windows-${{ matrix.arch }}
+          path: src-tauri/target/${{ matrix.target }}/release/tauri-app-template-cli.exe
+          retention-days: 1
+
+  # -----------------------------------------------------------------------
+  # JOB 2: Linux Build (x64 & ARM64 Dockerized)
+  # -----------------------------------------------------------------------
+  build-linux:
+    needs: setup
+    if: needs.setup.outputs.build_linux == 'true'
+    name: Linux Build (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/randomlyzay-labs/tauri-builder:latest
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: 1
+      CARGO_HOME: /github/home/.cargo
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # -- Tooling Setup --
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Update Version
+        if: ${{ inputs.version != '' }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          echo "Updating version in files to $VERSION"
+          node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = process.env.VERSION; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"' + process.env.VERSION + '\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> src-tauri/target'
+          key: linux-${{ matrix.arch }}
+
+      - name: Cache Tauri Tools
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/tauri
+          key: tauri-linux-tools-${{ matrix.arch }}
+          restore-keys: |
+            tauri-linux-tools-${{ matrix.arch }}-
+
+      # -- Build --
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build Frontend & Prune
+        run: pnpm run build:prod
+      
+      - name: Build App
+        env:
+          SQLX_OFFLINE: true
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+        shell: bash
+        run: pnpm tauri build --config '{"build":{"beforeBuildCommand":""}}'
+
+      - name: Patch AppImage (Remove Wayland libs)
+        env:
+          ARCH_NAME: ${{ matrix.arch }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          APPIMAGE=$(find src-tauri/target/release/bundle/appimage/ -name "*.AppImage" | head -n 1)
+          if [ -z "$APPIMAGE" ]; then
+            echo "No AppImage found"
+            exit 1
+          fi
+          echo "Found AppImage: $APPIMAGE"
+          
+          if [ "$ARCH_NAME" = "amd64" ]; then
+            export ARCH="x86_64"
+          elif [ "$ARCH_NAME" = "arm64" ]; then
+            export ARCH="aarch64"
+          else
+            export ARCH="$ARCH_NAME"
+          fi
+          echo "ARCH is $ARCH"
+          
+          chmod +x "$APPIMAGE"
+          "$APPIMAGE" --appimage-extract
+          mv squashfs-root app-pkg
+          
+          echo "Removing bundled Wayland libraries..."
+          find app-pkg/ -name "libwayland-*.so*" -print -delete
+          
+          echo "Downloading appimagetool..."
+          if [ "$ARCH" = "aarch64" ]; then
+            curl -SfL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage -o appimagetool
+          else
+            curl -SfL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
+          fi
+          chmod +x appimagetool
+          ./appimagetool --appimage-extract
+          APPIMAGETOOL="./squashfs-root/AppRun"
+          
+          rm -f "$APPIMAGE"
+          "$APPIMAGETOOL" app-pkg "$APPIMAGE"
+          
+          rm -rf app-pkg squashfs-root appimagetool
+          
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "Resigning AppImage..."
+            rm -f "$APPIMAGE.sig"
+            pnpm tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" -p "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$APPIMAGE"
+          fi
+
+      - name: Build CLI Binary
+        env:
+          SQLX_OFFLINE: true
+        run: |
+          cd src-tauri && cargo build --bin tauri-app-template-cli --release
+
+      - name: Upload GUI Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-bundle-${{ matrix.arch }}
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/appimage/*.AppImage.sig
+          retention-days: 1
+
+      - name: Upload CLI Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cli-linux-${{ matrix.arch }}
+          path: src-tauri/target/release/tauri-app-template-cli
+          retention-days: 1
+
+  # -----------------------------------------------------------------------
+  # JOB 3: Test Linux Deb & AppImage (Ubuntu)
+  # -----------------------------------------------------------------------
+  test-linux-ubuntu:
+    needs: [setup, build-linux]
+    if: needs.setup.outputs.build_linux == 'true'
+    name: Test Ubuntu Artifacts (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Download GUI Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-bundle-${{ matrix.arch }}
+          path: ./artifacts
+
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: cli-linux-${{ matrix.arch }}
+          path: ./cli-artifact
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libwebkit2gtk-4.1-dev libfuse2
+
+      - name: Test CLI Binary
+        run: |
+          chmod +x ./cli-artifact/tauri-app-template-cli
+          ./cli-artifact/tauri-app-template-cli --help
+
+      - name: Test .deb installation and launch
+        run: |
+          sudo apt-get install -y ./artifacts/deb/*.deb
+          
+          xvfb-run --auto-servernum tauri-app-template &
+          PID=$!
+          
+          sleep 5
+          
+          if ps -p $PID > /dev/null; then
+             echo "SUCCESS: Deb app launched and stayed alive."
+             kill $PID
+          else
+             echo "FAIL: Deb app crashed on launch."
+             exit 1
+          fi
+
+      - name: Test .AppImage launch
+        run: |
+          chmod +x ./artifacts/appimage/*.AppImage
+          
+          # Extract AppImage to bypass FUSE requirements in CI
+          ./artifacts/appimage/*.AppImage --appimage-extract
+          
+          xvfb-run --auto-servernum ./squashfs-root/AppRun &
+          PID=$!
+          
+          sleep 5
+          
+          if ps -p $PID > /dev/null; then
+             echo "SUCCESS: AppImage launched and stayed alive."
+             kill $PID
+          else
+             echo "FAIL: AppImage crashed on launch."
+             exit 1
+          fi
+
+  # -----------------------------------------------------------------------
+  # JOB 4: Test Linux RPM (Fedora Container)
+  # -----------------------------------------------------------------------
+  test-linux-rpm:
+    needs: [setup, build-linux]
+    if: needs.setup.outputs.build_linux == 'true'
+    name: Test Fedora RPM (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            
+    runs-on: ${{ matrix.runner }}
+    container: fedora:44
+
+    steps:
+      - name: Install Node.js for GitHub Actions
+        run: dnf install -y nodejs
+
+      - name: Download GUI Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-bundle-${{ matrix.arch }}
+          path: ./artifacts
+
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: cli-linux-${{ matrix.arch }}
+          path: ./cli-artifact
+
+      - name: Install dependencies and RPM
+        run: |
+          dnf install -y xorg-x11-server-Xvfb procps-ng webkit2gtk4.1
+          dnf install -y ./artifacts/rpm/*.rpm
+
+      - name: Test CLI Binary
+        run: |
+          chmod +x ./cli-artifact/tauri-app-template-cli
+          ./cli-artifact/tauri-app-template-cli --help
+
+      - name: Test .rpm launch
+        run: |
+          xvfb-run --auto-servernum tauri-app-template &
+          PID=$!
+          
+          sleep 5
+          
+          if ps -p $PID > /dev/null; then
+             echo "SUCCESS: RPM app launched and stayed alive."
+             kill $PID
+          else
+             echo "FAIL: RPM app crashed on launch."
+             exit 1
+          fi
+
+  # -----------------------------------------------------------------------
+  # JOB 5: Test Windows NSIS
+  # -----------------------------------------------------------------------
+  test-windows:
+    needs: [setup, build-windows]
+    if: needs.setup.outputs.build_windows == 'true'
+    name: Test Windows Artifacts (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+            
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: cli-windows-${{ matrix.arch }}
+          path: ./cli-artifact
+
+      - name: Test CLI Binary
+        shell: pwsh
+        run: |
+          .\cli-artifact\tauri-app-template-cli.exe --help
+          if ($LASTEXITCODE -ne 0) { exit 1 }

@@ -1,0 +1,56 @@
+name: Verify
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: [dev]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/workflows/pr-lint.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint & Test
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/randomlyzay-labs/tauri-builder:latest
+    env:
+      CARGO_HOME: /github/home/.cargo
+    if: ${{ !(startsWith(github.head_ref, 'sync/main-to-dev-') && github.event.pull_request.head.repo.full_name == github.repository && (github.actor == 'github-actions[bot]' || github.actor == github.repository_owner)) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> src-tauri/target'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Run verification
+        run: pnpm verify

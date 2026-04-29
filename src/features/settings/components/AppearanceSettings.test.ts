@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: MIT
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/lib/toast';
+import { animationStore } from '@/stores/animationStore.svelte';
+import { themeStore } from '@/stores/themeStore.svelte';
+import TestWrapper from '@/test/TestWrapper.svelte';
+
+const capturedCallbacks: Array<(val: string) => void> = [];
+
+// Mock the Select component to capture onValueChange callbacks in order
+vi.mock('@/components/ui/select', () => {
+	const Root = (
+		_anchor: unknown,
+		props: { onValueChange?: (val: string) => void },
+	) => {
+		if (props.onValueChange) {
+			capturedCallbacks.push(props.onValueChange);
+		}
+	};
+	return {
+		Root,
+		Trigger: () => {},
+		Content: () => {},
+		Item: () => {},
+	};
+});
+
+import AppearanceSettings from './AppearanceSettings.svelte';
+
+// Mock i18n
+vi.mock('@/lib/i18n', () => ({
+	t: vi.fn((key: string, _params?: unknown) => key),
+}));
+
+// Mock toast
+vi.mock('@/lib/toast', () => ({
+	toast: {
+		success: vi.fn(),
+		error: vi.fn(),
+	},
+}));
+
+describe('AppearanceSettings', () => {
+	beforeEach(() => {
+		themeStore.setTheme('system');
+		animationStore.setAnimationsEnabled(true);
+		capturedCallbacks.length = 0;
+		vi.clearAllMocks();
+	});
+
+	it('renders theme and animation controls', () => {
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		expect(screen.getByText('appearanceSettings.themeMode')).toBeTruthy();
+		expect(screen.getByText('appearanceSettings.animations')).toBeTruthy();
+	});
+
+	it('changes theme when select option is changed', async () => {
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		const setThemeSpy = vi.spyOn(themeStore, 'setTheme');
+
+		// The theme select is the first select component instantiated
+		const themeCallback = capturedCallbacks[0];
+		expect(themeCallback).toBeDefined();
+		if (themeCallback) {
+			themeCallback('dark');
+		}
+
+		expect(setThemeSpy).toHaveBeenCalledWith('dark');
+	});
+
+	it('toggles animations when switch is clicked', async () => {
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		const initialValue = animationStore.animationsEnabled;
+		const toggle = screen.getByRole('switch');
+		await fireEvent.click(toggle);
+
+		expect(animationStore.animationsEnabled).toBe(!initialValue);
+	});
+
+	it('resets theme to default when reset button is clicked', async () => {
+		themeStore.setTheme('dark');
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		const resetButton = screen.getByLabelText(
+			'appearanceSettings.resetThemeMode',
+		);
+		await fireEvent.click(resetButton);
+
+		expect(themeStore.theme).toBe('system');
+	});
+
+	it('resets animations to default when reset button is clicked', async () => {
+		// Force it away from default
+		animationStore.setAnimationsEnabled(false);
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		const resetButton = screen.getByLabelText(
+			'appearanceSettings.resetAnimations',
+		);
+		await fireEvent.click(resetButton);
+
+		expect(animationStore.animationsEnabled).toBe(true);
+	});
+
+	it('renders toast position controls', () => {
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		expect(screen.getByText('appearanceSettings.toastPosition')).toBeTruthy();
+	});
+
+	it('resets toast position to default when reset button is clicked', async () => {
+		const { uiStore } = await import('@/stores/uiStore.svelte');
+		uiStore.setToastPosition('bottom-left');
+
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		const resetButton = screen.getByLabelText(
+			'appearanceSettings.resetToastPosition',
+		);
+		await fireEvent.click(resetButton);
+
+		expect(uiStore.toastPosition).toBe('top-right');
+		expect(toast.success).toHaveBeenCalled();
+	});
+});

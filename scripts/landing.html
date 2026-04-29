@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tauri App Template - Download</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --text: #ffffff;
+            --link: #ffffff;
+            --link-hover: #cccccc;
+            --border: #444444;
+            --bg-alt: #161616;
+            --btn-bg: #222222;
+            --btn-text: #ffffff;
+            --font: monospace;
+        }
+
+        [data-theme="light"] {
+            --bg: #ffffff;
+            --text: #000000;
+            --link: #000000;
+            --link-hover: #555555;
+            --border: #cccccc;
+            --bg-alt: #f5f5f5;
+            --btn-bg: #eaeaea;
+            --btn-text: #000000;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--btn-bg);
+        }
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) var(--bg);
+            box-sizing: border-box;
+        }
+
+        html {
+            scrollbar-gutter: stable;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        a { 
+            color: var(--link); 
+            text-decoration: underline; 
+            border-radius: 4px;
+        }
+        a:hover { 
+            color: var(--link-hover); 
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .header h1 { 
+            margin: 0; 
+            font-size: 1.5rem; 
+            font-weight: normal;
+        }
+
+        button {
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: 2px solid var(--border);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-family: var(--font);
+            font-size: 0.9rem;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            border-color: var(--text);
+        }
+
+        #theme-toggle {
+            padding: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+
+        #theme-icon {
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sun-center {
+            transition: r 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #mask-circle {
+            transition: cx 0.5s cubic-bezier(0.4, 0, 0.2, 1), cy 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sun-beams {
+            transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+        }
+
+        /* Dark Mode Moon state */
+        :not([data-theme="light"]) #theme-icon {
+            transform: rotate(-15deg);
+        }
+        :not([data-theme="light"]) #sun-center {
+            r: 9px;
+        }
+        :not([data-theme="light"]) #mask-circle {
+            cx: 18px;
+            cy: 12px;
+        }
+        :not([data-theme="light"]) #sun-beams {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        /* Light Mode Sun state */
+        [data-theme="light"] #theme-icon {
+            transform: rotate(90deg);
+        }
+        [data-theme="light"] #sun-center {
+            r: 5px;
+        }
+        [data-theme="light"] #mask-circle {
+            cx: 24px;
+            cy: 0px;
+        }
+        [data-theme="light"] #sun-beams {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .section {
+            margin-bottom: 1.5rem;
+        }
+
+        .hidden { display: none; }
+
+        .links-group {
+            margin-bottom: 2rem;
+        }
+
+        .links-group h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: normal;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 0.25rem;
+        }
+
+        .download-link {
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .repo-section {
+            background: var(--bg-alt);
+            padding: 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .repo-section h2 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            font-weight: normal;
+        }
+
+        pre {
+            background: var(--bg);
+            padding: 1.25rem;
+            overflow-x: auto;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            margin: 0;
+            color: var(--text);
+        }
+
+        .tabs {
+            margin-bottom: 1.25rem;
+        }
+
+        .tabs button {
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            border-radius: 8px;
+        }
+        
+        .tabs button.active {
+            background: var(--text);
+            color: var(--bg);
+            border-color: var(--text);
+        }
+
+        .primary-download {
+            margin-bottom: 1.5rem;
+        }
+        
+        .primary-download a {
+            display: inline-block;
+            background: var(--text);
+            color: var(--bg);
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            margin-right: 0.75rem;
+            margin-bottom: 0.75rem;
+            border: 2px solid var(--text);
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+        
+        .primary-download a:hover {
+            background: var(--bg);
+            color: var(--text);
+            border-color: var(--text);
+        }
+
+        .code-container {
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: 2px solid var(--border);
+            cursor: pointer;
+            font-family: var(--font);
+            font-weight: bold;
+            opacity: 0.8;
+            transition: opacity 0.2s, border-color 0.2s;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+            border-color: var(--text);
+        }
+    </style>
+    <noscript>
+        <style>
+            html .hidden { display: block; }
+            html #theme-toggle, html #more-downloads-btn, html #detected-section { display: none; }
+        </style>
+    </noscript>
+</head>
+<body>
+    <div class="header">
+        <h1>Tauri App Template v&#123;&#123;VERSION&#125;&#125;</h1>
+        <button type="button" id="theme-toggle" aria-label="Toggle Theme">
+            <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <title>Theme Toggle Icon</title>
+                <mask id="theme-mask">
+                    <rect x="0" y="0" width="24" height="24" fill="white" />
+                    <circle id="mask-circle" cx="24" cy="0" r="9" fill="black" />
+                </mask>
+                <circle id="sun-center" cx="12" cy="12" r="9" fill="currentColor" mask="url(#theme-mask)" />
+                <g id="sun-beams" stroke="currentColor">
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </g>
+            </svg>
+        </button>
+    </div>
+
+    <div class="section" id="detected-section">
+        <h2 id="detected-os-title" style="font-weight: normal; margin-bottom: 1rem; font-size: 1.3rem;">Select Your Platform</h2>
+        <div id="detected-links" class="primary-download"></div>
+    </div>
+
+    <div class="section hidden repo-section" id="repo-section">
+        <h2>Linux Package Repositories</h2>
+        <div class="tabs">
+            <button type="button" id="repo-tab-debian" class="repo-tab active" onclick="switchRepo('debian')">Debian / Ubuntu</button>
+            <button type="button" id="repo-tab-fedora" class="repo-tab" onclick="switchRepo('fedora')">Fedora / RHEL</button>
+        </div>
+        <div id="code-debian" class="code-container">
+            <button type="button" class="copy-btn" onclick="copyCode('code-debian')">Copy</button>
+<pre># Trust key and add repository
+sudo mkdir -p /etc/apt/keyrings
+sudo curl -fsSL https://randomlyzay-labs.github.io/tauri-app-template/tauri-app-template.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/tauri-app-template.gpg
+sudo curl -sLo /etc/apt/sources.list.d/tauri-app-template.list https://randomlyzay-labs.github.io/tauri-app-template/debian/tauri-app-template.list
+
+# Update package index and install
+sudo apt-get update
+sudo apt-get install tauri-app-template</pre>
+        </div>
+        <div id="code-fedora" class="code-container hidden">
+            <button type="button" class="copy-btn" onclick="copyCode('code-fedora')">Copy</button>
+<pre># Enable COPR repository
+sudo dnf copr enable randomlyzay/tauri-app-template -y
+
+# Install package
+sudo dnf install tauri-app-template</pre>
+        </div>
+    </div>
+
+    <div class="section">
+        <button type="button" id="more-downloads-btn">Show All Downloads</button>
+    </div>
+
+    <div class="section hidden" id="all-downloads">
+        <h2 style="font-weight: normal; margin-bottom: 1.5rem; font-size: 1.3rem;">All Downloads</h2>
+        
+        <div class="links-group">
+            <h3>Windows</h3>
+            <span class="template-link" data-file="tauri-app-template_VERSION_x64-setup.exe" data-label="Installer (x64)"></span>
+            <span class="template-link" data-file="tauri-app-template_VERSION_arm64-setup.exe" data-label="Installer (ARM64)"></span>
+        </div>
+
+        <div class="links-group">
+            <h3>AppImage</h3>
+            <span class="template-link" data-file="tauri-app-template_VERSION_amd64.appimage" data-label="AppImage (amd64)"></span>
+            <span class="template-link" data-file="tauri-app-template_VERSION_arm64.appimage" data-label="AppImage (arm64)"></span>
+        </div>
+
+        <div class="links-group">
+            <h3>Debian / Ubuntu</h3>
+            <span class="template-link" data-file="tauri-app-template_VERSION_amd64.deb" data-label="DEB Package (amd64)"></span>
+            <span class="template-link" data-file="tauri-app-template_VERSION_arm64.deb" data-label="DEB Package (arm64)"></span>
+        </div>
+
+        <div class="links-group">
+            <h3>Fedora / RHEL</h3>
+            <span class="template-link" data-file="tauri-app-template-VERSION-x86_64.rpm" data-label="RPM Package (x86_64)"></span>
+            <span class="template-link" data-file="tauri-app-template-VERSION-aarch64.rpm" data-label="RPM Package (aarch64)"></span>
+        </div>
+
+        <div class="links-group">
+            <h3>macOS</h3>
+            <p style="margin: 0; font-size: 0.9rem; opacity: 0.7;">macOS support is planned but not currently available.</p>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle Logic
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        function setTheme(isLight) {
+            if (isLight) {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            setTheme(true);
+        } else {
+            setTheme(false);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            setTheme(!isLight);
+        });
+
+        // Toggle All Downloads
+        const moreDownloadsBtn = document.getElementById('more-downloads-btn');
+        const allDownloads = document.getElementById('all-downloads');
+        moreDownloadsBtn.addEventListener('click', () => {
+            if (allDownloads.classList.contains('hidden')) {
+                allDownloads.classList.remove('hidden');
+                moreDownloadsBtn.textContent = 'Hide All Downloads';
+            } else {
+                allDownloads.classList.add('hidden');
+                moreDownloadsBtn.textContent = 'Show All Downloads';
+            }
+        });
+
+        // Platform Detection
+        const userAgent = navigator.userAgent.toLowerCase();
+        const platform = (navigator.userAgentData?.platform || navigator.platform || userAgent).toLowerCase();
+        const titleEl = document.getElementById('detected-os-title');
+        const linksEl = document.getElementById('detected-links');
+        const repoSection = document.getElementById('repo-section');
+        
+        let osName = '';
+        const links = [];
+        let isLinux = false;
+        let isMac = false;
+
+        const winUrl = '{{DETECT_WIN_URL}}';
+        const debUrl = '{{DETECT_DEB_URL}}';
+        const rpmUrl = '{{DETECT_RPM_URL}}';
+        const appImageUrl = '{{DETECT_APPIMAGE_URL}}';
+
+        if (platform.includes('win')) {
+            osName = 'Windows';
+            if (winUrl !== '#') links.push({ url: winUrl, label: 'Download Installer' });
+        } else if (platform.includes('mac')) {
+            osName = 'macOS';
+            isMac = true;
+        } else if (platform.includes('linux') || platform.includes('x11')) {
+            osName = 'Linux';
+            isLinux = true;
+            if (appImageUrl !== '#') links.push({ url: appImageUrl, label: 'Download AppImage' });
+            if (debUrl !== '#') links.push({ url: debUrl, label: 'Download .deb' });
+            if (rpmUrl !== '#') links.push({ url: rpmUrl, label: 'Download .rpm' });
+        }
+
+        if (isMac) {
+            document.getElementById('detected-section').innerHTML = '<h2 style="font-weight: normal; margin-bottom: 0; font-size: 1.3rem;">macOS is not supported yet.</h2>';
+        } else if (osName && links.length > 0) {
+            titleEl.textContent = `Detected OS: ${osName}`;
+            links.forEach(l => {
+                const a = document.createElement('a');
+                a.href = l.url;
+                a.textContent = l.label;
+                linksEl.appendChild(a);
+            });
+        } else {
+            titleEl.textContent = 'Select a platform from all downloads';
+        }
+
+        if (isLinux) {
+            repoSection.classList.remove('hidden');
+        }
+
+        // Repo Switcher Tabs
+        function switchRepo(type) {
+            document.querySelectorAll('.repo-tab').forEach((btn) => {
+                btn.classList.remove('active');
+            });
+            if (type === 'debian') {
+                document.getElementById('repo-tab-debian').classList.add('active');
+                document.getElementById('code-debian').classList.remove('hidden');
+                document.getElementById('code-fedora').classList.add('hidden');
+            } else {
+                document.getElementById('repo-tab-fedora').classList.add('active');
+                document.getElementById('code-debian').classList.add('hidden');
+                document.getElementById('code-fedora').classList.remove('hidden');
+            }
+        }
+
+        // Clipboard Copy Utility
+        function copyCode(containerId) {
+            const container = document.getElementById(containerId);
+            const codeText = container.querySelector('pre').textContent;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = container.querySelector('.copy-btn');
+                const origText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.borderColor = 'var(--text)';
+                setTimeout(() => {
+                    btn.textContent = origText;
+                    btn.style.borderColor = '';
+                }, 2000);
+            });
+        }
+
+        // Safe DOM Node Local Parser
+        function parseDataAttributesToLinks() {
+            document.querySelectorAll('.template-link').forEach(el => {
+                const fileTemplate = el.getAttribute('data-file');
+                const label = el.getAttribute('data-label');
+                const filename = fileTemplate.replace('VERSION', '{{VERSION}}');
+                
+                const a = document.createElement('a');
+                a.className = 'download-link';
+                a.href = `https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v{{VERSION}}/${filename}`;
+                a.textContent = label;
+                
+                el.parentNode.replaceChild(a, el);
+            });
+        }
+
+        window.switchRepo = switchRepo;
+        window.copyCode = copyCode;
+        parseDataAttributesToLinks();
+    </script>
+</body>
+</html>

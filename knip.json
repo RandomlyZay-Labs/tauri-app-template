@@ -1,0 +1,12 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"project": ["src/**/*.{ts,svelte}"],
+	"ignore": ["src/bindings.ts", "src/components/ui/**"],
+	"ignoreDependencies": [
+		"@semantic-release/commit-analyzer",
+		"@semantic-release/github",
+		"@semantic-release/release-notes-generator",
+		"conventional-changelog-conventionalcommits"
+	],
+	"ignoreBinaries": ["sqlx", "gpg", "dpkg-scanpackages", "gh", "copr-cli"]
+}

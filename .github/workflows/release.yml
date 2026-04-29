@@ -1,0 +1,230 @@
+name: Semantic Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  determine-version:
+    name: Determine Next Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      has_release: ${{ steps.version.outputs.has_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Next Version
+        id: version
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: node scripts/get-next-version.js
+
+  build:
+    name: Build
+    needs: determine-version
+    if: needs.determine-version.outputs.has_release == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build-pipeline.yml
+    secrets: inherit
+    with:
+      platform: 'all'
+      version: ${{ needs.determine-version.outputs.version }}
+
+  release:
+    name: Release
+    needs: [determine-version, build]
+    if: needs.determine-version.outputs.has_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      pages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rename release artifacts
+        run: |
+          find artifacts -type f | while read -r file; do
+            dir=$(dirname "$file")
+            base=$(basename "$file")
+            
+            # 1. Strip the "-1" release number from RPM filenames
+            # e.g., "Tauri App Template-0.5.1-1.x86_64.rpm" -> "Tauri App Template-0.5.1-x86_64.rpm"
+            new_base="$base"
+            if [[ "$base" == *".rpm" ]]; then
+              new_base=$(echo "$base" | sed -E 's/-([0-9]+\.[0-9]+\.[0-9]+)-1\.([a-zA-Z0-9_]+)\.rpm$/-\1-\2.rpm/')
+            fi
+            
+            # 2. Replace spaces with hyphens and lowercase all filenames
+            new_base=$(echo "$new_base" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
+            
+            if [ "$base" != "$new_base" ]; then
+              mv "$file" "$dir/$new_base"
+              echo "Renamed: $file -> $dir/$new_base"
+            fi
+          done
+
+      - name: Sign CLI Binaries
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            for file in \
+              artifacts/cli-windows-x64/tauri-app-template-cli.exe \
+              artifacts/cli-windows-arm64/tauri-app-template-cli.exe \
+              artifacts/cli-linux-amd64/tauri-app-template-cli \
+              artifacts/cli-linux-arm64/tauri-app-template-cli; do
+              if [ -f "$file" ]; then
+                echo "Signing $file..."
+                pnpm tauri signer sign -p "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$file"
+              else
+                echo "Warning: $file not found, skipping signature."
+              fi
+            done
+          else
+            echo "Warning: TAURI_SIGNING_PRIVATE_KEY is not set. CLI binaries will not be signed."
+          fi
+
+      - name: Generate latest.json
+        env:
+          VERSION: ${{ needs.determine-version.outputs.version }}
+        run: node scripts/generate-latest-json.js
+
+      - name: Import GPG Key
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Install Repo Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev rpm
+
+      - name: Sign RPM Packages
+        run: |
+          echo "%_signature gpg" > ~/.rpmmacros
+          echo "%_gpg_name Tauri App Template" >> ~/.rpmmacros
+          echo "%_gpgbin /usr/bin/gpg" >> ~/.rpmmacros
+          find artifacts -name "*.rpm" | while read -r rpm_file; do
+            echo "Signing $rpm_file..."
+            rpmsign --addsign "$rpm_file"
+          done
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: pnpm release
+
+      - name: Trigger COPR Build
+        if: success()
+        env:
+          COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
+        run: |
+          if [ -n "$COPR_WEBHOOK_URL" ]; then
+            echo "Triggering COPR build..."
+            curl -sS -X POST -H "Content-Type: application/json" -d '{}' "$COPR_WEBHOOK_URL"
+          else
+            echo "COPR_WEBHOOK_URL secret not set, skipping COPR build trigger."
+          fi
+
+      - name: Generate Repo Metadata & Landing Page
+        env:
+          VERSION: ${{ needs.determine-version.outputs.version }}
+        run: |
+          node scripts/generate-repo-metadata.js
+          node scripts/generate-github-pages.js
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Enable GitHub Pages
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Enabling GitHub Pages on gh-pages branch..."
+          echo '{"source":{"branch":"gh-pages","path":"/"}}' | gh api -X POST "repos/${{ github.repository }}/pages" --input - || echo "Pages is already enabled or failed to initialize, skipping."
+
+      - name: Merge main back into dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main dev
+          git reset --hard
+          git checkout -f dev
+          if ! git merge origin/main -m "chore: merge main back into dev"; then
+            printf "%s\n" "ERROR: Merge conflict encountered when merging main back into dev."
+            printf "%s\n" "Aborting the merge to restore the repository to a clean state."
+            git merge --abort
+            exit 1
+          fi
+          
+          # Create a sync branch and push it, then open a PR
+          SYNC_BRANCH="sync/main-to-dev-${{ github.run_id }}"
+          git checkout -b "$SYNC_BRANCH"
+          git push origin "$SYNC_BRANCH"
+
+          # Create pull request from the sync branch to dev
+          gh pr create \
+            --base dev \
+            --head "$SYNC_BRANCH" \
+            --title "chore: merge main back into dev" \
+            --body "Automated PR to sync dev with main after release. Code scanning and status checks must pass before merging." \
+
+          # Force merge using admin privileges to bypass checks that skip CI
+          gh pr merge --admin --merge --delete-branch
