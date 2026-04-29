@@ -1,0 +1,379 @@
+name: Build Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: 'Select platform to build'
+        required: true
+        type: string
+        default: 'all'
+
+jobs:
+  # -----------------------------------------------------------------------
+  # JOB 0: The Brain (Configuration)
+  # -----------------------------------------------------------------------
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      build_windows: ${{ steps.set-config.outputs.build_windows }}
+      build_linux: ${{ steps.set-config.outputs.build_linux }}
+    steps:
+      - id: set-config
+        run: |
+          INPUT="${{ inputs.platform }}"
+          if [ -z "$INPUT" ]; then INPUT="all"; fi
+          
+          echo "Selected Platform: $INPUT"
+
+          if [ "$INPUT" == "windows" ] || [ "$INPUT" == "all" ]; then
+            echo "build_windows=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_windows=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$INPUT" == "linux" ] || [ "$INPUT" == "all" ]; then
+            echo "build_linux=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_linux=false" >> $GITHUB_OUTPUT
+          fi
+
+  # -----------------------------------------------------------------------
+  # JOB 1: Windows Build (x64 & ARM64)
+  # -----------------------------------------------------------------------
+  build-windows:
+    needs: setup
+    if: needs.setup.outputs.build_windows == 'true'
+    name: Windows Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            arch: x64
+            runner: blacksmith-2vcpu-windows-2025
+          - target: aarch64-pc-windows-msvc
+            arch: arm64
+            runner: windows-11-arm
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      # -- Tooling Setup --
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+          key: windows-${{ matrix.target }}-${{ matrix.arch }}
+          # Prevents PRs/branches from poisoning the main cache, but always caches on act
+          #save-if: ${{ github.ref == 'refs/heads/main' || github.actor == 'nektos/act' }}
+      
+      # -- Build --
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build Frontend & Prune
+        run: pnpm run build:prod
+
+      - name: Disable Windows Defender for Rust target
+        if: ${{ matrix.arch == 'arm64' }}
+        shell: pwsh
+        run: |
+          $TargetPath = Join-Path -Path $env:GITHUB_WORKSPACE -ChildPath "src-tauri\target"
+          Add-MpPreference -ExclusionPath $TargetPath
+          Write-Host "Excluded $TargetPath from Windows Defender scans"
+      
+      - name: Build App
+        shell: pwsh
+        env:
+          SQLX_OFFLINE: true
+          RUSTFLAGS: "-C linker=rust-lld"
+        run: pnpm tauri build --target ${{ matrix.target }} --config '{"build":{"beforeBuildCommand":""}}'
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-bundle-${{ matrix.arch }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+          retention-days: 1
+
+  # -----------------------------------------------------------------------
+  # JOB 2: Linux Build (x64 & ARM64 Dockerized)
+  # -----------------------------------------------------------------------
+  build-linux:
+    needs: setup
+    if: needs.setup.outputs.build_linux == 'true'
+    name: Linux Build (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: blacksmith-4vcpu-ubuntu-2204
+            arch: amd64
+          - runner: blacksmith-4vcpu-ubuntu-2204-arm
+            arch: arm64
+            
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/randomlyzay-labs/tauri-builder:latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # -- Tooling Setup --
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+          key: linux-${{ matrix.arch }}
+          #save-if: ${{ github.ref == 'refs/heads/main' || github.actor == 'nektos/act' }}
+
+      - name: Cache Tauri Tools
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/tauri
+          key: tauri-linux-tools-${{ matrix.arch }}
+          restore-keys: |
+            tauri-linux-tools-${{ matrix.arch }}-
+
+      # -- Build --
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build Frontend & Prune
+        run: pnpm run build:prod
+      
+      - name: Build App
+        env:
+          SQLX_OFFLINE: true
+        shell: bash
+        run: pnpm tauri build --config '{"build":{"beforeBuildCommand":""}}'
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-bundle-${{ matrix.arch }}
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          retention-days: 1
+
+  # -----------------------------------------------------------------------
+  # JOB 3: Test Linux Deb & AppImage (Ubuntu)
+  # -----------------------------------------------------------------------
+  test-linux-ubuntu:
+    needs: [setup, build-linux]
+    if: needs.setup.outputs.build_linux == 'true'
+    name: Test Ubuntu Artifacts (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: blacksmith-2vcpu-ubuntu-2204
+            arch: amd64
+          - runner: blacksmith-2vcpu-ubuntu-2204-arm
+            arch: arm64
+            
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-bundle-${{ matrix.arch }}
+          path: ./artifacts
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libwebkit2gtk-4.1-dev libfuse2
+
+      - name: Test .deb installation and launch
+        run: |
+          sudo apt-get install -y ./artifacts/deb/*.deb
+          
+          xvfb-run --auto-servernum tauri-app-template &
+          PID=$!
+          
+          sleep 5
+          
+          if ps -p $PID > /dev/null; then
+             echo "SUCCESS: Deb app launched and stayed alive."
+             kill $PID
+          else
+             echo "FAIL: Deb app crashed on launch."
+             exit 1
+          fi
+
+      - name: Test .AppImage launch
+        run: |
+          chmod +x ./artifacts/appimage/*.AppImage
+          
+          # Extract AppImage to bypass FUSE requirements in CI
+          ./artifacts/appimage/*.AppImage --appimage-extract
+          
+          xvfb-run --auto-servernum ./squashfs-root/AppRun &
+          PID=$!
+          
+          sleep 5
+          
+          if ps -p $PID > /dev/null; then
+             echo "SUCCESS: AppImage launched and stayed alive."
+             kill $PID
+          else
+             echo "FAIL: AppImage crashed on launch."
+             exit 1
+          fi
+
+  # -----------------------------------------------------------------------
+  # JOB 4: Test Linux RPM (Fedora Container)
+  # -----------------------------------------------------------------------
+  test-linux-rpm:
+    needs: [setup, build-linux]
+    if: needs.setup.outputs.build_linux == 'true'
+    name: Test Fedora RPM (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: blacksmith-2vcpu-ubuntu-2204
+            arch: amd64
+          - runner: blacksmith-2vcpu-ubuntu-2204-arm
+            arch: arm64
+            
+    runs-on: ${{ matrix.runner }}
+    container: fedora:42
+
+    steps:
+      - name: Install Node.js for GitHub Actions
+        run: dnf install -y nodejs
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-bundle-${{ matrix.arch }}
+          path: ./artifacts
+
+      - name: Install dependencies and RPM
+        run: |
+          dnf install -y xorg-x11-server-Xvfb procps-ng webkit2gtk4.1
+          dnf install -y ./artifacts/rpm/*.rpm
+
+      - name: Test .rpm launch
+        run: |
+          xvfb-run --auto-servernum tauri-app-template &
+          PID=$!
+          
+          sleep 5
+          
+          if ps -p $PID > /dev/null; then
+             echo "SUCCESS: RPM app launched and stayed alive."
+             kill $PID
+          else
+             echo "FAIL: RPM app crashed on launch."
+             exit 1
+          fi
+
+  # -----------------------------------------------------------------------
+  # JOB 5: Test Windows NSIS
+  # -----------------------------------------------------------------------
+  test-windows:
+    needs: [setup, build-windows]
+    if: needs.setup.outputs.build_windows == 'true'
+    name: Test Windows Artifacts (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: blacksmith-2vcpu-windows-2025
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+            
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-bundle-${{ matrix.arch }}
+          path: ./artifacts
+
+      - name: Install and Launch App
+        shell: pwsh
+        run: |
+          $Installer = Get-ChildItem -Path ./artifacts -Filter *.exe | Select-Object -First 1
+          if (-not $Installer) {
+            Write-Error "Could not find the damn NSIS installer."
+            exit 1
+          }
+
+          Write-Host "Installing: $($Installer.FullName)"
+          # /S triggers silent install for NSIS
+          Start-Process -FilePath $Installer.FullName -ArgumentList "/S" -Wait
+
+          # Tauri typically installs here depending on whether it's a per-user or machine wide config.
+          $ExeName = "tauri-app-template.exe"
+          $PathsToTry = @(
+              "$env:LOCALAPPDATA\Programs\tauri-app-template\$ExeName",
+              "$env:LOCALAPPDATA\tauri-app-template\$ExeName",
+              "C:\Program Files\tauri-app-template\$ExeName",
+              "C:\Program Files (x86)\tauri-app-template\$ExeName"
+          )
+          
+          $AppPath = $null
+          foreach ($p in $PathsToTry) {
+              if (Test-Path $p) {
+                  $AppPath = $p
+                  break
+              }
+          }
+          
+          if (-not $AppPath) {
+              Write-Error "App didn't install where expected. Check your Tauri config bundle identifier."
+              exit 1
+          }
+          
+          Write-Host "Found installed app at: $AppPath"
+          Start-Process -FilePath $AppPath
+          
+          # Give it a few seconds to boot and see if it crashes
+          Start-Sleep -Seconds 5
+          
+          $ProcessName = $ExeName.Replace(".exe", "")
+          $RunningProcess = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
+          
+          if ($RunningProcess) {
+              Write-Host "SUCCESS: Windows app launched and didn't immediately die."
+              Stop-Process -Name $ProcessName -Force
+          } else {
+              Write-Error "FAIL: Windows app crashed or closed instantly on launch."
+              exit 1
+          }

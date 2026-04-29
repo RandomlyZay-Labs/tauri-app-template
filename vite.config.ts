@@ -1,0 +1,52 @@
+/// <reference types="vitest" />
+
+import path from 'node:path';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
+
+const host = process.env.TAURI_DEV_HOST;
+
+// https://vite.dev/config/
+export default defineConfig(() => ({
+	plugins: [svelte(), tailwindcss()],
+	resolve: {
+		alias: {
+			'@': path.resolve(__dirname, './src'),
+		},
+		conditions: ['browser', 'development'],
+	},
+
+	// Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
+	//
+	// 1. prevent Vite from obscuring rust errors
+	clearScreen: false,
+	// 2. tauri expects a fixed port, fail if that port is not available
+	server: {
+		port: 1420,
+		strictPort: true,
+		host: host || false,
+		hmr: host
+			? {
+					protocol: 'ws',
+					host,
+					port: 1421,
+				}
+			: undefined,
+		watch: {
+			// 3. tell Vite to ignore watching 'docs' and 'src-tauri'
+			ignored: ['**/docs/**', '**/src-tauri/**'],
+		},
+	},
+	test: {
+		environment: 'happy-dom',
+		include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}'],
+		exclude: ['e2e/**', 'node_modules/**'],
+		setupFiles: ['./src/test/setup.ts'],
+		silent: true,
+		resolve: {
+			conditions: ['browser', 'development'],
+			mainFields: ['browser'],
+		},
+	},
+}));

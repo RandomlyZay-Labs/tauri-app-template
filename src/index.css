@@ -1,0 +1,303 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+	/* Standardized animation durations — all UI motion should reference these */
+	--duration-snappy: 150ms;
+	--duration-normal: 200ms;
+
+	--background: oklch(0.985 0.005 275);
+	--foreground: oklch(0.145 0.015 270);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.145 0.015 270);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.145 0.015 270);
+	--primary: oklch(0.45 0.2 275);
+	--primary-foreground: oklch(0.98 0 0);
+	--secondary: oklch(0.955 0.015 275);
+	--secondary-foreground: oklch(0.25 0.03 275);
+	--muted: oklch(0.96 0.008 275);
+	--muted-foreground: oklch(0.5 0.01 270);
+	--accent: oklch(0.95 0.02 275);
+	--accent-foreground: oklch(0.25 0.03 275);
+	--destructive: oklch(0.58 0.22 27);
+	--border: oklch(0.9 0.01 275);
+	--input: oklch(0.9 0.01 275);
+	--ring: oklch(0.45 0.2 275);
+	--chart-1: oklch(0.65 0.18 275);
+	--chart-2: oklch(0.55 0.2 290);
+	--chart-3: oklch(0.5 0.22 260);
+	--chart-4: oklch(0.45 0.2 250);
+	--chart-5: oklch(0.4 0.18 265);
+	--radius: 0.625rem;
+	--sidebar: oklch(0.975 0.008 275);
+	--sidebar-foreground: oklch(0.145 0.015 270);
+	--sidebar-primary: oklch(0.45 0.2 275);
+	--sidebar-primary-foreground: oklch(0.98 0 0);
+	--sidebar-accent: oklch(0.94 0.02 275);
+	--sidebar-accent-foreground: oklch(0.25 0.03 275);
+	--sidebar-border: oklch(0.9 0.01 275);
+	--sidebar-ring: oklch(0.45 0.2 275);
+}
+
+.dark {
+	--background: oklch(0.13 0.015 270);
+	--foreground: oklch(0.93 0.01 270);
+	--card: oklch(0.17 0.015 270);
+	--card-foreground: oklch(0.93 0.01 270);
+	--popover: oklch(0.17 0.015 270);
+	--popover-foreground: oklch(0.93 0.01 270);
+	--primary: oklch(0.67 0.18 275);
+	--primary-foreground: oklch(0.98 0 0);
+	--secondary: oklch(0.22 0.02 270);
+	--secondary-foreground: oklch(0.9 0.01 270);
+	--muted: oklch(0.22 0.01 270);
+	--muted-foreground: oklch(0.65 0.02 270);
+	--accent: oklch(0.25 0.03 275);
+	--accent-foreground: oklch(0.93 0.01 270);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 8%);
+	--input: oklch(1 0 0 / 12%);
+	--ring: oklch(0.67 0.18 275);
+	--chart-1: oklch(0.7 0.15 275);
+	--chart-2: oklch(0.6 0.18 290);
+	--chart-3: oklch(0.55 0.2 260);
+	--chart-4: oklch(0.5 0.2 250);
+	--chart-5: oklch(0.45 0.18 265);
+	--sidebar: oklch(0.115 0.015 270);
+	--sidebar-foreground: oklch(0.93 0.01 270);
+	--sidebar-primary: oklch(0.67 0.18 275);
+	--sidebar-primary-foreground: oklch(0.98 0 0);
+	--sidebar-accent: oklch(0.2 0.025 275);
+	--sidebar-accent-foreground: oklch(0.93 0.01 270);
+	--sidebar-border: oklch(1 0 0 / 8%);
+	--sidebar-ring: oklch(0.67 0.18 275);
+}
+
+@theme inline {
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 8px);
+	--radius-3xl: calc(var(--radius) + 12px);
+	--radius-4xl: calc(var(--radius) + 16px);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+		font-family:
+			ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+			Roboto, "Helvetica Neue", Arial, "Inter", sans-serif;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+	html {
+		font-family:
+			ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+			Roboto, "Helvetica Neue", Arial, "Inter", sans-serif;
+	}
+}
+
+@custom-variant data-open (&:is(
+		[data-state="open"],
+		[data-open]:not([data-open="false"])
+	));
+@custom-variant data-closed (&:is(
+		[data-state="closed"],
+		[data-closed]:not([data-closed="false"])
+	));
+@custom-variant data-checked (&:is(
+		[data-state="checked"],
+		[data-checked]:not([data-checked="false"])
+	));
+@custom-variant data-unchecked (&:is(
+		[data-state="unchecked"],
+		[data-unchecked]:not([data-unchecked="false"])
+	));
+
+@custom-variant data-selected (&:is([data-selected]));
+@custom-variant data-disabled (&:is(
+		[data-disabled="true"],
+		[data-disabled]:not([data-disabled="false"])
+	));
+@custom-variant data-active (&:is(
+		[data-state="active"],
+		[data-active]:not([data-active="false"])
+	));
+@custom-variant data-horizontal (&:is([data-orientation="horizontal"]));
+@custom-variant data-vertical (&:is([data-orientation="vertical"]));
+
+@utility no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
+/* Force disable animations when this class is applied */
+.no-animations *,
+.no-animations *::before,
+.no-animations *::after {
+	animation-duration: 0.01ms;
+	animation-iteration-count: 1;
+	transition-duration: 0.01ms;
+	scroll-behavior: auto;
+}
+
+/* Remove filter effects from tabs content when animations are disabled */
+.no-animations [data-slot="tabs-content"] {
+	filter: none;
+}
+
+/* Card hover glow effect */
+.card-hover-glow {
+	transition:
+		box-shadow var(--duration-normal) ease,
+		transform var(--duration-snappy) ease,
+		border-color var(--duration-normal) ease;
+}
+.card-hover-glow:hover {
+	box-shadow:
+		0 0 0 1px oklch(0.67 0.18 275 / 15%),
+		0 8px 25px -5px oklch(0.67 0.18 275 / 10%);
+	transform: translateY(-1px);
+	border-color: oklch(0.67 0.18 275 / 25%);
+}
+
+/* Gradient text utility */
+.text-gradient-primary {
+	background: linear-gradient(
+		135deg,
+		oklch(0.67 0.18 275),
+		oklch(0.6 0.22 295)
+	);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+/* Sidebar nav active accent bar */
+.nav-active-bar::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 25%;
+	height: 50%;
+	width: 3px;
+	border-radius: 0 4px 4px 0;
+	background: linear-gradient(
+		180deg,
+		oklch(0.67 0.18 275),
+		oklch(0.55 0.22 290)
+	);
+}
+
+/* 
+ * Global Animation Handlers 
+ * These target the data-state attributes used by Bits UI / Shadcn-Svelte 
+ */
+[data-state="open"][data-slot="sheet-content"],
+[data-state="open"][data-slot="sheet-overlay"] {
+	animation-name: enter;
+	animation-duration: var(--duration-normal);
+	animation-fill-mode: forwards;
+}
+
+[data-state="closed"][data-slot="sheet-content"],
+[data-state="closed"][data-slot="sheet-overlay"] {
+	animation-name: exit;
+	animation-duration: var(--duration-normal);
+	animation-fill-mode: forwards;
+}
+
+/* Animation Sub-properties for Sheets */
+[data-state="open"][data-slot="sheet-content"] {
+	--tw-enter-opacity: 0;
+	--tw-enter-translate-x: 5rem; /* Slide in from right */
+}
+
+[data-state="closed"][data-slot="sheet-content"] {
+	--tw-exit-opacity: 0;
+	--tw-exit-translate-x: 5rem; /* Slide out to right */
+}
+
+[data-state="open"][data-slot="sheet-overlay"] {
+	--tw-enter-opacity: 0;
+}
+
+[data-state="closed"][data-slot="sheet-overlay"] {
+	--tw-exit-opacity: 0;
+}
+
+@keyframes enter {
+	from {
+		opacity: var(--tw-enter-opacity, 1);
+		transform: translate3d(
+				var(--tw-enter-translate-x, 0),
+				var(--tw-enter-translate-y, 0),
+				0
+			)
+			scale3d(
+				var(--tw-enter-scale, 1),
+				var(--tw-enter-scale, 1),
+				var(--tw-enter-scale, 1)
+			)
+			rotate(var(--tw-enter-rotate, 0));
+	}
+}
+
+@keyframes exit {
+	to {
+		opacity: var(--tw-exit-opacity, 1);
+		transform: translate3d(
+				var(--tw-exit-translate-x, 0),
+				var(--tw-exit-translate-y, 0),
+				0
+			)
+			scale3d(
+				var(--tw-exit-scale, 1),
+				var(--tw-exit-scale, 1),
+				var(--tw-exit-scale, 1)
+			)
+			rotate(var(--tw-exit-rotate, 0));
+	}
+}

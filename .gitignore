@@ -1,0 +1,45 @@
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Node/Svelte
+node_modules/
+coverage/
+build/
+dist/
+npm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Database
+*.db*
+*.sqlite*
+
+# Tauri
+src-tauri/target*/
+src-tauri/gen/
+src-tauri/tauri.conf.json.bak
+src-tauri/binaries/
+src-tauri/gen/schemas/
+*.rs.bk
+target*/
+
+# Cache, Logs, and Project-specific
+dev_data/
+artifacts/
+cache/
+.cache/
+*.log
+temp/
+*.tsbuildinfo
+test-results/
+playwright-report/

@@ -1,0 +1,550 @@
+import type { Page } from '@playwright/test';
+import type { Commands } from '../src/lib/ipc';
+
+export const MOCK_IPC_DEFAULTS: Partial<Commands> = {
+	async getLogPath() {
+		return '/mock/system/logs';
+	},
+	async getDataDir() {
+		return '/mock/data';
+	},
+	async openLogDir() {
+		return null;
+	},
+	async openDataDir() {
+		return null;
+	},
+	async resetApplication() {
+		return null;
+	},
+	async startDownload(_request) {
+		return {
+			downloadId: 'mock-dl-1',
+			filePath: '/mock/file',
+			totalBytes: 1024,
+		};
+	},
+	async cancelDownload(_downloadId: string) {
+		return null;
+	},
+	async listActiveDownloads() {
+		return [];
+	},
+	async getJob(jobId: string) {
+		return {
+			id: jobId,
+			kind: 'download',
+			status: 'completed',
+			progress: 100,
+			message: 'Mock job',
+			metadata: null,
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+	},
+	async listBackups() {
+		return [];
+	},
+	async createBackup() {
+		return {
+			id: 'mock-backup',
+			name: 'mock-backup.db',
+			path: '/mock/path',
+			size_bytes: 1024,
+			created_at: new Date().toISOString(),
+			is_manual: true,
+			label: null,
+		};
+	},
+	async pruneBackups() {
+		return 0;
+	},
+	async deleteBackup() {
+		return null;
+	},
+	async restoreBackup() {
+		return null;
+	},
+	async setTraySettings() {
+		return null;
+	},
+	async watchPath(_path: string) {
+		return null;
+	},
+	async unwatchPath(_path: string) {
+		return null;
+	},
+	async isAppimage() {
+		return false;
+	},
+	async integrateAppimage() {
+		return null;
+	},
+	async notify(_title: string, _body: string) {
+		return null;
+	},
+	async submitDownloadJob(request: {
+		url: string;
+		destDir: string;
+		filename: string | null;
+	}) {
+		return {
+			id: 'mock-job-1',
+			kind: 'download',
+			status: 'running',
+			progress: 0,
+			message: 'Mock download started',
+			metadata: JSON.stringify(request),
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+	},
+	async cancelJob(_jobId: string) {
+		return null;
+	},
+	async listJobs() {
+		return [];
+	},
+	async exportDiagnostics() {
+		return true;
+	},
+	async setSecret(_key: string, _value: string) {
+		return null;
+	},
+	async getSecret(_key: string) {
+		return 'mock-secret-value';
+	},
+	async deleteSecret(_key: string) {
+		return null;
+	},
+	async setLogLevel(_level: string) {
+		return null;
+	},
+	async getVersion() {
+		return '0.1.0';
+	},
+};
+
+export async function injectMockIpc(
+	page: Page,
+	customMocks: Record<string, unknown> = {},
+) {
+	await page.addInitScript((injectedMocks) => {
+		const defaultMocks = {
+			async getLogPath() {
+				return '/mock/system/logs';
+			},
+			async getDataDir() {
+				return '/mock/data';
+			},
+			async openLogDir() {
+				return null;
+			},
+			async openDataDir() {
+				return null;
+			},
+			async resetApplication() {
+				return null;
+			},
+			async listBackups() {
+				return [];
+			},
+			async createBackup() {
+				return {
+					id: 'mock-backup',
+					name: 'mock-backup.db',
+					path: '/mock/path',
+					size_bytes: 1024,
+					created_at: new Date().toISOString(),
+					is_manual: true,
+					label: null,
+				};
+			},
+			async pruneBackups() {
+				return 0;
+			},
+			async deleteBackup() {
+				return null;
+			},
+			async restoreBackup() {
+				return null;
+			},
+			async setTraySettings() {
+				return null;
+			},
+			async watchPath(path: string) {
+				setTimeout(() => {
+					// @ts-expect-error
+					window.__EMIT__('fs://change', `${path}/file.txt`);
+				}, 100);
+				return null;
+			},
+			async unwatchPath(_path: string) {
+				return null;
+			},
+			async isAppimage() {
+				return false;
+			},
+			async integrateAppimage() {
+				return null;
+			},
+			async notify(_title: string, _body: string) {
+				return null;
+			},
+			async submitDownloadJob(request: {
+				url: string;
+				destDir: string;
+				filename: string | null;
+			}) {
+				const jobId = 'mock-job-1';
+				// Simulate progress events
+				setTimeout(() => {
+					// @ts-expect-error
+					window.__EMIT__('job://progress', {
+						jobId,
+						kind: 'download',
+						status: 'running',
+						progress: 0,
+						message: 'Mock download started',
+						metadata: JSON.stringify(request),
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					});
+				}, 50);
+
+				setTimeout(() => {
+					// @ts-expect-error
+					window.__EMIT__('job://progress', {
+						jobId,
+						kind: 'download',
+						status: 'running',
+						progress: 50,
+						message: 'Downloading...',
+						metadata: JSON.stringify(request),
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					});
+				}, 150);
+
+				return {
+					id: jobId,
+					kind: 'download',
+					status: 'running',
+					progress: 0,
+					message: 'Mock download started',
+					metadata: JSON.stringify(request),
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+			},
+			async cancelJob(jobId: string) {
+				setTimeout(() => {
+					// @ts-expect-error
+					window.__EMIT__('job://progress', {
+						jobId,
+						status: 'cancelled',
+						progress: null,
+						message: 'Job cancelled',
+						updatedAt: new Date().toISOString(),
+					});
+				}, 100);
+				return null;
+			},
+			async listJobs() {
+				return [];
+			},
+			async getJob(jobId: string) {
+				return {
+					id: jobId,
+					kind: 'download',
+					status: 'completed',
+					progress: 100,
+					message: 'Mock job',
+					metadata: null,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+			},
+			async startDownload(_request: unknown) {
+				return {
+					downloadId: 'mock-dl-1',
+					filePath: '/mock/file',
+					totalBytes: 1024,
+				};
+			},
+			async cancelDownload(_downloadId: string) {
+				return null;
+			},
+			async listActiveDownloads() {
+				return [];
+			},
+			async exportDiagnostics() {
+				return true;
+			},
+			async setSecret(_key: string, _value: string) {
+				return null;
+			},
+			async getSecret(_key: string) {
+				return 'mock-secret-value';
+			},
+			async deleteSecret(_key: string) {
+				return null;
+			},
+			async setLogLevel(_level: string) {
+				return null;
+			},
+			async getVersion() {
+				return '0.1.0';
+			},
+		};
+
+		// Merge defaults with any overrides provided for specific tests.
+		// If an override is data, we wrap it in a function.
+		const mockCommands = { ...defaultMocks };
+		for (const [key, value] of Object.entries(injectedMocks)) {
+			if (value && typeof value === 'object' && '__THROW__' in value) {
+				// @ts-expect-error
+				mockCommands[key] = async () => {
+					// @ts-expect-error
+					throw new Error(value.__THROW__);
+				};
+			} else if (typeof value !== 'function') {
+				// @ts-expect-error
+				mockCommands[key] = async () => value;
+			} else {
+				// @ts-expect-error
+				mockCommands[key] = value;
+			}
+		}
+
+		// @ts-expect-error - Custom window property
+		window.__MOCK_IPC__ = mockCommands;
+
+		// @ts-expect-error - Tauri internal fallback
+		window.__TAURI_INTERNALS__ = window.__TAURI_INTERNALS__ || {};
+		// @ts-expect-error
+		window.__TAURI_INTERNALS__.callbacks =
+			window.__TAURI_INTERNALS__.callbacks || {};
+
+		const eventHandlers = new Map<
+			string,
+			Array<(event: { payload: unknown }) => void>
+		>();
+
+		// @ts-expect-error - Custom emit helper for tests
+		window.__EMIT__ = (event: string, payload: unknown) => {
+			const handlers = eventHandlers.get(event) || [];
+			for (const handler of handlers) {
+				handler({ payload });
+			}
+		};
+
+		const mockInvoke = async (cmd: string, args: unknown) => {
+			// Some plugins use camelCase for method names
+			if (cmd.includes('notification')) {
+				if (cmd.includes('is') && cmd.includes('Permission')) return true;
+				if (cmd.includes('request') && cmd.includes('Permission'))
+					return 'granted';
+				if (cmd.includes('is_permission_granted')) return true;
+				if (cmd.includes('request_permission')) return 'granted';
+			}
+
+			if (cmd.includes('process|restart')) {
+				return null;
+			}
+
+			if (cmd === 'plugin:event|listen') {
+				const { event, handler: handlerId } = args as {
+					event: string;
+					handler: number;
+				};
+				const handlers = eventHandlers.get(event) || [];
+				handlers.push((ev) => {
+					// @ts-expect-error
+					if (window.__TAURI_INTERNALS__.callbacks[handlerId]) {
+						// @ts-expect-error
+						window.__TAURI_INTERNALS__.callbacks[handlerId](ev);
+					}
+				});
+				eventHandlers.set(event, handlers);
+				return Math.floor(Math.random() * 1000000); // Dummy handle
+			}
+			if (cmd === 'plugin:event|unlisten') {
+				return null;
+			}
+			// Standard commands (snake_case)
+			if (cmd === 'list_backups' || cmd === 'listBackups') {
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				return (mc.list_backups || mc.listBackups)();
+			}
+			if (cmd === 'restore_backup' || cmd === 'restoreBackup') {
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				return (mc.restore_backup || mc.restoreBackup)(
+					(args as { backupId: string })?.backupId,
+				);
+			}
+			if (cmd === 'delete_backup' || cmd === 'deleteBackup') {
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				return (mc.delete_backup || mc.deleteBackup)(
+					(args as { backupId: string })?.backupId,
+				);
+			}
+			if (cmd === 'get_version' || cmd === 'plugin:app|get_version') {
+				return '0.1.0';
+			}
+			if (cmd === 'export_diagnostics' || cmd === 'exportDiagnostics') {
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				return (mc.exportDiagnostics || mc.export_diagnostics)();
+			}
+
+			if (cmd === 'is_appimage' || cmd === 'isAppimage') {
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				return (mc.is_appimage || mc.isAppimage)();
+			}
+
+			if (cmd === 'integrate_appimage' || cmd === 'integrateAppimage') {
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				return (mc.integrate_appimage || mc.integrateAppimage)();
+			}
+
+			if (cmd === 'reset_application' || cmd === 'resetApplication') {
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				return (mc.reset_application || mc.resetApplication)();
+			}
+
+			if (cmd === 'prune_backups' || cmd === 'pruneBackups') {
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				return (mc.prune_backups || mc.pruneBackups)(
+					(args as { maxBackups: number })?.maxBackups,
+				);
+			}
+
+			// Plugin commands
+			if (cmd === 'plugin:opener|open_url') {
+				const url = (args as { url: string })?.url;
+				// @ts-expect-error
+				window.__LAST_OPENED_URL__ = url;
+
+				// @ts-expect-error
+				const mc = window.__MOCK_IPC__;
+				// Priority: explicitly defined openExternalLink override
+				if (mc.openExternalLink) {
+					// Handle if it was passed as data (e.g. for a simple response)
+					if (typeof mc.openExternalLink !== 'function') {
+						return mc.openExternalLink;
+					}
+					return mc.openExternalLink(url);
+				}
+
+				if (mc.openExternalLink) return mc.openExternalLink(url);
+				if (mc.open_url) return mc.open_url(url);
+				return null;
+			}
+			if (cmd === 'plugin:dialog|open') {
+				return '/mock/selected/path';
+			}
+			if (cmd === 'plugin:dialog|message' || cmd === 'plugin:dialog|ask') {
+				return 'Yes';
+			}
+			if (cmd === 'plugin:dialog|save') {
+				return '/mock/path/to/save.log';
+			}
+			if (
+				cmd === 'plugin:notification|is_permission_granted' ||
+				cmd === 'plugin:notification|isPermissionGranted'
+			) {
+				return true;
+			}
+			if (
+				cmd === 'plugin:notification|request_permission' ||
+				cmd === 'plugin:notification|requestPermission'
+			) {
+				return 'granted';
+			}
+			return null;
+		};
+
+		// Lock down invoke to prevent it from being overridden
+		if (!window.__TAURI_INTERNALS__.invoke) {
+			Object.defineProperty(window.__TAURI_INTERNALS__, 'invoke', {
+				value: mockInvoke,
+				writable: false,
+				configurable: false,
+			});
+		}
+
+		// Also mock the direct IPC entry point used by some plugins in v2
+		// @ts-expect-error
+		window.__TAURI_INTERNALS__.ipc = (message: {
+			cmd: string;
+			callback: number;
+			error: number;
+			payload: unknown;
+		}) => {
+			mockInvoke(message.cmd, message.payload)
+				.then((res) => {
+					// @ts-expect-error
+					if (window.__TAURI_INTERNALS__.callbacks[message.callback]) {
+						// @ts-expect-error
+						window.__TAURI_INTERNALS__.callbacks[message.callback](res);
+					}
+				})
+				.catch((err) => {
+					// @ts-expect-error
+					if (window.__TAURI_INTERNALS__.callbacks[message.error]) {
+						// @ts-expect-error
+						window.__TAURI_INTERNALS__.callbacks[message.error](err);
+					}
+				});
+		};
+
+		// @ts-expect-error
+		window.__TAURI__ = window.__TAURI__ || {};
+		// @ts-expect-error
+		window.__TAURI__.invoke = mockInvoke;
+
+		// Mock the core invoke if it exists
+		// @ts-expect-error
+		if (window.__TAURI_CORE__) {
+			// @ts-expect-error
+			window.__TAURI_CORE__.invoke = mockInvoke;
+		}
+
+		// Mock the standard Notification API as a fallback
+		// @ts-expect-error
+		window.Notification = {
+			permission: 'granted',
+			requestPermission: async () => 'granted',
+		};
+
+		// Mock the v2 IPC entry point
+		// @ts-expect-error
+		window.__TAURI_IPC__ = (_message: unknown) => {};
+
+		// Fix: Tauri v2 plugins require this to register callbacks.
+		// @ts-expect-error
+		window.__TAURI_INTERNALS__.transformCallback = (
+			callback: (payload: unknown) => void,
+			once = false,
+		) => {
+			const id = Math.floor(Math.random() * 4294967295);
+			// @ts-expect-error
+			window.__TAURI_INTERNALS__.callbacks[id] = (payload: unknown) => {
+				if (once) {
+					// @ts-expect-error
+					delete window.__TAURI_INTERNALS__.callbacks[id];
+				}
+				callback(payload);
+			};
+			return id;
+		};
+	}, customMocks);
+}
