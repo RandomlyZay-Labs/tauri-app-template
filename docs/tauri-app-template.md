@@ -1,10 +1,22 @@
 # Roadmap
 
-## ci/linux-build
-- Test DEB/RPM builds
+## fix/posthog-prod-initialization
+- PostHog works in dev but not in prod release
 
-## ci/appimage-build
-- Test AppImage build
+## ci/linux-build
+- Adding to PATH needs a popup message after clicking:
+
+```
+**Success! `tauri-app-template` has been added to your system's PATH for easier CLI usage.**
+
+To use the command in your terminal right now, run:
+`tauri-app-template`
+
+**Note:** On some systems (like Ubuntu), you may need to log out and log back in for this change to take effect permanently.
+```
+- Is there a way to check if the user's system can use the system tray before trying to minimize to it?
+- Is there a way to remove the tray icon if the app is not currently minimized?
+- The system theme is not working on Fedora, but it is working on Ubuntu. If the user's system theme is set to dark, the app should be dark. If the user's system theme is set to light, the app should be light.
 
 ## ci/windows-build
 - Test Windows build

@@ -104,7 +104,9 @@ jobs:
         env:
           SQLX_OFFLINE: true
           RUSTFLAGS: "-C linker=rust-lld"
-        run: pnpm tauri build --target ${{ matrix.target }} --config '{"build":{"beforeBuildCommand":""}}'
+        run: |
+          $config = '{"build":{"beforeBuildCommand":""}}'
+          pnpm tauri build --target ${{ matrix.target }} --config $config
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
