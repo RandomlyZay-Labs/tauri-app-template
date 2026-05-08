@@ -1,7 +1,7 @@
 # Roadmap
 
 ## fix/production-issues
-- Move notifications to top right.
+
 
 ## ci/updater-plugin
 - Set up Tauri updater plugin
@@ -15,6 +15,6 @@
   - Update README template
   - Uncomment `save-if` lines in build.yml
   - Bump up runner cores
-  - Update dependencies one last time
   - Implement final tests
+  - Update dependencies one last time
   - AI codebase audit

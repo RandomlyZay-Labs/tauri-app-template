@@ -86,7 +86,7 @@ function getLocalizedErrorMessage(error: unknown): string {
 
 <svelte:boundary>
 	<Router {routes} />
-	<Toaster />
+	<Toaster position="top-right" />
 	<CommandPalette />
 	<ActivityCenter />
 
@@ -122,6 +122,6 @@ function getLocalizedErrorMessage(error: unknown): string {
 				</Card.Content>
 			</Card.Root>
 		</div>
-		<Toaster />
+		<Toaster position="top-right" />
 	{/snippet}
 </svelte:boundary>
