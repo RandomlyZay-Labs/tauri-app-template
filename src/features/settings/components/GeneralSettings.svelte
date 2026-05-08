@@ -24,7 +24,9 @@ import {
     Rocket,
     RotateCcw,
     Terminal,
-    Trash2
+    Trash2,
+    Copy,
+    Check
 } from '@lucide/svelte';
 import { onMount } from 'svelte';
 import { push } from 'svelte-spa-router';
@@ -34,11 +36,14 @@ import * as Card from '@/components/ui/card';
 import * as Dialog from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 
 let showResetDialog = $state(false);
 let showPrefResetDialog = $state(false);
 let deleteConfirmation = $state('');
 let isAppImage = $state(false);
+let showPathSuccessDialog = $state(false);
+let copied = $state(false);
 
 onMount(() => {
         void checkIsAppImage().then((v) => (isAppImage = v));
@@ -86,7 +91,7 @@ function handleIntegrateAppImage() {
         void executeSafeAction(
                 async () => {
                         await integrateAppImage();
-                        toast.success(t('generalSettings.addedToPath'));
+                        showPathSuccessDialog = true;
                 },
                 { errorMessage: t('generalSettings.failedToAddPath') },
         );
@@ -100,6 +105,12 @@ function handleTelemetryToggle(enabled: boolean) {
         uiStore.setTelemetryEnabled(enabled);
         updateTelemetryConsent(enabled);
         toast.success(t('appearanceSettings.settingUpdated', { label: t('generalSettings.telemetry') }));
+}
+
+async function copyCommand() {
+        await writeText('tauri-app-template');
+        copied = true;
+        setTimeout(() => (copied = false), 2000);
 }
 </script>
 
@@ -294,6 +305,48 @@ function handleTelemetryToggle(enabled: boolean) {
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (showResetDialog = false)}>{t('common.cancel')}</Button>
 			<Button variant="destructive" onclick={confirmResetApp} disabled={deleteConfirmation !== confirmPhrase}>{t('generalSettings.deleteEverything')}</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- PATH Success Dialog -->
+<Dialog.Root bind:open={showPathSuccessDialog}>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>{t('generalSettings.pathSuccessTitle')}</Dialog.Title>
+			<Dialog.Description class="space-y-4 pt-2 text-foreground">
+				<p class="font-bold">
+					{t('generalSettings.pathSuccessMessage')}
+				</p>
+				
+				<div class="space-y-2">
+					<p>{t('generalSettings.pathSuccessRunNow')}</p>
+					<div class="relative group">
+						<code class="block rounded bg-muted p-3 pr-12 font-mono text-sm border">
+							tauri-app-template
+						</code>
+						<Button 
+							variant="ghost" 
+							size="icon" 
+							class="absolute right-1.5 top-1.5 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+							onclick={copyCommand}
+						>
+							{#if copied}
+								<Check class="size-4 text-green-500" />
+							{:else}
+								<Copy class="size-4" />
+							{/if}
+						</Button>
+					</div>
+				</div>
+
+				<p class="text-muted-foreground text-sm">
+					<strong>Note:</strong> {t('generalSettings.pathSuccessNote')}
+				</p>
+			</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer>
+			<Button class="w-full" onclick={() => (showPathSuccessDialog = false)}>{t('common.done')}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

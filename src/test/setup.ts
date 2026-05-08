@@ -53,6 +53,10 @@ vi.mock('posthog-js', () => ({
 	},
 }));
 
+vi.mock('@tauri-apps/plugin-clipboard-manager', () => ({
+	writeText: vi.fn(),
+}));
+
 afterEach(async () => {
 	// Flush any pending microtasks (Svelte updates)
 	await tick();

@@ -159,4 +159,28 @@ describe('GeneralSettings', () => {
 		await tick();
 		vi.runAllTimers();
 	});
+
+	it('shows path success dialog when integrateAppImage is successful', {
+		timeout: 10000,
+	}, async () => {
+		mockIPC((cmd) => {
+			if (cmd === 'is_appimage') return true;
+			if (cmd === 'integrate_appimage') return null;
+		});
+
+		render(GeneralSettings);
+
+		// Wait for onMount and isAppImage state to update
+		await tick();
+		await tick();
+
+		const integrateBtn = await screen.findByText('generalSettings.addToPath');
+		await fireEvent.click(integrateBtn);
+
+		await tick();
+		await tick();
+
+		expect(screen.getByText('generalSettings.pathSuccessTitle')).toBeTruthy();
+		expect(screen.getByText('generalSettings.pathSuccessMessage')).toBeTruthy();
+	});
 });

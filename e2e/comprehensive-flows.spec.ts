@@ -271,7 +271,11 @@ test.describe('Comprehensive User Flows', () => {
 		await expect(integrateBtn).toBeVisible();
 		await integrateBtn.click();
 
-		await expect(page.getByText(/Successfully added to PATH/i)).toBeVisible();
+		await expect(page.getByText('Success!', { exact: true })).toBeVisible();
+		await expect(
+			page.getByText(/has been added to your system's PATH/i),
+		).toBeVisible();
+		await page.getByRole('button', { name: /^Done$/i }).click();
 	});
 
 	test('Debug Settings - tray, notifications, dialogs, logs, crash', async ({
