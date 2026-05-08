@@ -56,37 +56,10 @@ fn handle_single_instance<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _args: V
     }
 }
 
-/// Runs the Main Application logic with the resolved data directory.
+/// Runs the Main Application logic.
 #[allow(clippy::expect_used, clippy::unwrap_used)]
-pub fn run_app(custom_data_dir: Option<PathBuf>) {
+pub fn run_app(dev_data_dir: Option<PathBuf>) {
     let specta_builder = api::collect();
-
-    // Initialize Logging
-    let (app_log_dir, log_plugin) =
-        setup::logging::init(custom_data_dir.as_ref(), util::DATA_FOLDER_NAME);
-
-    log::info!("==================================");
-    log::info!("App Version: {}", env!("CARGO_PKG_VERSION"));
-    log::info!("OS: {} ({})", std::env::consts::OS, std::env::consts::ARCH);
-    log::info!("Resolved Data Directory: {}", app_log_dir.display());
-    log::info!("==================================");
-
-    // AppImage Auto-Integration (Unix only — AppImages don't exist on other platforms)
-    #[cfg(unix)]
-    {
-        if services::appimage_service::is_appimage()
-            && let Err(e) = services::appimage_service::integrate_appimage()
-        {
-            log::warn!("Failed to auto-integrate AppImage: {}", e);
-        }
-    }
-
-    // Initialize Database
-    let db_pool = tauri::async_runtime::block_on(setup::database::init(custom_data_dir.as_ref()))
-        .expect("Failed to initialize database");
-
-    let state_data_dir = custom_data_dir.clone();
-
     let is_cli = is_cli_invocation();
 
     let mut builder = tauri::Builder::default()
@@ -103,25 +76,59 @@ pub fn run_app(custom_data_dir: Option<PathBuf>) {
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(log_plugin)
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState {
-            db: db_pool.clone(),
-            log_dir: app_log_dir,
-            app_data_dir: state_data_dir.clone(),
-            tray_settings: Mutex::new(TraySettings {
-                minimize_to_tray: false,
-                notify_on_minimize: true,
-            }),
-            download_manager: services::download_service::DownloadManager::new(3),
-            job_manager: services::job_service::JobManager::new(db_pool),
-            watcher_manager: services::watcher_service::WatcherManager::new(),
-        })
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app| {
-            // --- CLI Handling ---
+            // 1. Resolve Data Directory
+            let app_data_dir = if let Some(ref dir) = dev_data_dir {
+                dir.clone()
+            } else {
+                app.path().app_data_dir().expect("Failed to resolve app data directory")
+            };
+
+            // 2. Resolve Log Directory
+            let app_log_dir = if dev_data_dir.is_some() {
+                 app_data_dir.join("logs")
+            } else {
+                 app.path().app_log_dir().expect("Failed to resolve app log dir")
+            };
+
+            // 2b. Initialize Logging
+            let log_plugin = setup::logging::init(&app_data_dir, &app_log_dir);
+            app.handle().plugin(log_plugin).expect("Failed to initialize log plugin");
+
+            log::info!("==================================");
+            log::info!("App Version: {}", env!("CARGO_PKG_VERSION"));
+            log::info!("OS: {} ({})", std::env::consts::OS, std::env::consts::ARCH);
+            log::info!("Resolved Data Directory: {}", app_data_dir.display());
+            log::info!("Resolved Log Directory: {}", app_log_dir.display());
+            log::info!("==================================");
+
+            // 3. Lifecycle Checks (Reset / Restore)
+            util::check_and_perform_reset(&app_data_dir);
+            util::check_and_perform_restore(&app_data_dir);
+
+            // 4. Initialize Database
+            let db_pool = tauri::async_runtime::block_on(setup::database::init(Some(&app_data_dir)))
+                .expect("Failed to initialize database");
+
+            // 5. Manage App State
+            app.manage(AppState {
+                db: db_pool.clone(),
+                log_dir: app_log_dir,
+                app_data_dir: Some(app_data_dir),
+                tray_settings: Mutex::new(TraySettings {
+                    minimize_to_tray: false,
+                    notify_on_minimize: true,
+                }),
+                download_manager: services::download_service::DownloadManager::new(3),
+                job_manager: services::job_service::JobManager::new(db_pool),
+                watcher_manager: services::watcher_service::WatcherManager::new(),
+            });
+
+            // 6. CLI Handling
             match app.cli().matches() {
                 Ok(matches) => {
                     if cli::handle_cli(app.handle(), &matches) {
@@ -135,19 +142,11 @@ pub fn run_app(custom_data_dir: Option<PathBuf>) {
                 }
             }
 
-            // Determine the unified data directory
-            let context_data_dir = if let Some(dir) = &state_data_dir {
-                dir.clone()
-            } else {
-                util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
-            };
-
-            // We append "webview" to keep cache separate from DB/Logs
+            // 7. Webview Window Setup
+            let state = app.state::<AppState>();
+            let context_data_dir = state.app_data_dir.as_ref().unwrap();
             let webview_data_dir = context_data_dir.join("webview");
 
-            // Use the standard WebviewWindowBuilder
-            // .data_directory() configures the WebContext internally
-            // .visible(false) + on_page_load eliminates white flash on startup
             tauri::WebviewWindowBuilder::new(
                 app,
                 "main",
@@ -165,7 +164,7 @@ pub fn run_app(custom_data_dir: Option<PathBuf>) {
             })
             .build()?;
 
-            // --- System Tray Setup ---
+            // 8. System Tray Setup
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
@@ -180,7 +179,7 @@ pub fn run_app(custom_data_dir: Option<PathBuf>) {
                 .build(app)?;
             tray.set_visible(false)?;
 
-            // --- Backup Scheduler ---
+            // 9. Backup Scheduler
             services::scheduler::spawn_scheduler(app.handle().clone());
 
             Ok(())
@@ -218,7 +217,6 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                     .show();
             }
         }
-        // If minimize_to_tray is false, the window closes normally (app exits if it's the main window)
     }
 }
 

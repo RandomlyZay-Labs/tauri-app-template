@@ -1,8 +1,5 @@
 # Roadmap
 
-## fix/production-issues
-
-
 ## ci/updater-plugin
 - Set up Tauri updater plugin
   - Test by making a change, pushing a new release, seeing if the app notifies me of an update, and having the app update
@@ -18,3 +15,4 @@
   - Implement final tests
   - Update dependencies one last time
   - AI codebase audit
+  - Create a release

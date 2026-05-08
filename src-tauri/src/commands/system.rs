@@ -87,11 +87,8 @@ pub async fn open_log_dir(app: tauri::AppHandle, state: State<'_, AppState>) -> 
 #[tauri::command]
 #[specta::specta]
 pub async fn open_data_dir(app: tauri::AppHandle, state: State<'_, AppState>) -> CResult<()> {
-    let data_dir = if let Some(custom) = &state.app_data_dir {
-        custom.clone()
-    } else {
-        util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
-    };
+    let data_dir = state.app_data_dir.as_ref().cloned().unwrap_or_default();
+    
     app.opener()
         .open_path(data_dir.to_string_lossy().to_string(), None::<&str>)
         .map_err(|e| crate::error::Error::Io(e.to_string()))?;
@@ -103,11 +100,8 @@ pub async fn open_data_dir(app: tauri::AppHandle, state: State<'_, AppState>) ->
 pub async fn reset_application(state: State<'_, AppState>) -> CResult<()> {
     log::debug!("[Command] reset_application called");
     
-    let data_dir = if let Some(custom) = &state.app_data_dir {
-        custom.clone()
-    } else {
-        util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
-    };
+    let data_dir = state.app_data_dir.as_ref().cloned().unwrap_or_default();
+
     util::schedule_factory_reset(&data_dir)?;
     Ok(())
 }
@@ -121,11 +115,7 @@ pub async fn set_log_level(state: State<'_, AppState>, level: String) -> CResult
         return Err(crate::error::Error::Validation("Invalid log level".into()));
     }
 
-    let data_dir = if let Some(custom) = &state.app_data_dir {
-        custom.clone()
-    } else {
-        util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
-    };
+    let data_dir = state.app_data_dir.as_ref().cloned().unwrap_or_default();
 
     crate::services::log_service::update_config_log_level(&data_dir, &level).await
 }

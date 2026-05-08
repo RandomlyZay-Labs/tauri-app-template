@@ -6,9 +6,6 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 // --- CONSTANTS ---
-// The name of the folder in the OS data directory where all app data will be stored.
-pub const DATA_FOLDER_NAME: &str = "tauri-app-template";
-
 const MARKER_WIPE_NAME: &str = ".pending_wipe";
 pub const MARKER_RESTORE_NAME: &str = ".pending_restore";
 pub const RESTORE_STAGING_NAME: &str = "restore.db.tmp";
@@ -24,24 +21,12 @@ static RE_UNIX: LazyLock<Regex> =
 static RE_WIN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"%(\w+)%").expect("Invalid RE_WIN"));
 
-/// Resolves the OS-specific data directory.
-pub fn resolve_os_app_data_dir() -> PathBuf {
-    use directories::BaseDirs;
-
-    if let Some(base_dirs) = BaseDirs::new() {
-        return base_dirs.data_local_dir().to_path_buf();
-    }
-    PathBuf::from("data")
-}
-
 /// Resolves a path string with support for `~`, `$VAR`, and `%VAR%` expansion.
 pub fn resolve_path(path_str: &str) -> CResult<PathBuf> {
-    use directories::BaseDirs;
-
     // 1. Expand `~` to user's home directory
     let mut expanded = if path_str.starts_with("~/") || path_str == "~" {
-        if let Some(base_dirs) = BaseDirs::new() {
-            path_str.replacen("~", base_dirs.home_dir().to_string_lossy().as_ref(), 1)
+        if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+            path_str.replacen("~", home.to_string_lossy().as_ref(), 1)
         } else {
             path_str.to_string()
         }
@@ -176,12 +161,6 @@ pub fn format_bytes(bytes: u64) -> String {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-
-    #[test]
-    fn test_resolve_os_app_data_dir() {
-        let dir = resolve_os_app_data_dir();
-        assert!(!dir.to_string_lossy().is_empty());
-    }
 
     #[test]
     fn test_resolve_dev_data_dir() {
@@ -367,10 +346,10 @@ mod tests {
         // Target should still be "old" because marker was missing
         assert_eq!(fs::read_to_string(&target).unwrap(), "old");
         assert!(staging.exists());
-        }
+    }
 
-        #[test]
-        fn test_factory_reset_failure_mid_execution() {
+    #[test]
+    fn test_factory_reset_failure_mid_execution() {
         let tmp = tempdir().expect("Failed to create temp dir");
         let data_dir = tmp.path();
 
@@ -396,10 +375,10 @@ mod tests {
         // store_file (the directory) should STILL EXIST because remove_file failed
         assert!(store_file.exists());
         assert!(store_file.is_dir());
-        }
+    }
 
-        #[test]
-        fn test_restore_failure_on_rename() {
+    #[test]
+    fn test_restore_failure_on_rename() {
         let tmp = tempdir().expect("Failed to create temp dir");
         let data_dir = tmp.path();
 
@@ -424,5 +403,5 @@ mod tests {
         assert!(staging.exists());
         // Target should still be a directory
         assert!(target.is_dir());
-        }
-        }
+    }
+}

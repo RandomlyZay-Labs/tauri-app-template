@@ -45,28 +45,15 @@ fn main() {
     }
 
     // ---------------------------------------------------------
-    // 2. RESOLVE DATA DIRECTORY
+    // 2. RESOLVE DEV DATA DIRECTORY
     // ---------------------------------------------------------
-    // In Dev: respects env var (defaults to "dev_data")
-    // In Prod: uses standard OS data dir + Folder Name
-    let data_dir = if let Ok(dev_path_str) = env::var("TAURI_APP_TEMPLATE_DATA_DIR") {
-        util::resolve_dev_data_dir(dev_path_str)
-    } else {
-        util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
-    };
+    // In Dev: respects env var (defaults to None, which uses Tauri default)
+    let dev_data_dir = env::var("TAURI_APP_TEMPLATE_DATA_DIR")
+        .ok()
+        .map(util::resolve_dev_data_dir);
 
     // ---------------------------------------------------------
-    // 3. LIFECYCLE CHECKS (Reset / Restore)
+    // 3. RUN APP
     // ---------------------------------------------------------
-
-    // Check for factory reset
-    util::check_and_perform_reset(&data_dir);
-
-    // Check for database restore
-    util::check_and_perform_restore(&data_dir);
-
-    // ---------------------------------------------------------
-    // 4. RUN APP
-    // ---------------------------------------------------------
-    run_app(Some(data_dir));
+    run_app(dev_data_dir);
 }
