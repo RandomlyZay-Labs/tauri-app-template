@@ -1,9 +1,7 @@
 # Roadmap
 
 ## fix/production-issues
-- The system theme is not working on Fedora, but it is working on Ubuntu. If the user's system theme is set to dark, the app should be dark. If the user's system theme is set to light, the app should be light.
-- Fix CLI usage on Windows. There is currently no output.
-- Test installer and uninstaller on Windows.
+- System theme does not switch automatically. It only works if the app is restarted.
 
 ## ci/updater-plugin
 - Set up Tauri updater plugin

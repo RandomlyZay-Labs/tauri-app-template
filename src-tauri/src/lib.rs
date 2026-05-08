@@ -20,7 +20,7 @@ use tauri_plugin_notification::NotificationExt;
 /// Checks raw process args to detect CLI subcommands/flags that should
 /// bypass the single-instance lock. This runs before the Tauri builder
 /// so the second process can boot its own app context against the shared DB.
-fn is_cli_invocation() -> bool {
+pub fn is_cli_invocation() -> bool {
     let args: Vec<String> = std::env::args().collect();
     is_cli_invocation_from_args(&args)
 }
