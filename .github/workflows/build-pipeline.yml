@@ -343,25 +343,7 @@ jobs:
 
           # Tauri typically installs here depending on whether it's a per-user or machine wide config.
           $ExeName = "tauri-app-template.exe"
-          $PathsToTry = @(
-              "$env:LOCALAPPDATA\Programs\tauri-app-template\$ExeName",
-              "$env:LOCALAPPDATA\tauri-app-template\$ExeName",
-              "C:\Program Files\tauri-app-template\$ExeName",
-              "C:\Program Files (x86)\tauri-app-template\$ExeName"
-          )
-          
-          $AppPath = $null
-          foreach ($p in $PathsToTry) {
-              if (Test-Path $p) {
-                  $AppPath = $p
-                  break
-              }
-          }
-          
-          if (-not $AppPath) {
-              Write-Error "App didn't install where expected. Check your Tauri config bundle identifier."
-              exit 1
-          }
+          $AppPath = "$env:LOCALAPPDATA\tauri-app-template\$ExeName"
           
           Write-Host "Found installed app at: $AppPath"
           Start-Process -FilePath $AppPath
