@@ -31,6 +31,19 @@ class ThemeStore {
 
 	constructor() {
 		this.hydrate();
+		this.setupSystemListener();
+	}
+
+	private setupSystemListener() {
+		if (typeof window !== 'undefined') {
+			window
+				.matchMedia('(prefers-color-scheme: dark)')
+				.addEventListener('change', () => {
+					if (this.theme === 'system') {
+						this.applyTheme('system');
+					}
+				});
+		}
 	}
 
 	private async hydrate() {

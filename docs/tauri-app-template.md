@@ -1,7 +1,7 @@
 # Roadmap
 
 ## fix/production-issues
-- System theme does not switch automatically. It only works if the app is restarted.
+- Move notifications to top right.
 
 ## ci/updater-plugin
 - Set up Tauri updater plugin

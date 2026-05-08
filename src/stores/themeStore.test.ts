@@ -101,4 +101,38 @@ describe('themeStore', () => {
 			root.classList.contains('dark') || root.classList.contains('light'),
 		).toBe(true);
 	});
+
+	it('updates theme automatically when system theme changes', async () => {
+		let changeHandler: (() => void) | null = null;
+		let matches = false;
+
+		vi.stubGlobal(
+			'matchMedia',
+			vi.fn().mockImplementation((query: string) => ({
+				matches,
+				media: query,
+				addEventListener: vi.fn().mockImplementation((event, handler) => {
+					if (event === 'change') changeHandler = handler;
+				}),
+				removeEventListener: vi.fn(),
+			})),
+		);
+
+		const store = await freshStore();
+		expect(store.theme).toBe('system');
+
+		// Initially light
+		matches = false;
+		store.setTheme('system');
+		expect(document.documentElement.classList.contains('light')).toBe(true);
+
+		// Switch to dark
+		matches = true;
+		if (changeHandler) (changeHandler as () => void)();
+
+		expect(document.documentElement.classList.contains('dark')).toBe(true);
+		expect(document.documentElement.classList.contains('light')).toBe(false);
+
+		vi.unstubAllGlobals();
+	});
 });
