@@ -1,7 +1,6 @@
 # Roadmap
 
 ## fix/production-issues
-- Remove the tray icon if the app is not currently minimized.
 - Adding to PATH (AppImage) needs a popup message after clicking:
 
 ```

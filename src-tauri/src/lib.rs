@@ -50,6 +50,9 @@ fn handle_single_instance<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _args: V
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.set_focus();
+        if let Some(tray) = app.tray_by_id("main-tray") {
+            let _ = tray.set_visible(false);
+        }
     }
 }
 
@@ -168,13 +171,14 @@ pub fn run_app(custom_data_dir: Option<PathBuf>) {
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
             let icon = app.default_window_icon().cloned().expect("Default window icon is required");
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::with_id("main-tray")
                 .icon(icon)
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(handle_menu_event)
                 .on_tray_icon_event(handle_tray_icon_event)
                 .build(app)?;
+            tray.set_visible(false)?;
 
             // --- Backup Scheduler ---
             services::scheduler::spawn_scheduler(app.handle().clone());
@@ -201,6 +205,10 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
             }
             api.prevent_close();
 
+            if let Some(tray) = app_handle.tray_by_id("main-tray") {
+                let _ = tray.set_visible(true);
+            }
+
             if settings.notify_on_minimize {
                 let _ = app_handle
                     .notification()
@@ -223,6 +231,9 @@ fn handle_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: tauri:
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
+                if let Some(tray) = app.tray_by_id("main-tray") {
+                    let _ = tray.set_visible(false);
+                }
             }
         }
         _ => {}
@@ -241,9 +252,15 @@ fn handle_tray_icon_event<R: tauri::Runtime>(tray: &tauri::tray::TrayIcon<R>, ev
             // Toggle visibility
             if window.is_visible().unwrap_or(false) {
                 let _ = window.hide();
+                if let Some(tray) = app.tray_by_id("main-tray") {
+                    let _ = tray.set_visible(true);
+                }
             } else {
                 let _ = window.show();
                 let _ = window.set_focus();
+                if let Some(tray) = app.tray_by_id("main-tray") {
+                    let _ = tray.set_visible(false);
+                }
             }
         }
     }
@@ -332,7 +349,7 @@ mod tests {
             .build()
             .unwrap();
         
-        let tray = TrayIconBuilder::new().build(handle).unwrap();
+        let tray = TrayIconBuilder::with_id("main-tray").build(handle).unwrap();
 
         let event = TrayIconEvent::Click {
             id: "main-tray".into(),
