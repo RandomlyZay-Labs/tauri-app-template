@@ -14,7 +14,7 @@ on:
           - linux
           # - macos
   pull_request:
-    branches: []
+    branches: [ main ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
