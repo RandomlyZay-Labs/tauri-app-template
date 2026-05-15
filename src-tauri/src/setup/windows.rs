@@ -5,6 +5,7 @@ use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
 /// This is required for CLI output on Windows when the app is compiled with
 /// `windows_subsystem = "windows"`.
 #[cfg(windows)]
+#[allow(unsafe_code)]
 pub fn attach_console() {
     unsafe {
         // Attempt to attach to the parent process's console
