@@ -1,3 +1,5 @@
+import { listen } from '@tauri-apps/api/event';
+import { commands } from '@/bindings';
 import {
 	loadPersistedState,
 	type PersistConfig,
@@ -26,12 +28,31 @@ const persistConfig: PersistConfig<ThemePersistedState> = {
 	name: 'theme-storage',
 };
 
+/**
+ * Resolves the actual system color scheme by trying the Freedesktop portal
+ * first (fixes Fedora/WebKitGTK), then falling back to `matchMedia`.
+ */
+async function resolveSystemTheme(): Promise<'dark' | 'light'> {
+	try {
+		const portalTheme = await commands.getSystemTheme();
+		if (portalTheme === 'dark') return 'dark';
+		if (portalTheme === 'light') return 'light';
+	} catch {
+		// Portal unavailable (non-Linux, no D-Bus) — expected
+	}
+
+	return window.matchMedia('(prefers-color-scheme: dark)').matches
+		? 'dark'
+		: 'light';
+}
+
 class ThemeStore {
 	theme = $state<Theme>('system');
 
 	constructor() {
 		this.hydrate();
 		this.setupSystemListener();
+		this.setupPortalListener();
 	}
 
 	private setupSystemListener() {
@@ -40,10 +61,28 @@ class ThemeStore {
 				.matchMedia('(prefers-color-scheme: dark)')
 				.addEventListener('change', () => {
 					if (this.theme === 'system') {
-						this.applyTheme('system');
+						void this.applyTheme('system');
 					}
 				});
 		}
+	}
+
+	/**
+	 * Listens for `system-theme-changed` events emitted by the Rust backend
+	 * when the Freedesktop portal reports a color-scheme change.
+	 */
+	private setupPortalListener() {
+		if (typeof window === 'undefined') return;
+
+		void listen<string>('system-theme-changed', (event) => {
+			if (this.theme !== 'system') return;
+
+			const resolved = event.payload === 'dark' ? 'dark' : 'light';
+
+			const root = window.document.documentElement;
+			root.classList.remove('light', 'dark');
+			root.classList.add(resolved);
+		});
 	}
 
 	private async hydrate() {
@@ -51,7 +90,7 @@ class ThemeStore {
 		if (saved.theme !== undefined) {
 			this.setTheme(saved.theme);
 		} else {
-			this.applyTheme(this.theme);
+			void this.applyTheme(this.theme);
 		}
 	}
 
@@ -59,15 +98,12 @@ class ThemeStore {
 		void savePersistedState(persistConfig, { theme: this.theme });
 	}
 
-	private applyTheme(theme: Theme) {
+	private async applyTheme(theme: Theme) {
 		const root = window.document.documentElement;
 		root.classList.remove('light', 'dark');
 
 		if (theme === 'system') {
-			const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-				.matches
-				? 'dark'
-				: 'light';
+			const systemTheme = await resolveSystemTheme();
 			root.classList.add(systemTheme);
 			return;
 		}
@@ -77,7 +113,7 @@ class ThemeStore {
 
 	setTheme(theme: Theme) {
 		this.theme = theme;
-		this.applyTheme(theme);
+		void this.applyTheme(theme);
 		this.persist();
 	}
 }

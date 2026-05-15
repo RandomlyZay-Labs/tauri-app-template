@@ -46,6 +46,8 @@ pub fn collect() -> Builder {
             // AppImage commands
             commands::appimage::is_appimage,
             commands::appimage::integrate_appimage,
+            // Theme commands
+            commands::theme::get_system_theme,
         ])
         .typ::<BackupMetadata>()
         .typ::<DownloadProgress>()

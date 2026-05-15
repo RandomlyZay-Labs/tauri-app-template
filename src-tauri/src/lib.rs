@@ -183,6 +183,10 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             // 9. Backup Scheduler
             services::scheduler::spawn_scheduler(app.handle().clone());
 
+            // 10. Linux Theme Watcher (Freedesktop portal)
+            #[cfg(target_os = "linux")]
+            services::theme_service::spawn_theme_watcher(app.handle().clone());
+
             Ok(())
         })
         .on_window_event(handle_window_event)

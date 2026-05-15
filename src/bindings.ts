@@ -91,6 +91,14 @@ async isAppimage() : Promise<boolean> {
 },
 async integrateAppimage() : Promise<null> {
     return await TAURI_INVOKE("integrate_appimage");
+},
+/**
+ * Returns the system color-scheme preference on Linux via the Freedesktop portal.
+ * Returns "dark", "light", or "no-preference".
+ * On non-Linux platforms this always returns `null` (frontend should rely on matchMedia).
+ */
+async getSystemTheme() : Promise<string | null> {
+    return await TAURI_INVOKE("get_system_theme");
 }
 }
 
