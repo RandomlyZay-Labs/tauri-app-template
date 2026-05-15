@@ -606,10 +606,14 @@ fn run_info_cli(ctx: &impl CliContext, matches: &Matches, json_format: bool) -> 
 pub fn handle_cli(app: &AppHandle, matches: &Matches) -> bool {
     let ctx = AppContext(app);
     match run_cli(&ctx, matches) {
-        CliResult::Exit => true,
+        CliResult::Exit => {
+            crate::setup::windows::simulate_enter_key();
+            true
+        }
         CliResult::Continue => false,
         CliResult::Error(msg) => {
             eprintln!("{msg}");
+            crate::setup::windows::simulate_enter_key();
             std::process::exit(1);
         }
     }
