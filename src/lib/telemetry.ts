@@ -24,6 +24,7 @@ export function initTelemetry() {
 		capture_pageview: true,
 		capture_pageleave: true,
 		disable_session_recording: true,
+		persistence: 'localStorage',
 		loaded: (ph) => {
 			if (!uiStore.telemetryEnabled) {
 				ph.opt_out_capturing();
