@@ -46,7 +46,7 @@ pub fn simulate_enter_key() {
             None,
             windows::Win32::Storage::FileSystem::OPEN_EXISTING,
             windows::Win32::Storage::FileSystem::FILE_ATTRIBUTE_NORMAL,
-            HANDLE::default(),
+            Some(HANDLE::default()),
         );
 
         let Ok(conin) = handle else {
