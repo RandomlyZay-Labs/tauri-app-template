@@ -30,6 +30,9 @@ pub fn simulate_enter_key() {
         WriteConsoleInputW, INPUT_RECORD, KEY_EVENT, KEY_EVENT_RECORD,
     };
     use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        MapVirtualKeyW, MAPVK_VK_TO_VSC, VK_RETURN,
+    };
     use windows::core::PCWSTR;
 
     unsafe {
@@ -53,16 +56,33 @@ pub fn simulate_enter_key() {
             return;
         };
 
-        let mut key: KEY_EVENT_RECORD = mem::zeroed();
-        key.bKeyDown = true.into();
-        key.wRepeatCount = 1;
-        key.uChar.UnicodeChar = b'\r' as u16;
+        let scan_code = MapVirtualKeyW(u32::from(VK_RETURN.0), MAPVK_VK_TO_VSC) as u16;
 
-        let mut record: INPUT_RECORD = mem::zeroed();
-        record.EventType = KEY_EVENT as u16;
-        record.Event.KeyEvent = key;
+        // Key-down event
+        let mut key_down: KEY_EVENT_RECORD = mem::zeroed();
+        key_down.bKeyDown = true.into();
+        key_down.wRepeatCount = 1;
+        key_down.wVirtualKeyCode = VK_RETURN.0;
+        key_down.wVirtualScanCode = scan_code;
+        key_down.uChar.UnicodeChar = b'\r' as u16;
 
-        let records = [record];
+        let mut record_down: INPUT_RECORD = mem::zeroed();
+        record_down.EventType = KEY_EVENT as u16;
+        record_down.Event.KeyEvent = key_down;
+
+        // Key-up event
+        let mut key_up: KEY_EVENT_RECORD = mem::zeroed();
+        key_up.bKeyDown = false.into();
+        key_up.wRepeatCount = 1;
+        key_up.wVirtualKeyCode = VK_RETURN.0;
+        key_up.wVirtualScanCode = scan_code;
+        key_up.uChar.UnicodeChar = b'\r' as u16;
+
+        let mut record_up: INPUT_RECORD = mem::zeroed();
+        record_up.EventType = KEY_EVENT as u16;
+        record_up.Event.KeyEvent = key_up;
+
+        let records = [record_down, record_up];
         let mut written: u32 = 0;
         let _ = WriteConsoleInputW(conin, &records, &mut written);
 
