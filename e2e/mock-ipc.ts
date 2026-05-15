@@ -130,6 +130,9 @@ export const MOCK_IPC_DEFAULTS: Partial<Commands> = {
 	async getSystemTheme() {
 		return null;
 	},
+	async setTheme(_theme) {
+		return null;
+	},
 };
 
 /**
@@ -240,6 +243,7 @@ export async function injectMockIpc(
 			setLogLevel: () => null,
 			getVersion: () => '0.1.0',
 			getSystemTheme: () => null,
+			setTheme: () => null,
 		};
 
 		// Expose for runtime overrides by tests via standard DOM events

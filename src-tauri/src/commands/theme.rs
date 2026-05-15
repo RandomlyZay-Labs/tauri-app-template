@@ -13,3 +13,16 @@ pub async fn get_system_theme() -> CResult<Option<String>> {
         Ok(None)
     }
 }
+
+/// Sets the application window theme.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_theme(app: tauri::AppHandle, theme: Option<String>) -> CResult<()> {
+    let tauri_theme = match theme.as_deref() {
+        Some("dark") => Some(tauri::Theme::Dark),
+        Some("light") => Some(tauri::Theme::Light),
+        _ => None,
+    };
+    app.set_theme(tauri_theme);
+    Ok(())
+}

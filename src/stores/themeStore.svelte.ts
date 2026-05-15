@@ -1,5 +1,6 @@
 import { listen } from '@tauri-apps/api/event';
 import { commands } from '@/bindings';
+import { executeSafeAction } from '@/lib/async-utils';
 import {
 	loadPersistedState,
 	type PersistConfig,
@@ -82,6 +83,7 @@ class ThemeStore {
 			const root = window.document.documentElement;
 			root.classList.remove('light', 'dark');
 			root.classList.add(resolved);
+			void executeSafeAction(() => commands.setTheme(resolved));
 		});
 	}
 
@@ -102,13 +104,13 @@ class ThemeStore {
 		const root = window.document.documentElement;
 		root.classList.remove('light', 'dark');
 
+		let resolvedTheme: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light';
 		if (theme === 'system') {
-			const systemTheme = await resolveSystemTheme();
-			root.classList.add(systemTheme);
-			return;
+			resolvedTheme = await resolveSystemTheme();
 		}
 
-		root.classList.add(theme);
+		root.classList.add(resolvedTheme);
+		void executeSafeAction(() => commands.setTheme(resolvedTheme));
 	}
 
 	setTheme(theme: Theme) {

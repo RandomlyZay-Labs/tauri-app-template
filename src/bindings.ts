@@ -99,6 +99,12 @@ async integrateAppimage() : Promise<null> {
  */
 async getSystemTheme() : Promise<string | null> {
     return await TAURI_INVOKE("get_system_theme");
+},
+/**
+ * Sets the application window theme.
+ */
+async setTheme(theme: string | null) : Promise<null> {
+    return await TAURI_INVOKE("set_theme", { theme });
 }
 }
 
