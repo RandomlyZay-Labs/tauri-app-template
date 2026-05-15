@@ -349,7 +349,7 @@ jobs:
 
           # Tauri typically installs here depending on whether it's a per-user or machine wide config.
           $ExeName = "tauri-app-template.exe"
-          $AppPath = "$env:LOCALAPPDATA\tauri-app-template\$ExeName"
+          $AppPath = "$env:LOCALAPPDATA\Tauri App Template\$ExeName"
           
           Start-Process -FilePath $AppPath
           
