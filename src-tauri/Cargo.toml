@@ -24,6 +24,7 @@ tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-store = "2"
 tauri-plugin-window-state = "2"
+tauri-plugin-better-posthog = "0.1"
 
 # --- Specta (Typescript Generation) ---
 specta = { version = "=2.0.0-rc.22", features = ["serde", "serde_json"] }
@@ -37,6 +38,7 @@ tokio = { version = "1", features = ["sync", "fs", "macros"] }
 tokio-util = { version = "0.7", features = ["io"] }
 
 # --- Data, Serialization, & DB ---
+better-posthog = "0.2"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

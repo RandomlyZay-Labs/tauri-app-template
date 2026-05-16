@@ -13,7 +13,7 @@
 	"app": {
 		"windows": [],
 		"security": {
-			"csp": "default-src 'self'; script-src 'self' https://*.posthog.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.posthog.com; img-src 'self' asset: https://asset.localhost; object-src 'none'; base-uri 'self'; form-action 'self'"
+			"csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' asset: https://asset.localhost; object-src 'none'; base-uri 'self'; form-action 'self'"
 		}
 	},
 	"bundle": {

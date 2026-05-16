@@ -62,8 +62,15 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
     let specta_builder = api::collect();
     let is_cli = is_cli_invocation();
 
+    // Initialize PostHog analytics (Rust-side HTTP, bypasses WebView CORS).
+    let _posthog_guard = better_posthog::init(better_posthog::ClientOptions {
+        api_key: Some("phc_nAKTTsOrVMFGq9yakG0UNEyQemz1UvPRueal5dvkaD5".into()),
+        ..Default::default()
+    });
+
     let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_cli::init());
+        .plugin(tauri_plugin_cli::init())
+        .plugin(tauri_plugin_better_posthog::init());
 
     // Only enforce single-instance for GUI launches. CLI invocations need their
     // own process to access stdout and run against the shared database.

@@ -1,13 +1,8 @@
-import posthog from 'posthog-js';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { invoke } from '@tauri-apps/api/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('posthog-js', () => ({
-	default: {
-		init: vi.fn(),
-		capture: vi.fn(),
-		opt_in_capturing: vi.fn(),
-		opt_out_capturing: vi.fn(),
-	},
+vi.mock('@tauri-apps/api/core', () => ({
+	invoke: vi.fn(),
 }));
 
 vi.mock('@/stores/uiStore.svelte', () => ({
@@ -18,37 +13,18 @@ vi.mock('@/stores/uiStore.svelte', () => ({
 }));
 
 describe('telemetry', () => {
-	beforeEach(() => {
-		vi.stubEnv('VITE_POSTHOG_KEY', 'test-key');
-		vi.stubEnv('VITE_POSTHOG_HOST', 'https://test.posthog.com');
+	beforeEach(async () => {
+		const uiStoreMod = await import('@/stores/uiStore.svelte');
+		uiStoreMod.uiStore.telemetryEnabled = true;
+		uiStoreMod.uiStore._hasHydrated = true;
 		vi.resetModules();
 		vi.clearAllMocks();
 	});
 
-	afterEach(() => {
-		vi.unstubAllEnvs();
-	});
-
-	it('initializes posthog correctly', async () => {
+	it('initializes telemetry correctly', async () => {
 		const { initTelemetry } = await import('./telemetry');
 		initTelemetry();
-
-		expect(posthog.init).toHaveBeenCalledWith(
-			'test-key',
-			expect.objectContaining({
-				api_host: 'https://test.posthog.com',
-				autocapture: true,
-				capture_pageview: true,
-			}),
-		);
-	});
-
-	it('does not initialize if no key is present', async () => {
-		vi.stubEnv('VITE_POSTHOG_KEY', '');
-		const { initTelemetry } = await import('./telemetry');
-		initTelemetry();
-
-		expect(posthog.init).not.toHaveBeenCalled();
+		// No side effects other than setting a flag
 	});
 
 	it('captures events if enabled and initialized', async () => {
@@ -56,14 +32,17 @@ describe('telemetry', () => {
 		initTelemetry();
 		captureEvent('test_event', { foo: 'bar' });
 
-		expect(posthog.capture).toHaveBeenCalledWith('test_event', { foo: 'bar' });
+		expect(invoke).toHaveBeenCalledWith('plugin:better-posthog|capture', {
+			event: 'test_event',
+			properties: { foo: 'bar' },
+		});
 	});
 
 	it('does not capture events if not initialized', async () => {
 		const { captureEvent } = await import('./telemetry');
 		captureEvent('test_event', { foo: 'bar' });
 
-		expect(posthog.capture).not.toHaveBeenCalled();
+		expect(invoke).not.toHaveBeenCalled();
 	});
 
 	it('does not capture events if uiStore.telemetryEnabled is false', async () => {
@@ -74,19 +53,23 @@ describe('telemetry', () => {
 		initTelemetry();
 		captureEvent('test_event', { foo: 'bar' });
 
-		expect(posthog.capture).not.toHaveBeenCalled();
+		expect(invoke).not.toHaveBeenCalled();
 	});
 
-	it('updates telemetry consent', async () => {
+	it('updates telemetry consent with opt-in event', async () => {
 		const { initTelemetry, updateTelemetryConsent } = await import(
 			'./telemetry'
 		);
 		initTelemetry();
 
 		updateTelemetryConsent(true);
-		expect(posthog.opt_in_capturing).toHaveBeenCalled();
+		expect(invoke).toHaveBeenCalledWith('plugin:better-posthog|capture', {
+			event: 'telemetry_opted_in',
+			properties: undefined,
+		});
 
+		vi.clearAllMocks();
 		updateTelemetryConsent(false);
-		expect(posthog.opt_out_capturing).toHaveBeenCalled();
+		expect(invoke).not.toHaveBeenCalled();
 	});
 });

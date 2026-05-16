@@ -90,9 +90,6 @@ jobs:
 
       - name: Build Frontend & Prune
         run: pnpm run build:prod
-        env:
-          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
-          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
 
       - name: Disable Windows Defender for Rust target
         if: ${{ matrix.arch == 'arm64' }}
@@ -173,9 +170,6 @@ jobs:
 
       - name: Build Frontend & Prune
         run: pnpm run build:prod
-        env:
-          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
-          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
       
       - name: Build App
         env:

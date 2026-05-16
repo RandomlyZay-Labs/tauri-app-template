@@ -39,20 +39,6 @@ mockIPC((cmd) => {
 	}
 });
 
-vi.mock('posthog-js', () => ({
-	default: {
-		init: vi.fn(),
-		capture: vi.fn(),
-		identify: vi.fn(),
-		reset: vi.fn(),
-		opt_in_capturing: vi.fn(),
-		opt_out_capturing: vi.fn(),
-		has_opted_in_capturing: vi.fn(),
-		has_opted_out_capturing: vi.fn(),
-		onFeatureFlags: vi.fn(),
-	},
-}));
-
 vi.mock('@tauri-apps/plugin-clipboard-manager', () => ({
 	writeText: vi.fn(),
 }));
