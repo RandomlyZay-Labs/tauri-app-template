@@ -13,7 +13,13 @@
 # Safely adds the app installation directory to the User PATH and updates the system immediately.
 !macro NSIS_HOOK_POSTINSTALL
   DetailPrint "Installing CLI wrapper..."
-  File "tauri-app-template.com"
+  !if /FileExists "..\..\..\..\nsis\tauri-app-template.com"
+    File "..\..\..\..\nsis\tauri-app-template.com"
+  !else if /FileExists "..\..\..\..\..\nsis\tauri-app-template.com"
+    File "..\..\..\..\..\nsis\tauri-app-template.com"
+  !else
+    !error "Could not find tauri-app-template.com to bundle!"
+  !endif
 
   DetailPrint "Adding $INSTDIR to the user PATH environment variable..."
   
