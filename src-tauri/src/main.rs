@@ -2,12 +2,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::env;
-use std::path::PathBuf;
 
 use tauri_app_template_lib::{run_app, util};
 
 fn main() {
     #[cfg(target_os = "windows")]
+    #[allow(unsafe_code)]
     unsafe {
         use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
         let _ = AttachConsole(ATTACH_PARENT_PROCESS);
@@ -23,6 +23,7 @@ fn main() {
     {
         use specta_typescript::{BigIntExportBehavior, Typescript};
         use std::fs;
+        use std::path::PathBuf;
         use tauri_app_template_lib::api;
 
         let builder = api::collect();
