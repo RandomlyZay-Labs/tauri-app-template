@@ -135,9 +135,12 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                 watcher_manager: services::watcher_service::WatcherManager::new(),
             });
 
+            // DEBUG_VERSION: 1.0.1
             // 6. CLI Handling
+            println!("[DEBUG] Calling app.cli().matches()...");
             match app.cli().matches() {
                 Ok(matches) => {
+                    println!("[DEBUG] Matches retrieved: {:?}", matches);
                     if cli::handle_cli(app.handle(), &matches) {
                         // Explicitly flush stdout before exiting to ensure piped output is visible
                         use std::io::Write;
@@ -147,6 +150,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                     }
                 }
                 Err(e) => {
+                    println!("[DEBUG] CLI Match Error: {}", e);
                     eprintln!("{}", e);
                     std::process::exit(1);
                 }

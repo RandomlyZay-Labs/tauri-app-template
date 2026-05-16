@@ -213,8 +213,11 @@ pub(crate) enum CliResult {
 // Pure routing logic (testable)
 // ---------------------------------------------------------------------------
 
+// DEBUG_VERSION: 1.0.1
 pub(crate) fn run_cli(ctx: &impl CliContext, matches: &Matches) -> CliResult {
+    println!("[DEBUG] run_cli started with matches: {:?}", matches);
     if let Some(help_arg) = matches.args.get("help") {
+        println!("[DEBUG] help_arg value: {:?}", help_arg.value);
         if let Some(help_text) = help_arg.value.as_str() {
             println!("{help_text}");
             use std::io::Write;
