@@ -83,7 +83,6 @@ class ThemeStore {
 			const root = window.document.documentElement;
 			root.classList.remove('light', 'dark');
 			root.classList.add(resolved);
-			void executeSafeAction(() => commands.setTheme(resolved));
 		});
 	}
 
@@ -110,7 +109,11 @@ class ThemeStore {
 		}
 
 		root.classList.add(resolvedTheme);
-		void executeSafeAction(() => commands.setTheme(resolvedTheme));
+
+		// If system theme is selected, we pass null to the backend to let Tauri
+		// track the OS theme natively (required for dynamic titlebar updates on Windows).
+		const backendTheme = theme === 'system' ? null : resolvedTheme;
+		void executeSafeAction(() => commands.setTheme(backendTheme));
 	}
 
 	setTheme(theme: Theme) {

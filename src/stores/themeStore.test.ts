@@ -9,10 +9,12 @@ vi.mock('@/lib/store-utils', () => ({
 }));
 
 const mockGetSystemTheme = vi.fn().mockResolvedValue(null);
+const mockSetTheme = vi.fn().mockResolvedValue(null);
 
 vi.mock('@/bindings', () => ({
 	commands: {
 		getSystemTheme: (...args: unknown[]) => mockGetSystemTheme(...args),
+		setTheme: (...args: unknown[]) => mockSetTheme(...args),
 	},
 }));
 
@@ -27,6 +29,7 @@ describe('themeStore', () => {
 		vi.clearAllMocks();
 		mockLoadPersistedState.mockResolvedValue({});
 		mockGetSystemTheme.mockResolvedValue(null);
+		mockSetTheme.mockClear();
 		document.documentElement.classList.remove('light', 'dark');
 	});
 
@@ -204,5 +207,32 @@ describe('themeStore', () => {
 			'system-theme-changed',
 			expect.any(Function),
 		);
+	});
+
+	it('calls setTheme(null) when system theme is applied', async () => {
+		const store = await freshStore();
+		mockSetTheme.mockClear();
+
+		store.setTheme('system');
+		await vi.waitFor(() => {
+			expect(mockSetTheme).toHaveBeenCalledWith(null);
+		});
+	});
+
+	it('updates class but does not call setTheme when system-theme-changed fires', async () => {
+		await freshStore();
+		mockSetTheme.mockClear();
+
+		// Get the callback registered with listen
+		const callback = mockListen.mock.calls.find(
+			(call) => call[0] === 'system-theme-changed',
+		)?.[1];
+		expect(callback).toBeDefined();
+
+		// Simulate event
+		callback({ payload: 'dark' });
+
+		expect(document.documentElement.classList.contains('dark')).toBe(true);
+		expect(mockSetTheme).not.toHaveBeenCalled();
 	});
 });
