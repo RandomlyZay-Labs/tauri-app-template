@@ -6,10 +6,15 @@ authors = ["RandomlyZay"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/RandomlyZay-Labs/tauri-app-template"
 edition = "2024"
+default-run = "tauri-app-template"
 
 [lib]
 name = "tauri_app_template_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "tauri-app-template"
+path = "src/main.rs"
 
 [[bin]]
 name = "tauri-app-template-cli"

@@ -107,13 +107,15 @@ jobs:
         run: |
           $config = '{\"build\":{\"beforeBuildCommand\":\"\"}}'
           
-          # Build the CLI wrapper binary
+          # Build the CLI wrapper binary and move it
+          Push-Location src-tauri
           cargo build --bin tauri-app-template-cli --release --target ${{ matrix.target }}
           
           # Rename it to .com and move it to the nsis folder for easy bundling
-          $BinPath = "src-tauri/target/${{ matrix.target }}/release/tauri-app-template-cli.exe"
-          $ComPath = "src-tauri/nsis/tauri-app-template.com"
+          $BinPath = "target/${{ matrix.target }}/release/tauri-app-template-cli.exe"
+          $ComPath = "nsis/tauri-app-template.com"
           Move-Item -Path $BinPath -Destination $ComPath -Force
+          Pop-Location
           
           pnpm tauri build --target ${{ matrix.target }} --config $config
 
