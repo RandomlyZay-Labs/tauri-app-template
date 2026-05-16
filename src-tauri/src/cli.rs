@@ -216,7 +216,9 @@ pub(crate) enum CliResult {
 pub(crate) fn run_cli(ctx: &impl CliContext, matches: &Matches) -> CliResult {
     if let Some(help_arg) = matches.args.get("help") {
         if let Some(help_text) = help_arg.value.as_str() {
-            print!("{help_text}");
+            println!("{help_text}");
+            use std::io::Write;
+            let _ = std::io::stdout().flush();
         }
         return CliResult::Exit;
     }
