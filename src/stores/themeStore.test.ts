@@ -30,6 +30,7 @@ describe('themeStore', () => {
 		mockLoadPersistedState.mockResolvedValue({});
 		mockGetSystemTheme.mockResolvedValue(null);
 		mockSetTheme.mockClear();
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 		document.documentElement.classList.remove('light', 'dark');
 	});
 
@@ -173,6 +174,7 @@ describe('themeStore', () => {
 		expect(document.documentElement.classList.contains('light')).toBe(false);
 
 		vi.unstubAllGlobals();
+		vi.stubGlobal('navigator', { userAgent: 'Linux' }); // restore default
 	});
 
 	it('uses portal theme when matchMedia is unreliable', async () => {
@@ -209,7 +211,8 @@ describe('themeStore', () => {
 		);
 	});
 
-	it('calls setTheme(null) when system theme is applied', async () => {
+	it('calls setTheme(null) when system theme is applied on Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Windows' });
 		const store = await freshStore();
 		mockSetTheme.mockClear();
 
@@ -217,9 +220,42 @@ describe('themeStore', () => {
 		await vi.waitFor(() => {
 			expect(mockSetTheme).toHaveBeenCalledWith(null);
 		});
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 	});
 
-	it('updates class but does not call setTheme when system-theme-changed fires', async () => {
+	it('calls setTheme(resolved) when system theme is applied on non-Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		const store = await freshStore();
+		mockSetTheme.mockClear();
+
+		store.setTheme('system');
+		await vi.waitFor(() => {
+			expect(mockSetTheme).toHaveBeenCalledWith(
+				expect.stringMatching(/dark|light/),
+			);
+		});
+	});
+
+	it('updates class and calls setTheme when system-theme-changed fires on non-Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		await freshStore();
+		mockSetTheme.mockClear();
+
+		// Get the callback registered with listen
+		const callback = mockListen.mock.calls.find(
+			(call) => call[0] === 'system-theme-changed',
+		)?.[1];
+		expect(callback).toBeDefined();
+
+		// Simulate event
+		callback({ payload: 'dark' });
+
+		expect(document.documentElement.classList.contains('dark')).toBe(true);
+		expect(mockSetTheme).toHaveBeenCalledWith('dark');
+	});
+
+	it('updates class but does NOT call setTheme when system-theme-changed fires on Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Windows' });
 		await freshStore();
 		mockSetTheme.mockClear();
 
@@ -234,5 +270,6 @@ describe('themeStore', () => {
 
 		expect(document.documentElement.classList.contains('dark')).toBe(true);
 		expect(mockSetTheme).not.toHaveBeenCalled();
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 	});
 });

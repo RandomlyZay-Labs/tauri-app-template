@@ -83,6 +83,14 @@ class ThemeStore {
 			const root = window.document.documentElement;
 			root.classList.remove('light', 'dark');
 			root.classList.add(resolved);
+
+			// On non-Windows platforms (like Linux), we need to explicitly lock the backend theme
+			// to ensure the window decorations (titlebar) update correctly.
+			// On Windows, we skip this to maintain the native theme tracking state (setTheme(null)).
+			const isWindows = navigator.userAgent.includes('Win');
+			if (!isWindows) {
+				void executeSafeAction(() => commands.setTheme(resolved));
+			}
 		});
 	}
 
@@ -110,9 +118,11 @@ class ThemeStore {
 
 		root.classList.add(resolvedTheme);
 
-		// If system theme is selected, we pass null to the backend to let Tauri
-		// track the OS theme natively (required for dynamic titlebar updates on Windows).
-		const backendTheme = theme === 'system' ? null : resolvedTheme;
+		// On Windows, passing null for the 'system' theme enables native tracking for the titlebar.
+		// On other platforms (like Linux), we explicitly set the theme to ensure decorations update.
+		const isWindows =
+			typeof window !== 'undefined' && navigator.userAgent.includes('Win');
+		const backendTheme = theme === 'system' && isWindows ? null : resolvedTheme;
 		void executeSafeAction(() => commands.setTheme(backendTheme));
 	}
 
