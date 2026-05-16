@@ -607,13 +607,11 @@ pub fn handle_cli(app: &AppHandle, matches: &Matches) -> bool {
     let ctx = AppContext(app);
     match run_cli(&ctx, matches) {
         CliResult::Exit => {
-            crate::setup::windows::simulate_enter_key();
             true
         }
         CliResult::Continue => false,
         CliResult::Error(msg) => {
             eprintln!("{msg}");
-            crate::setup::windows::simulate_enter_key();
             std::process::exit(1);
         }
     }

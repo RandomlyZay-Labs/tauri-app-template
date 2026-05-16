@@ -11,6 +11,10 @@ edition = "2024"
 name = "tauri_app_template_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[[bin]]
+name = "tauri-app-template-cli"
+path = "src/bin.rs"
+
 [dependencies]
 # --- Tauri ---
 tauri = { version = "2", features = ["tray-icon", "devtools"] }

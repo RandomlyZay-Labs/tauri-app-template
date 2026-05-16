@@ -145,7 +145,6 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                 }
                 Err(e) => {
                     eprintln!("{}", e);
-                    setup::windows::simulate_enter_key();
                     std::process::exit(1);
                 }
             }

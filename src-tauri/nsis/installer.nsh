@@ -12,6 +12,9 @@
 # NSIS Hook for Tauri v2
 # Safely adds the app installation directory to the User PATH and updates the system immediately.
 !macro NSIS_HOOK_POSTINSTALL
+  DetailPrint "Installing CLI wrapper..."
+  File "tauri-app-template.com"
+
   DetailPrint "Adding $INSTDIR to the user PATH environment variable..."
   
   ; Target the Current User registry (HKCU) to avoid needing admin rights
@@ -25,6 +28,7 @@
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
+  Delete "$INSTDIR\tauri-app-template.com"
   DetailPrint "Removing $INSTDIR from the user PATH environment variable..."
   
   ; Target the Current User registry (HKCU)
