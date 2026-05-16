@@ -195,33 +195,45 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
 }
 
 fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
-    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-        let app_handle = window.app_handle();
-        let state = app_handle.state::<AppState>();
-        let Ok(settings) = state.tray_settings.lock() else {
-            log::error!("Failed to acquire tray settings lock");
-            return;
-        };
+    match event {
+        tauri::WindowEvent::CloseRequested { api, .. } => {
+            let app_handle = window.app_handle();
+            let state = app_handle.state::<AppState>();
+            let Ok(settings) = state.tray_settings.lock() else {
+                log::error!("Failed to acquire tray settings lock");
+                return;
+            };
 
-        if settings.minimize_to_tray {
-            if let Err(e) = window.hide() {
-                log::error!("Failed to hide window: {}", e);
-            }
-            api.prevent_close();
+            if settings.minimize_to_tray {
+                if let Err(e) = window.hide() {
+                    log::error!("Failed to hide window: {}", e);
+                }
+                api.prevent_close();
 
-            if let Some(tray) = app_handle.tray_by_id("main-tray") {
-                let _ = tray.set_visible(true);
-            }
+                if let Some(tray) = app_handle.tray_by_id("main-tray") {
+                    let _ = tray.set_visible(true);
+                }
 
-            if settings.notify_on_minimize {
-                let _ = app_handle
-                    .notification()
-                    .builder()
-                    .title("Tauri App Template")
-                    .body("Application minimized to tray")
-                    .show();
+                if settings.notify_on_minimize {
+                    let _ = app_handle
+                        .notification()
+                        .builder()
+                        .title("Tauri App Template")
+                        .body("Application minimized to tray")
+                        .show();
+                }
             }
         }
+        #[cfg(target_os = "windows")]
+        tauri::WindowEvent::ThemeChanged(theme) => {
+            use tauri::Emitter;
+            let theme_str = match theme {
+                tauri::Theme::Dark => "dark",
+                _ => "light",
+            };
+            let _ = window.emit("system-theme-changed", theme_str);
+        }
+        _ => {}
     }
 }
 
