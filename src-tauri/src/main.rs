@@ -7,13 +7,14 @@ use std::path::PathBuf;
 use tauri_app_template_lib::{run_app, util};
 
 fn main() {
+    #[cfg(target_os = "windows")]
+    unsafe {
+        use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+        let _ = AttachConsole(ATTACH_PARENT_PROCESS);
+    }
+
     let _ = fix_path_env::fix();
 
-    // Attach to parent console if running as a CLI on Windows.
-    // This allows output to be seen in CMD/PowerShell when windows_subsystem = "windows".
-    if tauri_app_template_lib::is_cli_invocation() {
-        tauri_app_template_lib::setup::windows::attach_console();
-    }
 
     // ---------------------------------------------------------
     // 1. GENERATE BINDINGS (Dev Only)

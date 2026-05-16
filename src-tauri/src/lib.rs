@@ -139,8 +139,11 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             match app.cli().matches() {
                 Ok(matches) => {
                     if cli::handle_cli(app.handle(), &matches) {
+                        // Explicitly flush stdout before exiting to ensure piped output is visible
+                        use std::io::Write;
+                        let _ = std::io::stdout().flush();
                         app.handle().exit(0);
-                        return Ok(());
+                        std::process::exit(0);
                     }
                 }
                 Err(e) => {
