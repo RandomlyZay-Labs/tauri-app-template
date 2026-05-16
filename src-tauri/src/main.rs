@@ -9,8 +9,27 @@ fn main() {
     #[cfg(target_os = "windows")]
     #[allow(unsafe_code)]
     unsafe {
-        use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
-        let _ = AttachConsole(ATTACH_PARENT_PROCESS);
+        use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS, SetStdHandle, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE};
+        use windows::Win32::Storage::FileSystem::{CreateFileW, FILE_SHARE_WRITE, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, GENERIC_WRITE, GENERIC_READ};
+        use windows::core::PCWSTR;
+
+        if AttachConsole(ATTACH_PARENT_PROCESS).is_ok() {
+            let name: Vec<u16> = "CONOUT$\0".encode_utf16().collect();
+            let handle = CreateFileW(
+                PCWSTR(name.as_ptr()),
+                GENERIC_WRITE.0 | GENERIC_READ.0,
+                FILE_SHARE_WRITE,
+                None,
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                None,
+            );
+
+            if let Ok(h) = handle {
+                let _ = SetStdHandle(STD_OUTPUT_HANDLE, h);
+                let _ = SetStdHandle(STD_ERROR_HANDLE, h);
+            }
+        }
     }
 
     let _ = fix_path_env::fix();
