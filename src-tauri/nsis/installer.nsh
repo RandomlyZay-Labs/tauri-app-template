@@ -13,12 +13,12 @@
 # Safely adds the app installation directory to the User PATH and updates the system immediately.
 !macro NSIS_HOOK_POSTINSTALL
   DetailPrint "Installing CLI wrapper..."
-  !if /FileExists "..\..\..\..\nsis\tauri-app-template.com"
-    File "..\..\..\..\nsis\tauri-app-template.com"
-  !else if /FileExists "..\..\..\..\..\nsis\tauri-app-template.com"
-    File "..\..\..\..\..\nsis\tauri-app-template.com"
+  !if /FileExists "..\..\..\..\nsis\tauri-app-template-cli.exe"
+    File "..\..\..\..\nsis\tauri-app-template-cli.exe"
+  !else if /FileExists "..\..\..\..\..\nsis\tauri-app-template-cli.exe"
+    File "..\..\..\..\..\nsis\tauri-app-template-cli.exe"
   !else
-    !error "Could not find tauri-app-template.com to bundle!"
+    !error "Could not find tauri-app-template-cli.exe to bundle!"
   !endif
 
   DetailPrint "Adding $INSTDIR to the user PATH environment variable..."
@@ -34,7 +34,7 @@
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
-  Delete "$INSTDIR\tauri-app-template.com"
+  Delete "$INSTDIR\tauri-app-template-cli.exe"
   DetailPrint "Removing $INSTDIR from the user PATH environment variable..."
   
   ; Target the Current User registry (HKCU)
