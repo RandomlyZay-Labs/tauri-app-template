@@ -12,7 +12,10 @@
 # NSIS Hook for Tauri v2
 # Safely adds the app installation directory to the User PATH and updates the system immediately.
 !macro NSIS_HOOK_POSTINSTALL
-  DetailPrint "Installing CLI wrapper..."
+  DetailPrint "Installing CLI wrapper to isolated bin directory..."
+  CreateDirectory "$INSTDIR\bin"
+  SetOutPath "$INSTDIR\bin"
+  
   !if /FileExists "..\..\..\..\nsis\tauri-app-template-cli.exe"
     File "..\..\..\..\nsis\tauri-app-template-cli.exe"
   !else if /FileExists "..\..\..\..\..\nsis\tauri-app-template-cli.exe"
@@ -21,27 +24,29 @@
     !error "Could not find tauri-app-template-cli.exe to bundle!"
   !endif
 
-  DetailPrint "Adding $INSTDIR to the user PATH environment variable..."
+  DetailPrint "Adding $INSTDIR\bin to the user PATH environment variable..."
   
   ; Target the Current User registry (HKCU) to avoid needing admin rights
   EnVar::SetHKCU
   
-  ; Safely append the installation directory to the Path
-  EnVar::AddValue "Path" "$INSTDIR"
+  ; Safely append the isolated bin directory to the Path
+  EnVar::AddValue "Path" "$INSTDIR\bin"
   
   ; Broadcast the environment change so the CLI is immediately available
   SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
-  Delete "$INSTDIR\tauri-app-template-cli.exe"
-  DetailPrint "Removing $INSTDIR from the user PATH environment variable..."
+  Delete "$INSTDIR\bin\tauri-app-template-cli.exe"
+  RMDir "$INSTDIR\bin"
+  
+  DetailPrint "Removing $INSTDIR\bin from the user PATH environment variable..."
   
   ; Target the Current User registry (HKCU)
   EnVar::SetHKCU
   
-  ; Safely remove the installation directory from the Path
-  EnVar::DeleteValue "Path" "$INSTDIR"
+  ; Safely remove the isolated bin from the Path
+  EnVar::DeleteValue "Path" "$INSTDIR\bin"
   
   ; Broadcast the environment change so the system knows it's gone
   SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000

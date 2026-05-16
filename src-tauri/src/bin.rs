@@ -9,20 +9,23 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    // Collect all arguments passed to this wrapper, excluding the wrapper's own path.
     let args: Vec<String> = env::args().skip(1).collect();
-
-    // The CLI wrapper (this binary) will be named tauri-app-template.com and 
-    // live in the same directory as tauri-app-template.exe.
     let current_exe = env::current_exe()?;
     let exe_dir = current_exe.parent().ok_or("Failed to get exe directory")?;
     
-    // We target the main GUI binary which contains the actual logic.
-    let target_exe = exe_dir.join("tauri-app-template.exe");
+    // Check if we are in a 'bin' subdirectory (installed state)
+    let mut target_exe = exe_dir.join("tauri-app-template.exe");
+    if !target_exe.exists() {
+        // Try parent directory (installed state where proxy is in $INSTDIR/bin/)
+        if let Some(parent) = exe_dir.parent() {
+            target_exe = parent.join("tauri-app-template.exe");
+        }
+    }
 
-    // Spawn the main application as a child process.
-    // By inheriting stdin/stdout/stderr, we ensure that the parent console
-    // correctly handles the I/O of the GUI app's CLI mode.
+    if !target_exe.exists() {
+        return Err("Could not find tauri-app-template.exe next to or above the CLI wrapper.".into());
+    }
+
     let mut child = Command::new(target_exe)
         .args(args)
         .stdin(Stdio::inherit())
@@ -30,7 +33,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .stderr(Stdio::inherit())
         .spawn()?;
 
-    // Wait for the main application to finish and exit with the same status code.
     let status = child.wait()?;
     std::process::exit(status.code().unwrap_or(0));
 }
