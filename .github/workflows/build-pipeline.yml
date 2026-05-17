@@ -103,7 +103,7 @@ jobs:
         shell: pwsh
         env:
           SQLX_OFFLINE: true
-          RUSTFLAGS: "-C linker=rust-lld"
+          RUSTFLAGS: "-C linker=rust-lld -C target-feature=+crt-static"
         run: |
           $config = '{\"build\":{\"beforeBuildCommand\":\"\"}}'
           pnpm tauri build --target ${{ matrix.target }} --config $config
@@ -112,7 +112,7 @@ jobs:
         shell: pwsh
         env:
           SQLX_OFFLINE: true
-          RUSTFLAGS: "-C linker=rust-lld"
+          RUSTFLAGS: "-C linker=rust-lld -C target-feature=+crt-static"
         run: |
           Push-Location src-tauri
           cargo build --bin tauri-app-template-cli --release --target ${{ matrix.target }}
