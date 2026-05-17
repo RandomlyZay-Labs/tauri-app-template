@@ -201,7 +201,7 @@ jobs:
           cd src-tauri && cargo build --bin tauri-app-template-cli --release
 
       - name: Upload GUI Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-bundle-${{ matrix.arch }}
           path: |
@@ -211,7 +211,7 @@ jobs:
           retention-days: 1
 
       - name: Upload CLI Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cli-linux-${{ matrix.arch }}
           path: src-tauri/target/release/tauri-app-template-cli
