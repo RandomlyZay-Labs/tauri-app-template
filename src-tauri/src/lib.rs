@@ -1,9 +1,9 @@
 pub mod api;
-mod cli;
+pub mod cli;
 mod commands;
 mod error;
-mod repositories;
-mod services;
+pub mod repositories;
+pub mod services;
 pub mod setup;
 mod state;
 pub mod util;
@@ -14,36 +14,7 @@ use std::sync::Mutex;
 use tauri::Manager;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri_plugin_cli::CliExt;
 use tauri_plugin_notification::NotificationExt;
-
-/// Checks raw process args to detect CLI subcommands/flags that should
-/// bypass the single-instance lock. This runs before the Tauri builder
-/// so the second process can boot its own app context against the shared DB.
-pub fn is_cli_invocation() -> bool {
-    let args: Vec<String> = std::env::args().collect();
-    is_cli_invocation_from_args(&args)
-}
-
-fn is_cli_invocation_from_args(args: &[String]) -> bool {
-    if args.len() <= 1 {
-        return false;
-    }
-
-    // Ignore macOS process serial number arg often passed to GUI apps
-    if args.len() == 2 && args[1].starts_with("-psn") {
-        return false;
-    }
-
-    // Only treat known CLI subcommands and flags as CLI invocations.
-    // Arbitrary arguments (file paths, protocol URLs) should not bypass
-    // the single-instance lock.
-    let cli_commands = [
-        "jobs", "download", "backup", "secret", "info",
-        "--help", "-h", "--version", "-v", "--json", "-j",
-    ];
-    args.iter().skip(1).any(|arg| cli_commands.contains(&arg.as_str()))
-}
 
 fn handle_single_instance<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _args: Vec<String>, _cwd: String) {
     // A duplicate GUI launch was attempted — bring the existing window to focus
@@ -60,7 +31,6 @@ fn handle_single_instance<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _args: V
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 pub fn run_app(dev_data_dir: Option<PathBuf>) {
     let specta_builder = api::collect();
-    let is_cli = is_cli_invocation();
 
     // Initialize PostHog analytics (Rust-side HTTP, bypasses WebView CORS).
     let _posthog_guard = better_posthog::init(better_posthog::ClientOptions {
@@ -68,17 +38,9 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
         ..Default::default()
     });
 
-    let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_cli::init())
-        .plugin(tauri_plugin_better_posthog::init());
-
-    // Only enforce single-instance for GUI launches. CLI invocations need their
-    // own process to access stdout and run against the shared database.
-    if !is_cli {
-        builder = builder.plugin(tauri_plugin_single_instance::init(handle_single_instance));
-    }
-
-    builder
+    tauri::Builder::default()
+        .plugin(tauri_plugin_better_posthog::init())
+        .plugin(tauri_plugin_single_instance::init(handle_single_instance))
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -134,27 +96,6 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                 job_manager: services::job_service::JobManager::new(db_pool),
                 watcher_manager: services::watcher_service::WatcherManager::new(),
             });
-
-            // DEBUG_VERSION: 1.0.1
-            // 6. CLI Handling
-            println!("[DEBUG] Calling app.cli().matches()...");
-            match app.cli().matches() {
-                Ok(matches) => {
-                    println!("[DEBUG] Matches retrieved: {:?}", matches);
-                    if cli::handle_cli(app.handle(), &matches) {
-                        // Explicitly flush stdout before exiting to ensure piped output is visible
-                        use std::io::Write;
-                        let _ = std::io::stdout().flush();
-                        app.handle().exit(0);
-                        std::process::exit(0);
-                    }
-                }
-                Err(e) => {
-                    println!("[DEBUG] CLI Match Error: {}", e);
-                    eprintln!("{}", e);
-                    std::process::exit(1);
-                }
-            }
 
             // 7. Webview Window Setup
             let state = app.state::<AppState>();
@@ -299,27 +240,6 @@ fn handle_tray_icon_event<R: tauri::Runtime>(tray: &tauri::tray::TrayIcon<R>, ev
 mod tests {
     use super::*;
     use tauri::Manager;
-
-    #[test]
-    fn test_is_cli_invocation_from_args() {
-        // No args
-        assert!(!is_cli_invocation_from_args(&["app".to_string()]));
-        
-        // Known subcommand
-        assert!(is_cli_invocation_from_args(&["app".to_string(), "jobs".to_string()]));
-        
-        // Known flag
-        assert!(is_cli_invocation_from_args(&["app".to_string(), "--help".to_string()]));
-        
-        // Mixed
-        assert!(is_cli_invocation_from_args(&["app".to_string(), "backup".to_string(), "--json".to_string()]));
-
-        // macOS -psn
-        assert!(!is_cli_invocation_from_args(&["app".to_string(), "-psn_0_123456".to_string()]));
-
-        // Arbitrary arg (e.g. file path or URL)
-        assert!(!is_cli_invocation_from_args(&["app".to_string(), "/path/to/file".to_string()]));
-    }
 
     #[tokio::test]
     async fn test_handle_menu_event_show() {

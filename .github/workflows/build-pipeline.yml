@@ -106,24 +106,30 @@ jobs:
           RUSTFLAGS: "-C linker=rust-lld"
         run: |
           $config = '{\"build\":{\"beforeBuildCommand\":\"\"}}'
-          
-          # Build the CLI wrapper binary and move it
-          Push-Location src-tauri
-          cargo build --bin tauri-app-template-cli --release --target ${{ matrix.target }}
-          
-          # Move the CLI wrapper to the nsis folder for easy bundling
-          $BinPath = "target/${{ matrix.target }}/release/tauri-app-template-cli.exe"
-          $CliPath = "nsis/tauri-app-template-cli.exe"
-          Move-Item -Path $BinPath -Destination $CliPath -Force
-          Pop-Location
-          
           pnpm tauri build --target ${{ matrix.target }} --config $config
 
-      - name: Upload Artifacts
+      - name: Build CLI Binary
+        shell: pwsh
+        env:
+          SQLX_OFFLINE: true
+          RUSTFLAGS: "-C linker=rust-lld"
+        run: |
+          Push-Location src-tauri
+          cargo build --bin tauri-app-template-cli --release --target ${{ matrix.target }}
+          Pop-Location
+
+      - name: Upload GUI Artifacts
         uses: actions/upload-artifact@v7
         with:
           name: windows-bundle-${{ matrix.arch }}
           path: src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+          retention-days: 1
+
+      - name: Upload CLI Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cli-windows-${{ matrix.arch }}
+          path: src-tauri/target/${{ matrix.target }}/release/tauri-app-template-cli.exe
           retention-days: 1
 
   # -----------------------------------------------------------------------
@@ -188,14 +194,27 @@ jobs:
         shell: bash
         run: pnpm tauri build --config '{"build":{"beforeBuildCommand":""}}'
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v7
+      - name: Build CLI Binary
+        env:
+          SQLX_OFFLINE: true
+        run: |
+          cd src-tauri && cargo build --bin tauri-app-template-cli --release
+
+      - name: Upload GUI Artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: linux-bundle-${{ matrix.arch }}
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/rpm/*.rpm
             src-tauri/target/release/bundle/appimage/*.AppImage
+          retention-days: 1
+
+      - name: Upload CLI Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-linux-${{ matrix.arch }}
+          path: src-tauri/target/release/tauri-app-template-cli
           retention-days: 1
 
   # -----------------------------------------------------------------------
@@ -217,16 +236,27 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
-      - name: Download Artifacts
+      - name: Download GUI Artifacts
         uses: actions/download-artifact@v8
         with:
           name: linux-bundle-${{ matrix.arch }}
           path: ./artifacts
 
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: cli-linux-${{ matrix.arch }}
+          path: ./cli-artifact
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libwebkit2gtk-4.1-dev libfuse2
+
+      - name: Test CLI Binary
+        run: |
+          chmod +x ./cli-artifact/tauri-app-template-cli
+          ./cli-artifact/tauri-app-template-cli --help
 
       - name: Test .deb installation and launch
         run: |
@@ -288,16 +318,27 @@ jobs:
       - name: Install Node.js for GitHub Actions
         run: dnf install -y nodejs
 
-      - name: Download Artifacts
+      - name: Download GUI Artifacts
         uses: actions/download-artifact@v8
         with:
           name: linux-bundle-${{ matrix.arch }}
           path: ./artifacts
 
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: cli-linux-${{ matrix.arch }}
+          path: ./cli-artifact
+
       - name: Install dependencies and RPM
         run: |
           dnf install -y xorg-x11-server-Xvfb procps-ng webkit2gtk4.1
           dnf install -y ./artifacts/rpm/*.rpm
+
+      - name: Test CLI Binary
+        run: |
+          chmod +x ./cli-artifact/tauri-app-template-cli
+          ./cli-artifact/tauri-app-template-cli --help
 
       - name: Test .rpm launch
         run: |
@@ -333,18 +374,30 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
-      - name: Download Artifacts
+      - name: Download GUI Artifacts
         uses: actions/download-artifact@v8
         with:
           name: windows-bundle-${{ matrix.arch }}
           path: ./artifacts
+
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: cli-windows-${{ matrix.arch }}
+          path: ./cli-artifact
+
+      - name: Test CLI Binary
+        shell: pwsh
+        run: |
+          .\cli-artifact\tauri-app-template-cli.exe --help
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Install and Launch App
         shell: pwsh
         run: |
           $Installer = Get-ChildItem -Path ./artifacts -Filter *.exe | Select-Object -First 1
           if (-not $Installer) {
-            Write-Error "Could not find the damn NSIS installer."
+            Write-Error "Could not find the NSIS installer."
             exit 1
           }
 

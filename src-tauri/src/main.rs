@@ -1,34 +1,11 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 // DEBUG_VERSION: 1.0.1
 use std::env;
 
 use tauri_app_template_lib::{run_app, util};
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    println!("[DEBUG] Raw Args: {:?}", args);
-
-    #[cfg(target_os = "windows")]
-    #[allow(unsafe_code)]
-    unsafe {
-        use windows::Win32::System::Console::GetConsoleWindow;
-        use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
-        
-        let is_cli = tauri_app_template_lib::is_cli_invocation();
-        println!("[DEBUG] is_cli_invocation: {}", is_cli);
-
-        if is_cli {
-            tauri_app_template_lib::setup::windows::attach_console();
-        } else {
-            println!("[DEBUG] Hiding console window...");
-            let hwnd = GetConsoleWindow();
-            if !hwnd.0.is_null() {
-                let _ = ShowWindow(hwnd, SW_HIDE);
-            }
-        }
-    }
-
     let _ = fix_path_env::fix();
-
 
     // ---------------------------------------------------------
     // 1. GENERATE BINDINGS (Dev Only)

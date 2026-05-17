@@ -107,6 +107,12 @@ impl WatcherManager {
     }
 }
 
+impl Default for WatcherManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {

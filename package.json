@@ -35,7 +35,7 @@
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui",
 		"dev": "vite",
-		"cli": "cd src-tauri && TAURI_APP_TEMPLATE_DATA_DIR=dev_data cargo run --",
+		"cli": "cd src-tauri && TAURI_APP_TEMPLATE_DATA_DIR=dev_data cargo run --bin tauri-app-template-cli --",
 		"build": "vite build",
 		"build:prod": "pnpm build && pnpm prune --prod --ignore-scripts",
 		"knip": "knip --treat-config-hints-as-errors",

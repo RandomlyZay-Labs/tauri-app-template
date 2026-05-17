@@ -1,38 +1,45 @@
-use std::env;
-use std::process::{Command, Stdio};
+#![allow(clippy::expect_used)]
+use clap::Parser;
+use tauri_app_template_lib::cli::{CliArgs, StandaloneContext, CliResult, run_cli};
+use tauri_app_template_lib::services::job_service::JobManager;
+use tauri_app_template_lib::services::download_service::DownloadManager;
 
-fn main() {
-    if let Err(e) = run() {
-        eprintln!("CLI Wrapper Error: {e}");
-        std::process::exit(1);
-    }
-}
-
-fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().skip(1).collect();
-    let current_exe = env::current_exe()?;
-    let exe_dir = current_exe.parent().ok_or("Failed to get exe directory")?;
+#[tokio::main]
+async fn main() {
+    let args = CliArgs::parse();
     
-    // Check if we are in a 'bin' subdirectory (installed state)
-    let mut target_exe = exe_dir.join("tauri-app-template.exe");
-    if !target_exe.exists() {
-        // Try parent directory (installed state where proxy is in $INSTDIR/bin/)
-        if let Some(parent) = exe_dir.parent() {
-            target_exe = parent.join("tauri-app-template.exe");
+    // Resolve data dir (mirrors Tauri's default logic for the app identifier)
+    let data_dir = if let Ok(val) = std::env::var("TAURI_APP_TEMPLATE_DATA_DIR") {
+        tauri_app_template_lib::util::resolve_dev_data_dir(val)
+    } else {
+        // Standard Tauri formula: {base_data_dir}/{identifier}
+        let identifier = "io.github.randomlyzay-labs.tauri-app-template";
+        dirs::data_dir()
+            .expect("Failed to resolve base data directory")
+            .join(identifier)
+    };
+
+    let log_dir = data_dir.join("logs");
+
+    let db_pool = tauri_app_template_lib::setup::database::init(Some(&data_dir))
+        .await
+        .expect("Failed to initialize database");
+
+    let ctx = StandaloneContext {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        product_name: "Tauri App Template".to_string(),
+        job_manager: JobManager::new(db_pool.clone()),
+        download_manager: DownloadManager::new(3),
+        db: db_pool,
+        data_dir,
+        log_dir,
+    };
+
+    match run_cli(&ctx, &args).await {
+        CliResult::Exit => {}
+        CliResult::Error(msg) => {
+            eprintln!("{msg}");
+            std::process::exit(1);
         }
     }
-
-    if !target_exe.exists() {
-        return Err("Could not find tauri-app-template.exe next to or above the CLI wrapper.".into());
-    }
-
-    let mut child = Command::new(target_exe)
-        .args(args)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()?;
-
-    let status = child.wait()?;
-    std::process::exit(status.code().unwrap_or(0));
 }

@@ -28,7 +28,6 @@
 		"notification:allow-notify",
 		"process:default",
 		"store:default",
-		"cli:default",
 		"better-posthog:default"
 	]
 }

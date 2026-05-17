@@ -2,6 +2,8 @@ use crate::error::CResult;
 use crate::services::download_service::{DownloadRequest, DownloadResult};
 use crate::state::AppState;
 use tauri::State;
+use std::sync::Arc;
+use crate::services::events::AppEmitter;
 
 #[tauri::command]
 #[specta::specta]
@@ -11,7 +13,7 @@ pub async fn start_download(
     request: DownloadRequest,
 ) -> CResult<DownloadResult> {
     log::debug!("[Command] start_download called with url: {}", request.url);
-    state.download_manager.start_download(app, request).await
+    state.download_manager.start_download(Arc::new(app) as Arc<dyn AppEmitter>, request).await
 }
 
 #[tauri::command]
