@@ -201,10 +201,27 @@ impl CliMgmtService {
         match download_result {
             Ok(_) => {
                 log::info!("[CliMgmtService] Download completed. Verifying checksum...");
-                let file_bytes = std::fs::read(&tmp_path).map_err(|e| {
-                    let _ = std::fs::remove_file(&tmp_path);
-                    Error::Io(e.to_string())
-                })?;
+                let file_bytes = match std::fs::read(&tmp_path) {
+                    Ok(bytes) => bytes,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = format!("Failed to read temporary download file: {}", e);
+                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(Error::Io(e.to_string()));
+                    }
+                };
 
                 use sha2::{Sha256, Digest};
                 let mut hasher = Sha256::new();
@@ -258,11 +275,10 @@ impl CliMgmtService {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
-                    if let Ok(metadata) = std::fs::metadata(&target_path) {
-                        let mut perms = metadata.permissions();
-                        perms.set_mode(0o755);
-                        if let Err(e) = std::fs::set_permissions(&target_path, perms) {
-                            let msg = format!("Failed to set permissions: {}", e);
+                    let metadata = match std::fs::metadata(&target_path) {
+                        Ok(m) => m,
+                        Err(e) => {
+                            let msg = format!("Failed to read metadata: {}", e);
                             job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
                             emit_job_progress(
                                 &*emitter,
@@ -278,6 +294,25 @@ impl CliMgmtService {
                             );
                             return Err(Error::Io(e.to_string()));
                         }
+                    };
+                    let mut perms = metadata.permissions();
+                    perms.set_mode(0o755);
+                    if let Err(e) = std::fs::set_permissions(&target_path, perms) {
+                        let msg = format!("Failed to set permissions: {}", e);
+                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(Error::Io(e.to_string()));
                     }
                 }
 
@@ -553,6 +588,108 @@ mod tests {
         // Verify file was NOT written to target path due to failure
         let cli_path = CliMgmtService::get_cli_path()?;
         assert!(!cli_path.is_file());
+        Ok(())
+    }
+
+    struct MockFailureFileSystem;
+
+    #[async_trait::async_trait]
+    impl crate::services::io::FileSystem for MockFailureFileSystem {
+        async fn create_dir_all(&self, path: &std::path::Path) -> std::io::Result<()> {
+            RealFileSystem.create_dir_all(path).await
+        }
+        async fn exists(&self, path: &std::path::Path) -> bool {
+            RealFileSystem.exists(path).await
+        }
+        async fn metadata_len(&self, path: &std::path::Path) -> std::io::Result<u64> {
+            RealFileSystem.metadata_len(path).await
+        }
+        async fn remove_file(&self, path: &std::path::Path) -> std::io::Result<()> {
+            RealFileSystem.remove_file(path).await
+        }
+        async fn copy(&self, from: &std::path::Path, to: &std::path::Path) -> std::io::Result<u64> {
+            RealFileSystem.copy(from, to).await
+        }
+        async fn create(&self, path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            if path.to_string_lossy().contains("sha256") {
+                RealFileSystem.create(path).await
+            } else {
+                Ok(Box::new(tokio::io::sink()))
+            }
+        }
+        async fn open_append(&self, path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            if path.to_string_lossy().contains("sha256") {
+                RealFileSystem.open_append(path).await
+            } else {
+                Ok(Box::new(tokio::io::sink()))
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_install_cli_read_failure() -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let path = temp.path().join("tauri-app-template-cli");
+        TEST_CLI_PATH.with(|p| {
+            *p.borrow_mut() = Some(path.clone());
+        });
+
+        // Generate checksum for mock binary
+        let mock_binary = b"mock CLI binary content".to_vec();
+        use sha2::{Sha256, Digest};
+        let mut hasher = Sha256::new();
+        hasher.update(&mock_binary);
+        let computed_sha = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let mock_checksum = format!("{}  tauri-app-template-cli\n", computed_sha);
+
+        // Setup mock tauri app and AppState
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+
+        let db = sqlx::SqlitePool::connect("sqlite::memory:").await?;
+        
+        // Run database migrations to set up the jobs table
+        sqlx::migrate!("./migrations")
+            .run(&db)
+            .await?;
+
+        let mock_network = Arc::new(MockCliNetwork {
+            checksum: mock_checksum,
+            binary: mock_binary,
+        });
+
+        let download_manager = DownloadManager::with_mocks(
+            1,
+            mock_network,
+            Arc::new(MockFailureFileSystem),
+        );
+
+        handle.manage(AppState {
+            db: db.clone(),
+            log_dir: temp.path().join("logs"),
+            app_data_dir: Some(temp.path().to_path_buf()),
+            tray_settings: Mutex::new(TraySettings {
+                minimize_to_tray: false,
+                notify_on_minimize: false,
+            }),
+            download_manager,
+            job_manager: JobManager::new(db.clone()),
+            watcher_manager: WatcherManager::new(),
+        });
+
+        let result = CliMgmtService::install_cli(handle.clone()).await;
+        assert!(result.is_err());
+
+        // Verify the job was marked as failed in the database
+        let jobs = sqlx::query!("SELECT status, message FROM jobs")
+            .fetch_all(&db)
+            .await?;
+        
+        // We registered 1 download job for the binary (excluding checksum, which runs instantly without job row)
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].status, "failed");
+        assert!(jobs[0].message.as_deref().unwrap_or_default().contains("Failed to read temporary download file"));
+
         Ok(())
     }
 }
