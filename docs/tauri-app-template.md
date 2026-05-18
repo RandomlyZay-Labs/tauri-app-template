@@ -13,6 +13,14 @@
   - Test auto-update flow on all systems
   - Research updating across multiple versions
 
+## feat/github-pages
+
+- Set up GitHub Pages
+- Create basic landing page
+  - OS-dependent download links
+- Embed repo metadata in DEB and RPM releases
+- Set up DEB and RPM repository metadata and point them to GitHub Releases
+  
 ## chore/release-prep
 
 - Template Finalization
