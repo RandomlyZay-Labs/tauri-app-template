@@ -2,7 +2,6 @@
 
 ## feat/cli-integration
 
-- Update dependencies
 - Push first release
 - Add an in-app "Install CLI" button in Settings which downloads the correct CLI binary and installs it to the user's PATH automatically, replacing the existing entire "Integrate AppImage" feature
 - Add CLI update manager to the app
