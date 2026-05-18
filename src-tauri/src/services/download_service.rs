@@ -5,11 +5,11 @@ use specta::Type;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::{Mutex, Semaphore};
 use tokio_util::sync::CancellationToken;
 use super::network::{NetworkClient, RealNetworkClient};
+use super::events::{AppEmitter, emit};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,7 +55,7 @@ pub struct DownloadResult {
     pub total_bytes: u64,
 }
 
-pub type ProgressCallback = fn(u64, Option<u64>, Option<u64>, Option<u64>);
+pub type ProgressCallback = Box<dyn Fn(u64, Option<u64>, Option<u64>, Option<u64>) + Send + Sync + 'static>;
 
 struct EmitProgressArgs<'a> {
     download_id: &'a str,
@@ -122,9 +122,9 @@ impl DownloadManager {
     }
 
     /// Begin a streaming download. Returns once the download is fully complete.
-    pub async fn start_download<R: tauri::Runtime>(
+    pub async fn start_download(
         &self,
-        app: AppHandle<R>,
+        emitter: Arc<dyn AppEmitter>,
         request: DownloadRequest,
     ) -> CResult<DownloadResult> {
         log::debug!("[DownloadService] Starting download for url: {}", request.url);
@@ -147,7 +147,7 @@ impl DownloadManager {
 
         let on_progress: Option<ProgressCallback> = None;
         let result = self
-            .run_download(&app, &download_id, &request, &token, on_progress)
+            .run_download(emitter.clone(), &download_id, &request, &token, on_progress)
             .await;
 
         drop(permit);
@@ -160,7 +160,7 @@ impl DownloadManager {
         match result {
             Ok(res) => {
                 emit_progress(
-                    &app,
+                    &*emitter,
                     EmitProgressArgs {
                         download_id: &download_id,
                         url: &request.url,
@@ -180,7 +180,7 @@ impl DownloadManager {
                     DownloadStatus::Failed
                 };
                 emit_progress(
-                    &app,
+                    &*emitter,
                     EmitProgressArgs {
                         download_id: &download_id,
                         url: &request.url,
@@ -214,16 +214,13 @@ impl DownloadManager {
 
     /// Run a download using an externally-provided cancellation token (e.g. from JobManager).
     /// Does NOT manage the token lifecycle — the caller is responsible.
-    pub async fn start_download_tracked<R: tauri::Runtime, F>(
+    pub async fn start_download_tracked(
         &self,
-        app: AppHandle<R>,
+        emitter: Arc<dyn AppEmitter>,
         request: DownloadRequest,
         token: &CancellationToken,
-        on_progress: Option<F>,
-    ) -> CResult<DownloadResult>
-    where
-        F: Fn(u64, Option<u64>, Option<u64>, Option<u64>) + Send + Sync + 'static,
-    {
+        on_progress: Option<ProgressCallback>,
+    ) -> CResult<DownloadResult> {
         validate_url(&request.url)?;
 
         let download_id = uuid::Uuid::new_v4().to_string();
@@ -235,14 +232,14 @@ impl DownloadManager {
             .await
             .map_err(|e| Error::Unknown(format!("Semaphore closed: {e}")))?;
 
-        let result = self.run_download(&app, &download_id, &request, token, on_progress).await;
+        let result = self.run_download(emitter.clone(), &download_id, &request, token, on_progress).await;
 
         drop(permit);
 
         match result {
             Ok(res) => {
                 emit_progress(
-                    &app,
+                    &*emitter,
                     EmitProgressArgs {
                         download_id: &download_id,
                         url: &request.url,
@@ -262,7 +259,7 @@ impl DownloadManager {
                     DownloadStatus::Failed
                 };
                 emit_progress(
-                    &app,
+                    &*emitter,
                     EmitProgressArgs {
                         download_id: &download_id,
                         url: &request.url,
@@ -282,17 +279,14 @@ impl DownloadManager {
     // Internal
     // -----------------------------------------------------------------------
 
-    async fn run_download<R: tauri::Runtime, F>(
+    async fn run_download(
         &self,
-        app: &AppHandle<R>,
+        emitter: Arc<dyn AppEmitter>,
         download_id: &str,
         request: &DownloadRequest,
         token: &CancellationToken,
-        on_progress: Option<F>,
-    ) -> CResult<DownloadResult>
-    where
-        F: Fn(u64, Option<u64>, Option<u64>, Option<u64>) + Send + Sync + 'static,
-    {
+        on_progress: Option<ProgressCallback>,
+    ) -> CResult<DownloadResult> {
         log::debug!("[DownloadService] Running download {} for url: {}", download_id, request.url);
         let dest_dir = PathBuf::from(&request.dest_dir);
         validate_directory(&dest_dir)?;
@@ -366,7 +360,7 @@ impl DownloadManager {
                                 });
 
                                 emit_progress(
-                                    app,
+                                    &*emitter,
                                     EmitProgressArgs {
                                         download_id,
                                         url: &request.url,
@@ -378,7 +372,7 @@ impl DownloadManager {
                                     },
                                 );
 
-                                if let Some(cb) = &on_progress {
+                                if let Some(ref cb) = on_progress {
                                     cb(bytes_downloaded, total_bytes, Some(speed_bps), eta_secs);
                                 }
                                 last_update = std::time::Instant::now();
@@ -406,7 +400,7 @@ impl DownloadManager {
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn emit_progress<R: tauri::Runtime>(app: &AppHandle<R>, args: EmitProgressArgs<'_>) {
+fn emit_progress(emitter: &dyn AppEmitter, args: EmitProgressArgs<'_>) {
     let percent = args
         .total_bytes
         .filter(|&t| t > 0)
@@ -423,7 +417,7 @@ fn emit_progress<R: tauri::Runtime>(app: &AppHandle<R>, args: EmitProgressArgs<'
         status: args.status,
     };
 
-    let _ = app.emit(EVENT_NAME, payload);
+    emit(emitter, EVENT_NAME, payload);
 }
 
 fn validate_url(url: &str) -> CResult<()> {
@@ -722,6 +716,11 @@ mod tests {
                 // Only write partial response then close
                 let response = "HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\n0123";
                 let _ = stream.write_all(response.as_bytes()).await;
+                let _ = stream.flush().await;
+
+                // Sleep briefly to allow the client to read the partial response
+                // before the connection is closed.
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                 // stream closes here as it goes out of scope
             }
         });
@@ -731,7 +730,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_resume_with_range() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
         let url = spawn_range_test_server().await;
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
@@ -741,7 +739,8 @@ mod tests {
         tokio::fs::write(&file_path, "01234").await?;
 
         let dm = DownloadManager::new(3);
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let req = DownloadRequest {
             url,
@@ -749,7 +748,7 @@ mod tests {
             filename: Some("resume_test.bin".to_string()),
         };
 
-        let result = dm.start_download(app, req).await?;
+        let result = dm.start_download(emitter, req).await?;
         assert_eq!(result.total_bytes, 10);
         
         let content = tokio::fs::read_to_string(&result.file_path).await?;
@@ -760,13 +759,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_network_drop() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
         let url = spawn_disconnecting_test_server().await;
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
         let dm = DownloadManager::new(3);
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let req = DownloadRequest {
             url,
@@ -774,7 +773,7 @@ mod tests {
             filename: Some("drop_test.bin".to_string()),
         };
 
-        let result = dm.start_download(app, req).await;
+        let result = dm.start_download(emitter, req).await;
         assert!(result.is_err());
         
         // Verify that some data was flushed to disk before failure
@@ -789,14 +788,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_start_download_completed() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
-        
         let url = spawn_test_server().await;
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
         let dm = DownloadManager::new(3);
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let req = DownloadRequest {
             url,
@@ -804,7 +802,7 @@ mod tests {
             filename: Some("test_file.bin".to_string()),
         };
 
-        let result = dm.start_download(app, req).await?;
+        let result = dm.start_download(emitter, req).await?;
         assert_eq!(result.total_bytes, 10);
         
         let content = tokio::fs::read_to_string(&result.file_path).await?;
@@ -815,13 +813,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_start_download_failed() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
-        
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
         let dm = DownloadManager::new(3);
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let req = DownloadRequest {
             url: "http://127.0.0.1:1".to_string(), // closed port
@@ -829,7 +826,7 @@ mod tests {
             filename: Some("test_fail.bin".to_string()),
         };
 
-        let result = dm.start_download(app, req).await;
+        let result = dm.start_download(emitter, req).await;
         assert!(result.is_err());
 
         Ok(())
@@ -837,14 +834,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_cancellation_behavior() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
         let url = spawn_slow_test_server().await;
         
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
         let dm = DownloadManager::new(3);
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let req = DownloadRequest {
             url,
@@ -853,8 +850,9 @@ mod tests {
         };
 
         let dm_clone = dm.clone_inner();
+        let e_clone = Arc::clone(&emitter);
         let handle = tokio::spawn(async move {
-            dm_clone.start_download(app, req).await
+            dm_clone.start_download(e_clone, req).await
         });
 
         // wait lightly to ensure it starts
@@ -901,7 +899,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_network_timeout() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
         let url = spawn_timeout_test_server().await;
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
@@ -913,7 +910,8 @@ mod tests {
             .unwrap();
         let dm = DownloadManager::with_mocks(1, Arc::new(RealNetworkClient::new(client)), Arc::new(RealFileSystem));
         
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let req = DownloadRequest {
             url,
@@ -921,7 +919,7 @@ mod tests {
             filename: Some("timeout_test.bin".to_string()),
         };
 
-        let result = dm.start_download(app, req).await;
+        let result = dm.start_download(emitter, req).await;
         assert!(result.is_err());
         
         if let Err(crate::error::Error::Network(msg)) = result {
@@ -936,7 +934,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_disk_full_simulation() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
         let url = spawn_test_server().await;
         
         struct FullFs;
@@ -956,7 +953,8 @@ mod tests {
         }
 
         let dm = DownloadManager::with_mocks(1, Arc::new(MockSuccessNetwork), Arc::new(FullFs));
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
@@ -967,7 +965,7 @@ mod tests {
             filename: Some("full_test.bin".to_string()),
         };
 
-        let result = dm.start_download(app, req).await;
+        let result = dm.start_download(emitter, req).await;
         assert!(result.is_err());
         
         // On Linux/Unix, it should be an IO error with ENOSPC
@@ -983,7 +981,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_range_mismatch_restart() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
         // This server ignores Range header and returns 200 OK
         let url = spawn_test_server().await;
         let tmp = tempfile::tempdir()?;
@@ -993,7 +990,8 @@ mod tests {
         tokio::fs::write(&file_path, "partial data that should be overwritten").await?;
 
         let dm = DownloadManager::new(1);
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let req = DownloadRequest {
             url,
@@ -1001,7 +999,7 @@ mod tests {
             filename: Some("mismatch_test.bin".to_string()),
         };
 
-        let result = dm.start_download(app, req).await?;
+        let result = dm.start_download(emitter, req).await?;
         assert_eq!(result.total_bytes, 10);
         
         let content = tokio::fs::read_to_string(&result.file_path).await?;
@@ -1014,8 +1012,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_start_download_tracked() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
-        
         // Use a custom slow server for this test
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -1037,7 +1033,8 @@ mod tests {
         let test_dir = tmp.path();
 
         let dm = DownloadManager::new(3);
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
         let token = CancellationToken::new();
 
         let req = DownloadRequest {
@@ -1047,13 +1044,13 @@ mod tests {
         };
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-        let on_progress = move |bytes: u64, total: Option<u64>, _speed: Option<u64>, _eta: Option<u64>| {
+        let on_progress = Box::new(move |bytes: u64, total: Option<u64>, _speed: Option<u64>, _eta: Option<u64>| {
             if bytes > 0 {
                 let _ = tx.send((bytes, total));
             }
-        };
+        });
 
-        let result = dm.start_download_tracked(app, req, &token, Some(on_progress)).await?;
+        let result = dm.start_download_tracked(emitter, req, &token, Some(on_progress)).await?;
         assert_eq!(result.total_bytes, 10);
         
         // Verify progress callback was called
@@ -1066,7 +1063,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_progress_percentage() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::{Manager, Listener};
+        use tauri::{Listener};
         use std::sync::atomic::{AtomicBool, Ordering};
         
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -1090,11 +1087,11 @@ mod tests {
         let test_dir = tmp.path();
 
         let dm = DownloadManager::new(1);
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
         let progress_seen = Arc::new(AtomicBool::new(false));
         let p_clone = progress_seen.clone();
 
-        app.listen(EVENT_NAME, move |event| {
+        app.listen(EVENT_NAME, move |event: tauri::Event| {
             let payload: DownloadProgress = serde_json::from_str(event.payload()).unwrap();
             if let Some(percent) = payload.percent
                 && percent > 0.0 && percent < 100.0 {
@@ -1108,7 +1105,8 @@ mod tests {
             filename: Some("percent.bin".to_string()),
         };
 
-        dm.start_download(app, req).await?;
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
+        dm.start_download(emitter, req).await?;
 
         assert!(progress_seen.load(Ordering::SeqCst), "Should have seen intermediate progress percentage");
 
@@ -1117,7 +1115,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_concurrency_limit() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Manager;
         use std::sync::atomic::{AtomicUsize, Ordering};
         
         let url = spawn_slow_test_server().await;
@@ -1125,7 +1122,7 @@ mod tests {
         let test_dir = tmp.path();
 
         let dm = DownloadManager::new(2); // Limit to 2 concurrent
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
         
         let active_count = Arc::new(AtomicUsize::new(0));
         let max_seen = Arc::new(AtomicUsize::new(0));
@@ -1133,7 +1130,7 @@ mod tests {
         let mut handles = Vec::new();
         for i in 0..5 {
             let dm_clone = dm.clone_inner();
-            let app_clone = app.clone();
+            let emitter = Arc::new(app.clone()) as Arc<dyn AppEmitter>;
             let req = DownloadRequest {
                 url: url.clone(),
                 dest_dir: test_dir.to_string_lossy().to_string(),
@@ -1155,7 +1152,7 @@ mod tests {
                     }
                 }
                 
-                let res = dm_clone.start_download(app_clone, req).await;
+                let res = dm_clone.start_download(emitter, req).await;
                 a_clone.fetch_sub(1, Ordering::SeqCst);
                 res
             }));
@@ -1165,36 +1162,19 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         assert_eq!(dm.semaphore.available_permits(), 0, "All permits should be taken");
         
-        // The semaphore itself enforces the limit, so dm.start_download will block.
-        // Our 'active_count' incremented BEFORE calling start_download, 
-        // so we should check how many actually entered the download logic?
-        // Wait, the semaphore is ACQUIRED inside start_download.
-        
-        // Let's modify the test to verify that no more than 2 downloads are running at once.
-        // We can check this by how many files are being created or by tracking inside DownloadManager.
-        // Since we can't easily track inside DownloadManager without modifying it, 
-        // we rely on the fact that start_download acquires the permit.
-        
-        // Actually, the best way to prove it is to see that 3 handles are still waiting.
-        
         let mut completed = 0;
         for h in handles {
             let _ = h.await;
             completed += 1;
         }
         assert_eq!(completed, 5);
-        // max_seen here would be 5 because we incremented it before start_download.
-        // To really test it, we'd need to increment it AFTER semaphore acquisition.
         
         Ok(())
     }
 
     #[tokio::test]
     async fn test_download_permission_denied() -> Result<(), Box<dyn std::error::Error>> {
-        use async_trait::async_trait;
-        use tauri::Manager;
         struct MockFs;
-        #[async_trait]
         #[async_trait]
         impl FileSystem for MockFs {
             async fn create_dir_all(&self, _path: &Path) -> std::io::Result<()> {
@@ -1224,7 +1204,8 @@ mod tests {
         }
 
         let dm = DownloadManager::with_mocks(1, Arc::new(MockSuccessNetwork), Arc::new(MockFs));
-        let app = tauri::test::mock_app().app_handle().clone();
+        let app = tauri::test::mock_app().handle().clone();
+        let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
         let req = DownloadRequest {
             url: "http://example.com/file.zip".to_string(),
@@ -1232,7 +1213,7 @@ mod tests {
             filename: None,
         };
 
-        let result: CResult<DownloadResult> = dm.start_download(app, req).await;
+        let result: CResult<DownloadResult> = dm.start_download(emitter, req).await;
         assert!(result.is_err());
 
         match result.unwrap_err() {

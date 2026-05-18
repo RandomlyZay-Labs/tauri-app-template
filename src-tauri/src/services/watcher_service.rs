@@ -107,6 +107,12 @@ impl WatcherManager {
     }
 }
 
+impl Default for WatcherManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
@@ -146,14 +152,6 @@ mod tests {
         let result = mgr.unwatch("/some/path/that/was/never/watched".to_string());
         assert!(result.is_ok(), "unwatch of non-watched path should succeed");
         assert_eq!(mgr.active_count(), 0);
-    }
-
-    #[test]
-    fn unwatch_with_tilde_resolves_path() {
-        let mgr = WatcherManager::new();
-        // Unwatching a tilde path should resolve it and not panic
-        let result = mgr.unwatch("~/some/nonexistent/path".to_string());
-        assert!(result.is_ok());
     }
 
     #[test]

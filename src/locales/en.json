@@ -14,7 +14,8 @@
 		"manual": "Manual",
 		"offline": "You are currently offline",
 		"reset": "Reset",
-		"close": "Close"
+		"close": "Close",
+		"note": "Note"
 	},
 	"sidebar": {
 		"appName": "Tauri App Template",
@@ -106,6 +107,10 @@
 		"addToPath": "Add to PATH",
 		"addedToPath": "Successfully added to PATH",
 		"failedToAddPath": "Failed to add to PATH",
+		"pathSuccessTitle": "Success!",
+		"pathSuccessMessage": "tauri-app-template has been added to your system's PATH for easier CLI usage.",
+		"pathSuccessRunNow": "To use the command in your terminal right now, run:",
+		"pathSuccessNote": "On some systems (like Ubuntu), you may need to log out and log back in for this change to take effect permanently.",
 		"onboarding": "Onboarding",
 		"rerunOnboarding": "Re-run Onboarding",
 		"onboardingDescription": "Re-run the initial setup process again.",

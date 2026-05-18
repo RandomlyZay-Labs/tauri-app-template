@@ -8,10 +8,29 @@ vi.mock('@/lib/store-utils', () => ({
 	savePersistedState: (...args: unknown[]) => mockSavePersistedState(...args),
 }));
 
+const mockGetSystemTheme = vi.fn().mockResolvedValue(null);
+const mockSetTheme = vi.fn().mockResolvedValue(null);
+
+vi.mock('@/bindings', () => ({
+	commands: {
+		getSystemTheme: (...args: unknown[]) => mockGetSystemTheme(...args),
+		setTheme: (...args: unknown[]) => mockSetTheme(...args),
+	},
+}));
+
+const mockListen = vi.fn().mockResolvedValue(vi.fn());
+
+vi.mock('@tauri-apps/api/event', () => ({
+	listen: (...args: unknown[]) => mockListen(...args),
+}));
+
 describe('themeStore', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockLoadPersistedState.mockResolvedValue({});
+		mockGetSystemTheme.mockResolvedValue(null);
+		mockSetTheme.mockClear();
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 		document.documentElement.classList.remove('light', 'dark');
 	});
 
@@ -20,6 +39,13 @@ describe('themeStore', () => {
 		const mod = await import('./themeStore.svelte');
 		await vi.waitFor(() => {
 			expect(mockLoadPersistedState).toHaveBeenCalled();
+		});
+		// Allow async applyTheme to complete
+		await vi.waitFor(() => {
+			const root = document.documentElement;
+			return (
+				root.classList.contains('dark') || root.classList.contains('light')
+			);
 		});
 		return mod.themeStore;
 	}
@@ -33,9 +59,11 @@ describe('themeStore', () => {
 		const store = await freshStore();
 
 		store.setTheme('dark');
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+		});
 
 		expect(store.theme).toBe('dark');
-		expect(document.documentElement.classList.contains('dark')).toBe(true);
 		expect(document.documentElement.classList.contains('light')).toBe(false);
 	});
 
@@ -43,9 +71,11 @@ describe('themeStore', () => {
 		const store = await freshStore();
 
 		store.setTheme('light');
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('light')).toBe(true);
+		});
 
 		expect(store.theme).toBe('light');
-		expect(document.documentElement.classList.contains('light')).toBe(true);
 		expect(document.documentElement.classList.contains('dark')).toBe(false);
 	});
 
@@ -54,21 +84,27 @@ describe('themeStore', () => {
 
 		store.setTheme('system');
 
-		const root = document.documentElement;
-		const hasThemeClass =
-			root.classList.contains('dark') || root.classList.contains('light');
-		expect(hasThemeClass).toBe(true);
+		await vi.waitFor(() => {
+			const root = document.documentElement;
+			const hasThemeClass =
+				root.classList.contains('dark') || root.classList.contains('light');
+			expect(hasThemeClass).toBe(true);
+		});
 	});
 
 	it('setTheme removes previous theme class before applying new one', async () => {
 		const store = await freshStore();
 
 		store.setTheme('dark');
-		expect(document.documentElement.classList.contains('dark')).toBe(true);
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+		});
 
 		store.setTheme('light');
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('light')).toBe(true);
+		});
 		expect(document.documentElement.classList.contains('dark')).toBe(false);
-		expect(document.documentElement.classList.contains('light')).toBe(true);
 	});
 
 	it('persists theme on setTheme', async () => {
@@ -100,5 +136,185 @@ describe('themeStore', () => {
 		expect(
 			root.classList.contains('dark') || root.classList.contains('light'),
 		).toBe(true);
+	});
+
+	it('updates theme automatically when system theme changes', async () => {
+		let changeHandler: (() => void) | null = null;
+		let matches = false;
+
+		vi.stubGlobal(
+			'matchMedia',
+			vi.fn().mockImplementation((query: string) => ({
+				matches,
+				media: query,
+				addEventListener: vi.fn().mockImplementation((event, handler) => {
+					if (event === 'change') changeHandler = handler;
+				}),
+				removeEventListener: vi.fn(),
+			})),
+		);
+
+		const store = await freshStore();
+		expect(store.theme).toBe('system');
+
+		// Initially light
+		matches = false;
+		store.setTheme('system');
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('light')).toBe(true);
+		});
+
+		// Switch to dark
+		matches = true;
+		if (changeHandler) (changeHandler as () => void)();
+
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+		});
+		expect(document.documentElement.classList.contains('light')).toBe(false);
+
+		vi.unstubAllGlobals();
+		vi.stubGlobal('navigator', { userAgent: 'Linux' }); // restore default
+	});
+
+	it('uses portal theme when matchMedia is unreliable', async () => {
+		mockGetSystemTheme.mockResolvedValue('dark');
+
+		const store = await freshStore();
+		expect(store.theme).toBe('system');
+
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+		});
+	});
+
+	it('falls back to matchMedia when portal returns null', async () => {
+		mockGetSystemTheme.mockResolvedValue(null);
+
+		const store = await freshStore();
+		expect(store.theme).toBe('system');
+
+		await vi.waitFor(() => {
+			const root = document.documentElement;
+			expect(
+				root.classList.contains('dark') || root.classList.contains('light'),
+			).toBe(true);
+		});
+	});
+
+	it('registers a listener for system-theme-changed events', async () => {
+		await freshStore();
+
+		expect(mockListen).toHaveBeenCalledWith(
+			'system-theme-changed',
+			expect.any(Function),
+		);
+	});
+
+	it('calls setTheme(null) when system theme is applied on Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Windows' });
+		const store = await freshStore();
+		mockSetTheme.mockClear();
+
+		store.setTheme('system');
+		await vi.waitFor(() => {
+			expect(mockSetTheme).toHaveBeenCalledWith(null);
+		});
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+	});
+
+	it('calls setTheme(resolved) when system theme is applied on non-Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		const store = await freshStore();
+		mockSetTheme.mockClear();
+
+		store.setTheme('system');
+		await vi.waitFor(() => {
+			expect(mockSetTheme).toHaveBeenCalledWith(
+				expect.stringMatching(/dark|light/),
+			);
+		});
+	});
+
+	it('updates class and calls setTheme when system-theme-changed fires on non-Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		await freshStore();
+		mockSetTheme.mockClear();
+
+		// Get the callback registered with listen
+		const callback = mockListen.mock.calls.find(
+			(call) => call[0] === 'system-theme-changed',
+		)?.[1];
+		expect(callback).toBeDefined();
+
+		// Simulate event
+		callback({ payload: 'dark' });
+
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+			expect(mockSetTheme).toHaveBeenCalledWith('dark');
+		});
+	});
+
+	it('updates class but does NOT call setTheme when system-theme-changed fires on Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Windows' });
+		await freshStore();
+		mockSetTheme.mockClear();
+
+		// Get the callback registered with listen
+		const callback = mockListen.mock.calls.find(
+			(call) => call[0] === 'system-theme-changed',
+		)?.[1];
+		expect(callback).toBeDefined();
+
+		// Simulate event
+		callback({ payload: 'dark' });
+
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+			expect(mockSetTheme).not.toHaveBeenCalled();
+		});
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+	});
+
+	it('updates class to light and calls setTheme(null) when system-theme-changed fires with no-preference on non-Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		await freshStore();
+		mockSetTheme.mockClear();
+
+		// Get the callback registered with listen
+		const callback = mockListen.mock.calls.find(
+			(call) => call[0] === 'system-theme-changed',
+		)?.[1];
+		expect(callback).toBeDefined();
+
+		// Simulate event with 'no-preference'
+		callback({ payload: 'no-preference' });
+
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('light')).toBe(true);
+			expect(mockSetTheme).toHaveBeenCalledWith(null);
+		});
+	});
+
+	it('updates class to light but does NOT call setTheme when system-theme-changed fires with no-preference on Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Windows' });
+		await freshStore();
+		mockSetTheme.mockClear();
+
+		// Get the callback registered with listen
+		const callback = mockListen.mock.calls.find(
+			(call) => call[0] === 'system-theme-changed',
+		)?.[1];
+		expect(callback).toBeDefined();
+
+		// Simulate event with 'no-preference'
+		callback({ payload: 'no-preference' });
+
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('light')).toBe(true);
+			expect(mockSetTheme).not.toHaveBeenCalled();
+		});
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 	});
 });

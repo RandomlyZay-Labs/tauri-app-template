@@ -1,71 +1,17 @@
 use crate::error::CResult;
-use regex::Regex;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
 
 // --- CONSTANTS ---
-// The name of the folder in the OS data directory where all app data will be stored.
-pub const DATA_FOLDER_NAME: &str = "tauri-app-template";
-
 const MARKER_WIPE_NAME: &str = ".pending_wipe";
 pub const MARKER_RESTORE_NAME: &str = ".pending_restore";
 pub const RESTORE_STAGING_NAME: &str = "restore.db.tmp";
 const DB_NAME: &str = "tauri_app_template.db";
 
-// Global regexes for path expansion. 
-// These are allowed to use `.expect()` because they are static initializers.
-#[allow(clippy::expect_used)]
-static RE_UNIX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\$(\w+)|\$\{(\w+)\}").expect("Invalid RE_UNIX"));
-
-#[allow(clippy::expect_used)]
-static RE_WIN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"%(\w+)%").expect("Invalid RE_WIN"));
-
-/// Resolves the OS-specific data directory.
-pub fn resolve_os_app_data_dir() -> PathBuf {
-    use directories::BaseDirs;
-
-    if let Some(base_dirs) = BaseDirs::new() {
-        return base_dirs.data_local_dir().to_path_buf();
-    }
-    PathBuf::from("data")
-}
-
-/// Resolves a path string with support for `~`, `$VAR`, and `%VAR%` expansion.
+/// Resolves a path string.
 pub fn resolve_path(path_str: &str) -> CResult<PathBuf> {
-    use directories::BaseDirs;
-
-    // 1. Expand `~` to user's home directory
-    let mut expanded = if path_str.starts_with("~/") || path_str == "~" {
-        if let Some(base_dirs) = BaseDirs::new() {
-            path_str.replacen("~", base_dirs.home_dir().to_string_lossy().as_ref(), 1)
-        } else {
-            path_str.to_string()
-        }
-    } else {
-        path_str.to_string()
-    };
-
-    // 2. Expand environment variables (Unix style: $VAR or ${VAR})
-    expanded = RE_UNIX
-        .replace_all(&expanded, |caps: &regex::Captures| {
-            let key = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str()).unwrap_or_default();
-            env::var(key).unwrap_or_else(|_| caps.get(0).map(|m| m.as_str()).unwrap_or_default().to_string())
-        })
-        .to_string();
-
-    // 3. Expand environment variables (Windows style: %VAR%)
-    expanded = RE_WIN
-        .replace_all(&expanded, |caps: &regex::Captures| {
-            let key = caps.get(1).map(|m| m.as_str()).unwrap_or_default();
-            env::var(key).unwrap_or_else(|_| caps.get(0).map(|m| m.as_str()).unwrap_or_default().to_string())
-        })
-        .to_string();
-
-    Ok(PathBuf::from(expanded))
+    Ok(PathBuf::from(path_str))
 }
 
 /// Resolves the development data directory relative to the Project Root.
@@ -178,12 +124,6 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_resolve_os_app_data_dir() {
-        let dir = resolve_os_app_data_dir();
-        assert!(!dir.to_string_lossy().is_empty());
-    }
-
-    #[test]
     fn test_resolve_dev_data_dir() {
         // Absolute path
         let abs_path = if cfg!(windows) { "C:\\test" } else { "/tmp/test" };
@@ -263,28 +203,12 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_path_env_vars() {
-        unsafe {
-            env::set_var("TEST_RESOLVE_VAR", "my_value");
-        }
-        let p = resolve_path("$TEST_RESOLVE_VAR/file.txt").expect("failed to resolve path");
-        assert!(p.to_string_lossy().contains("my_value"));
+    fn test_resolve_path_remains_literal() {
+        let tilde_path = resolve_path("~/test").expect("failed to resolve");
+        assert_eq!(tilde_path, PathBuf::from("~/test"));
 
-        // Windows style
-        let p_win = resolve_path("%TEST_RESOLVE_VAR%/file.txt").expect("failed to resolve path win");
-        assert!(p_win.to_string_lossy().contains("my_value"));
-
-        unsafe {
-            env::remove_var("TEST_RESOLVE_VAR");
-        }
-    }
-
-    #[test]
-    fn test_resolve_path_home() {
-        let p = resolve_path("~/test").expect("failed to resolve home");
-        let s = p.to_string_lossy();
-        assert!(s.ends_with("test"));
-        assert!(!s.starts_with("~"));
+        let env_var_path = resolve_path("$VAR/test").expect("failed to resolve");
+        assert_eq!(env_var_path, PathBuf::from("$VAR/test"));
     }
 
     #[test]
@@ -367,10 +291,10 @@ mod tests {
         // Target should still be "old" because marker was missing
         assert_eq!(fs::read_to_string(&target).unwrap(), "old");
         assert!(staging.exists());
-        }
+    }
 
-        #[test]
-        fn test_factory_reset_failure_mid_execution() {
+    #[test]
+    fn test_factory_reset_failure_mid_execution() {
         let tmp = tempdir().expect("Failed to create temp dir");
         let data_dir = tmp.path();
 
@@ -396,10 +320,10 @@ mod tests {
         // store_file (the directory) should STILL EXIST because remove_file failed
         assert!(store_file.exists());
         assert!(store_file.is_dir());
-        }
+    }
 
-        #[test]
-        fn test_restore_failure_on_rename() {
+    #[test]
+    fn test_restore_failure_on_rename() {
         let tmp = tempdir().expect("Failed to create temp dir");
         let data_dir = tmp.path();
 
@@ -424,5 +348,5 @@ mod tests {
         assert!(staging.exists());
         // Target should still be a directory
         assert!(target.is_dir());
-        }
-        }
+    }
+}

@@ -1,131 +1,100 @@
-use crate::services::log_service;
-use std::path::PathBuf;
+use std::path::Path;
 use tauri::{Runtime, plugin::TauriPlugin};
 use tauri_plugin_log::{Builder, Target, TargetKind};
+use std::fs;
+use std::time::SystemTime;
+use chrono::{DateTime, Local, NaiveDateTime};
 
 pub fn init<R: Runtime>(
-    custom_data_dir: Option<&PathBuf>,
-    folder_name: &str,
-) -> (PathBuf, TauriPlugin<R>) {
-    // 1. Resolve log directory
-    let log_dir = resolve_log_dir(custom_data_dir, folder_name);
-
-    // 2. Rotate and prune logs before initializing the plugin to prevent file locks
-    if let Some(ref dir) = log_dir {
-        log_service::rotate_log(dir);
-        log_service::prune_logs(dir, 10);
-    }
-
-    let app_state_log_dir = log_dir.unwrap_or_default();
-
-    let root_data_dir = custom_data_dir.cloned().unwrap_or_else(|| {
-        crate::util::resolve_os_app_data_dir().join(folder_name)
-    });
+    app_data_dir: &Path,
+    app_log_dir: &Path,
+) -> TauriPlugin<R> {
     
-    let level = crate::setup::log_config::read_log_level(&root_data_dir);
+    // 1. Rotate previous session log
+    rotate_log(app_log_dir);
+    
+    // 2. Prune old logs
+    prune_logs(app_log_dir, 10);
 
     // 3. Configure Plugin
-    let target = if let Some(path) = custom_data_dir {
-        // If custom data dir, put logs in a subdirectory there
-        Target::new(TargetKind::Folder {
-            path: path.join("logs"),
-            file_name: Some("latest".to_string()),
-        })
-    } else {
-        // Otherwise use standard system log directory
-        Target::new(TargetKind::LogDir {
-            file_name: Some("latest".to_string()),
-        })
-    };
+    let target = Target::new(TargetKind::Folder {
+        path: app_log_dir.to_path_buf(),
+        file_name: Some("latest".to_string()),
+    });
 
-    let builder = Builder::new().targets([target]).level(level);
+    // 4. Read log level from config
+    let level = crate::setup::log_config::read_log_level(app_data_dir);
 
-    (app_state_log_dir, builder.build())
+    // We don't need tauri_plugin_log's RotationStrategy because we are handling it manually on startup.
+    Builder::new()
+        .targets([target])
+        .level(level)
+        .build()
 }
 
-fn resolve_log_dir(custom_data_dir: Option<&PathBuf>, folder_name: &str) -> Option<PathBuf> {
-    if let Some(path) = custom_data_dir {
-        return Some(path.join("logs"));
+/// Rotates the `latest.log` file to a timestamped file.
+fn rotate_log(log_dir: &Path) {
+    if !log_dir.exists() {
+        let _ = fs::create_dir_all(log_dir);
+        return;
     }
 
-    use directories::BaseDirs;
-    if let Some(base_dirs) = BaseDirs::new() {
-        let log_dir = if cfg!(target_os = "macos") {
-            base_dirs.home_dir().join("Library/Logs").join(folder_name)
-        } else {
-            // Windows, Linux, and others
-            base_dirs.data_local_dir().join(folder_name).join("logs")
-        };
-        return Some(log_dir);
+    let current_log_path = log_dir.join("latest.log");
+    if current_log_path.exists() {
+        let metadata = fs::metadata(&current_log_path).ok();
+        let timestamp = metadata
+            .as_ref()
+            .and_then(|m| m.created().ok())
+            .or_else(|| metadata.as_ref().and_then(|m| m.modified().ok()))
+            .unwrap_or_else(SystemTime::now);
+
+        let datetime: DateTime<Local> = timestamp.into();
+        let formatted_time = datetime.format("%Y-%m-%d_%H-%M-%S");
+        let new_name = format!("{}.log", formatted_time);
+        let new_path = log_dir.join(new_name);
+
+        let _ = fs::rename(&current_log_path, &new_path);
     }
-    None
 }
 
-#[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    #[test]
-    fn test_resolve_log_dir_custom() {
-        let custom_dir = PathBuf::from("/tmp/custom_data");
-        let log_dir = resolve_log_dir(Some(&custom_dir), "myapp");
-        assert_eq!(log_dir, Some(custom_dir.join("logs")));
+/// Prunes old log files, keeping only the most recent `max_files`.
+fn prune_logs(log_dir: &Path, max_files: usize) {
+    if !log_dir.exists() {
+        return;
     }
 
-    #[test]
-    fn test_resolve_log_dir_default() {
-        let log_dir = resolve_log_dir(None, "myapp");
-        assert!(log_dir.is_some());
-        let path = log_dir.unwrap();
-        assert!(path.to_string_lossy().contains("myapp"));
-        if cfg!(target_os = "macos") {
-            assert!(path.to_string_lossy().contains("Library/Logs"));
-        } else if !cfg!(windows) {
-            // Linux/Unix
-            assert!(path.to_string_lossy().contains("logs"));
+    let mut log_files = Vec::new();
+    if let Ok(entries) = fs::read_dir(log_dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
+                if file_name == "latest.log" || path.extension().and_then(|s| s.to_str()) != Some("log") {
+                    continue;
+                }
+
+                if let Some(parsed_ts) = path.file_stem().and_then(|s| s.to_str()).and_then(|stem| {
+                    NaiveDateTime::parse_from_str(stem, "%Y-%m-%d_%H-%M-%S").ok()
+                }) {
+                    let modified_time = fs::metadata(&path).and_then(|m| m.modified()).ok();
+                    log_files.push((path, modified_time, parsed_ts));
+                }
+            }
         }
     }
 
-    #[test]
-    fn test_init_triggers_rotation_and_pruning() {
-        let tmp = tempfile::tempdir().unwrap();
-        let custom_dir = tmp.path().to_path_buf();
-        let log_dir = custom_dir.join("logs");
-        std::fs::create_dir_all(&log_dir).unwrap();
+    log_files.sort_by(|(path_a, time_a, parsed_a), (path_b, time_b, parsed_b)| {
+        time_b.cmp(time_a)
+            .then_with(|| parsed_b.cmp(parsed_a))
+            .then_with(|| path_b.cmp(path_a))
+    });
 
-        // 1. Create an existing 'latest.log' to be rotated
-        let latest_log = log_dir.join("latest.log");
-        std::fs::write(&latest_log, "previous session log").unwrap();
-
-        // 2. Create multiple old logs to trigger pruning (limit is 10)
-        for i in 0..15 {
-            let log_name = format!("2024-01-{:02}_10-00-00.log", i + 1);
-            std::fs::write(log_dir.join(log_name), "old log").unwrap();
+    if log_files.len() > max_files {
+        for (path, _, _) in log_files.iter().skip(max_files) {
+            let _ = fs::remove_file(path);
         }
-
-        assert_eq!(std::fs::read_dir(&log_dir).unwrap().count(), 16); // 1 latest + 15 old
-
-        // 3. Call init
-        let (returned_log_dir, _plugin) = init::<tauri::Wry>(Some(&custom_dir), "myapp");
-
-        assert_eq!(returned_log_dir, log_dir);
-
-        // 4. Verify rotation: 'latest.log' should be gone (renamed)
-        assert!(!latest_log.exists());
-
-        // 5. Verify pruning: should have at most 10 timestamped logs + the one just rotated
-        // Total should be around 11 (10 oldest kept + 1 newly rotated)
-        let file_count = std::fs::read_dir(&log_dir).unwrap().count();
-        assert!(file_count <= 11, "Expected around 11 log files, found {}", file_count);
-    }
-
-    #[test]
-    fn test_init_no_custom_dir() {
-        // This test mostly ensures it doesn't panic and returns a sensible path
-        let (log_dir, _plugin) = init::<tauri::Wry>(None, "myapp");
-        assert!(!log_dir.to_string_lossy().is_empty());
-        assert!(log_dir.to_string_lossy().contains("myapp"));
     }
 }

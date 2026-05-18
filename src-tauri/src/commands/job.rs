@@ -3,6 +3,8 @@ use crate::services::download_service::DownloadRequest;
 use crate::services::job_service::{self, JobRow};
 use crate::state::AppState;
 use tauri::State;
+use std::sync::Arc;
+use crate::services::events::AppEmitter;
 
 #[tauri::command]
 #[specta::specta]
@@ -34,7 +36,7 @@ pub async fn submit_download_job(
 ) -> CResult<JobRow> {
     log::debug!("[Command] submit_download_job called with url: {}", request.url);
     job_service::spawn_download_job(
-        app,
+        Arc::new(app) as Arc<dyn AppEmitter>,
         &state.job_manager,
         &state.download_manager,
         request,

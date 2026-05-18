@@ -14,7 +14,8 @@
 		"manual": "Manual",
 		"offline": "No tienes conexión a internet",
 		"reset": "Restablecer",
-		"close": "Cerrar"
+		"close": "Cerrar",
+		"note": "Nota"
 	},
 	"sidebar": {
 		"appName": "Tauri App Template",
@@ -107,6 +108,10 @@
 		"addToPath": "Añadir a PATH",
 		"addedToPath": "Añadido exitosamente a PATH",
 		"failedToAddPath": "Error al añadir a PATH",
+		"pathSuccessTitle": "¡Éxito!",
+		"pathSuccessMessage": "tauri-app-template se ha añadido al PATH de tu sistema para facilitar el uso de la CLI.",
+		"pathSuccessRunNow": "Para usar el comando en tu terminal ahora mismo, ejecuta:",
+		"pathSuccessNote": "En algunos sistemas (como Ubuntu), es posible que debas cerrar sesión y volver a entrar para que este cambio surta efecto de forma permanente.",
 		"onboarding": "Bienvenida e introducción",
 		"rerunOnboarding": "Volver a ejecutar bienvenida",
 		"onboardingDescription": "Vuelve a ejecutar el proceso de configuración inicial.",

@@ -5,5 +5,6 @@ pub mod job;
 pub mod notification;
 pub mod security;
 pub mod system;
+pub mod theme;
 pub mod tray;
 pub mod watcher;
