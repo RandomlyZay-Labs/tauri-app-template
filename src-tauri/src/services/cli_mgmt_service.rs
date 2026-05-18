@@ -16,8 +16,6 @@ pub struct CliMgmtService;
 
 impl CliMgmtService {
     pub fn get_cli_path() -> CResult<PathBuf> {
-        let home = dirs::home_dir().ok_or_else(|| Error::Unknown("Could not find home directory".into()))?;
-        
         #[cfg(windows)]
         {
             let local_app_data = dirs::data_local_dir().ok_or_else(|| Error::Unknown("Could not find LocalAppData directory".into()))?;
@@ -26,6 +24,7 @@ impl CliMgmtService {
         
         #[cfg(not(windows))]
         {
+            let home = dirs::home_dir().ok_or_else(|| Error::Unknown("Could not find home directory".into()))?;
             Ok(home.join(".local").join("bin").join("tauri-app-template-cli"))
         }
     }
@@ -33,7 +32,7 @@ impl CliMgmtService {
     pub fn get_cli_status() -> CResult<CliStatus> {
         let path = Self::get_cli_path()?;
         
-        if !path.exists() {
+        if !path.is_file() {
             return Ok(CliStatus {
                 installed: false,
                 version: None,
@@ -58,7 +57,7 @@ impl CliMgmtService {
             _ => {
                 // If it fails to run, we treat it as installed but unknown version
                 Ok(CliStatus {
-                    installed: true,
+                    installed: path.is_file(),
                     version: None,
                 })
             }
@@ -91,7 +90,7 @@ impl CliMgmtService {
         log::info!("[CliMgmtService] Downloading CLI from {}", url);
 
         // 2. Download the binary
-        let response = reqwest::get(url).await.map_err(|e| Error::Unknown(format!("Download failed: {}", e)))?;
+        let response = reqwest::get(&url).await.map_err(|e| Error::Unknown(format!("Download failed: {}", e)))?;
         if !response.status().is_success() {
             return Err(Error::Unknown(format!("Download failed with status: {}", response.status())));
         }
@@ -101,11 +100,42 @@ impl CliMgmtService {
         // 3. Ensure target directory exists
         std::fs::create_dir_all(target_dir).map_err(|e| Error::Io(e.to_string()))?;
 
-        // 4. Write to temp file first then rename
+        // 4. Verify checksum
+        let sha256_url = format!("{}.sha256", url);
+        log::info!("[CliMgmtService] Downloading SHA-256 checksum from {}", sha256_url);
+        let sha_response = reqwest::get(&sha256_url).await.map_err(|e| Error::Unknown(format!("Checksum download failed: {}", e)))?;
+        if !sha_response.status().is_success() {
+            return Err(Error::Unknown(format!("Checksum download failed with status: {}", sha_response.status())));
+        }
+        let sha_text = sha_response.text().await.map_err(|e| Error::Unknown(format!("Failed to read checksum response: {}", e)))?;
+        let expected_sha = sha_text.split_whitespace().next().ok_or_else(|| Error::Unknown("Empty checksum file".into()))?.to_lowercase();
+
+        use sha2::{Sha256, Digest};
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes);
+        let hash_result = hasher.finalize();
+        let computed_sha = hash_result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+
         let mut tmp_path = target_path.clone();
         tmp_path.set_extension("download");
-        std::fs::write(&tmp_path, bytes).map_err(|e| Error::Io(e.to_string()))?;
-        std::fs::rename(&tmp_path, &target_path).map_err(|e| Error::Io(e.to_string()))?;
+
+        if computed_sha != expected_sha {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(Error::Unknown(format!(
+                "Integrity check failed: checksum mismatch. Expected: {}, Computed: {}",
+                expected_sha, computed_sha
+            )));
+        }
+
+        // 5. Write to temp file first then rename
+        if let Err(e) = std::fs::write(&tmp_path, bytes) {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(Error::Io(e.to_string()));
+        }
+        if let Err(e) = std::fs::rename(&tmp_path, &target_path) {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(Error::Io(e.to_string()));
+        }
 
         // 5. Set executable permissions on Unix
         #[cfg(unix)]
@@ -127,16 +157,26 @@ impl CliMgmtService {
         #[cfg(windows)]
         {
             let dir_str = target_dir.to_str().ok_or_else(|| Error::Unknown("Invalid path".into()))?;
+            let dir_str_escaped = dir_str.replace('\'', "''");
             let script = format!(
                 r#"$oldPath = [Environment]::GetEnvironmentVariable("Path", "User"); if ($oldPath -split ';' -notcontains '{}') {{ [Environment]::SetEnvironmentVariable("Path", $oldPath + ";{}", "User") }}"#,
-                dir_str, dir_str
+                dir_str_escaped, dir_str_escaped
             );
             
-            Command::new("powershell")
+            let output = Command::new("powershell")
                 .arg("-Command")
                 .arg(script)
                 .output()
-                .map_err(|e| Error::Unknown(format!("Failed to update PATH via PowerShell: {}", e)))?;
+                .map_err(|e| Error::Unknown(format!("Failed to run PowerShell process: {}", e)))?;
+
+            if !output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(Error::Unknown(format!(
+                    "PowerShell script failed with exit code: {:?}. stdout: {}, stderr: {}",
+                    output.status.code(), stdout, stderr
+                )));
+            }
         }
 
         #[cfg(unix)]
