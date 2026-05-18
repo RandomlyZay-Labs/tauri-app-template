@@ -39,7 +39,7 @@ mod tests {
     use std::collections::HashMap;
     use keyring_core::api::{CredentialApi, CredentialStoreApi};
 
-    type MockStore = Arc<Mutex<HashMap<String, Vec<u8>>>>;
+    type MockStore = Arc<Mutex<HashMap<(String, String), Vec<u8>>>>;
 
     static STORE: LazyLock<MockStore> = 
         LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
@@ -88,14 +88,14 @@ mod tests {
             if let Some(err) = INJECTED_ERROR.lock().unwrap().take() {
                 return Err(err);
             }
-            self.store.lock().unwrap().insert(self.user.clone(), secret.to_vec());
+            self.store.lock().unwrap().insert((self.service.clone(), self.user.clone()), secret.to_vec());
             Ok(())
         }
         fn get_secret(&self) -> keyring_core::error::Result<Vec<u8>> {
             if let Some(err) = INJECTED_ERROR.lock().unwrap().take() {
                 return Err(err);
             }
-            self.store.lock().unwrap().get(&self.user)
+            self.store.lock().unwrap().get(&(self.service.clone(), self.user.clone()))
                 .cloned()
                 .ok_or(keyring_core::Error::NoEntry)
         }
@@ -103,7 +103,7 @@ mod tests {
             if let Some(err) = INJECTED_ERROR.lock().unwrap().take() {
                 return Err(err);
             }
-            self.store.lock().unwrap().remove(&self.user)
+            self.store.lock().unwrap().remove(&(self.service.clone(), self.user.clone()))
                 .map(|_| ())
                 .ok_or(keyring_core::Error::NoEntry)
         }
@@ -129,8 +129,8 @@ mod tests {
         use std::sync::Once;
         static INIT: Once = Once::new();
         INIT.call_once(|| {
-            // Use try_lock to avoid panicking if something went wrong in a previous test
-            // although here we are inside call_once.
+            // Initialize the default global store with our mock builder exactly once,
+            // so that all test runs share the same mock registry during unit testing.
             keyring_core::set_default_store(Arc::new(MyMockBuilder { 
                 store: Arc::clone(&STORE) 
             }));
@@ -258,5 +258,20 @@ mod tests {
         assert!(err.to_string().contains("OS Keychain Locked"));
         
         clear_mock_error();
+    }
+
+    #[test]
+    fn test_service_isolation_in_mock() {
+        let _guard = use_mock_keyring();
+        let key = "shared_key";
+        
+        let entry1 = Entry::new("service.one", key).expect("entry 1");
+        let entry2 = Entry::new("service.two", key).expect("entry 2");
+        
+        entry1.set_password("secret-one").expect("set 1");
+        entry2.set_password("secret-two").expect("set 2");
+        
+        assert_eq!(entry1.get_password().expect("get 1"), "secret-one");
+        assert_eq!(entry2.get_password().expect("get 2"), "secret-two");
     }
 }
