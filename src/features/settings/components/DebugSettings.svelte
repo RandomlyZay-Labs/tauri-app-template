@@ -1,8 +1,11 @@
 <script lang="ts">
-import { commands } from '@/lib/ipc';
+import { Button } from '@/components/ui/button';
+import * as Card from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import * as Tooltip from '@/components/ui/tooltip';
 import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
+import { commands } from '@/lib/ipc';
 import {
     exitApp,
     relaunchApp,
@@ -20,9 +23,6 @@ import {
     RefreshCw,
     RotateCcw,
 } from '@lucide/svelte';
-import { Button } from '@/components/ui/button';
-import * as Card from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 
 let shouldCrash = $state(false);
 let debugOn = $derived(

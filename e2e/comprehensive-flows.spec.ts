@@ -287,6 +287,7 @@ test.describe('Comprehensive User Flows', () => {
 		await installBtn.click();
 		await expect(page.getByText(/CLI installed successfully/i)).toBeVisible();
 		await expect(page.getByText(/Up to Date/i)).toBeVisible();
+		await expect(page.getByText(/v0\.1\.0/)).toBeVisible();
 	});
 
 	test('Debug Settings - tray, notifications, dialogs, logs, crash', async ({

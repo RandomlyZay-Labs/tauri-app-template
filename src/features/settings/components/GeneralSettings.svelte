@@ -21,10 +21,7 @@ import {
     FolderOpen,
     Rocket,
     RotateCcw,
-    Terminal,
-    Trash2,
-    Copy,
-    Check
+    Trash2
 } from '@lucide/svelte';
 import { onMount } from 'svelte';
 import { push } from 'svelte-spa-router';
@@ -39,7 +36,6 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 let showResetDialog = $state(false);
 let showPrefResetDialog = $state(false);
 let deleteConfirmation = $state('');
-let showPathSuccessDialog = $state(false);
 let copied = $state(false);
 
 onMount(() => {
@@ -266,48 +262,6 @@ async function copyCommand() {
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (showResetDialog = false)}>{t('common.cancel')}</Button>
 			<Button variant="destructive" onclick={confirmResetApp} disabled={deleteConfirmation !== confirmPhrase}>{t('generalSettings.deleteEverything')}</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
-
-<!-- PATH Success Dialog -->
-<Dialog.Root bind:open={showPathSuccessDialog}>
-	<Dialog.Content>
-		<Dialog.Header>
-			<Dialog.Title>{t('generalSettings.pathSuccessTitle')}</Dialog.Title>
-			<Dialog.Description class="space-y-4 pt-2 text-foreground">
-				<p class="font-bold">
-					{t('generalSettings.pathSuccessMessage')}
-				</p>
-				
-				<div class="space-y-2">
-					<p>{t('generalSettings.pathSuccessRunNow')}</p>
-					<div class="relative group">
-						<code class="block rounded bg-muted p-3 pr-12 font-mono text-sm border">
-							tauri-app-template
-						</code>
-						<Button 
-							variant="ghost" 
-							size="icon" 
-							class="absolute right-1.5 top-1.5 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-							onclick={copyCommand}
-						>
-							{#if copied}
-								<Check class="size-4 text-green-500" />
-							{:else}
-								<Copy class="size-4" />
-							{/if}
-						</Button>
-					</div>
-				</div>
-
-				<p class="text-muted-foreground text-sm">
-					<strong>{t('common.note')}:</strong> {t('generalSettings.pathSuccessNote')}
-				</p>
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Button class="w-full" onclick={() => (showPathSuccessDialog = false)}>{t('common.done')}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

@@ -2,15 +2,15 @@
 import { Button } from '@/components/ui/button';
 import * as Card from '@/components/ui/card';
 import * as Tooltip from '@/components/ui/tooltip';
-import { executeSafeAction } from '@/lib/async-utils';
 import { getAppVersion } from '@/lib/app-version.svelte';
+import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
 import { getCliStatus, installCli } from '@/lib/system-utils';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
-import { Download, RefreshCw, Terminal, CheckCircle2, AlertCircle, Copy, Check } from '@lucide/svelte';
-import { onMount } from 'svelte';
+import { AlertCircle, Check, CheckCircle2, Copy, Download, RefreshCw, Terminal } from '@lucide/svelte';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { onMount } from 'svelte';
 
 let cliStatus = $state<{ installed: boolean; version: string | null } | null>(null);
 let isLoading = $state(false);

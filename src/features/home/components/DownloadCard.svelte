@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Button } from '@/components/ui/button';
+import * as Card from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
@@ -10,7 +11,6 @@ import { toast } from '@/lib/toast';
 import { activityStore } from '@/stores/activityStore.svelte';
 import { Download, FolderOpen, Loader2 } from '@lucide/svelte';
 import { open } from '@tauri-apps/plugin-dialog';
-import * as Card from '@/components/ui/card';
 
 let url = $state('');
 let destDir = $state('');

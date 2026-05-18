@@ -16,8 +16,8 @@ import {
 } from '@lucide/svelte';
 import { formatDistanceToNow } from 'date-fns';
 import { flip } from 'svelte/animate';
-import { fade, fly, scale } from 'svelte/transition';
 import { quintOut } from 'svelte/easing';
+import { fade, fly } from 'svelte/transition';
 
 
 function getIcon(type: string) {

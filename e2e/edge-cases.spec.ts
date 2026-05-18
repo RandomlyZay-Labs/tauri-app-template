@@ -100,5 +100,10 @@ test.describe('Edge Cases & Resiliency', () => {
 
 		// 3. Verify error handling (should show error toast)
 		await expect(page.getByText(/Failed to install CLI/i)).toBeVisible();
+
+		// 4. Validate recoverability: status should still be "Not Installed" and button should be enabled/actionable
+		await expect(page.getByText('Not Installed')).toBeVisible();
+		await expect(installBtn).toBeVisible();
+		await expect(installBtn).toBeEnabled();
 	});
 });
