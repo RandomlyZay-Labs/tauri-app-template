@@ -53,10 +53,10 @@ export const MOCK_IPC_DEFAULTS: Partial<Commands> = {
 	async unwatchPath(_path: string) {
 		return null;
 	},
-	async isAppimage() {
-		return false;
+	async getCliStatus() {
+		return { installed: false, version: null };
 	},
-	async integrateAppimage() {
+	async installCli() {
 		return null;
 	},
 	async notify(_title: string, _body: string) {
@@ -204,8 +204,8 @@ export async function injectMockIpc(
 				return null;
 			},
 			unwatchPath: () => null,
-			isAppimage: () => false,
-			integrateAppimage: () => null,
+			getCliStatus: () => ({ installed: false, version: null }),
+			installCli: () => null,
 			notify: () => null,
 			submitDownloadJob: (args: unknown) => ({
 				id: 'mock-job-1',

@@ -15,7 +15,9 @@
 		"offline": "You are currently offline",
 		"reset": "Reset",
 		"close": "Close",
-		"note": "Note"
+		"note": "Note",
+		"copy": "Copy to clipboard",
+		"copied": "Copied!"
 	},
 	"sidebar": {
 		"appName": "Tauri App Template",
@@ -69,6 +71,7 @@
 		"general": "General",
 		"appearance": "Appearance",
 		"backups": "Backups",
+		"cli": "CLI",
 		"debug": "Debug"
 	},
 	"generalSettings": {
@@ -101,16 +104,6 @@
 		"failedToResetApp": "Failed to reset application",
 		"couldNotOpenLogDir": "Could not open log directory",
 		"couldNotOpenDataDir": "Could not open data directory",
-		"appImage": "AppImage",
-		"appImageIntegration": "AppImage Integration",
-		"appImageIntegrationDescription": "Integrate the AppImage with your system by adding it to your PATH.",
-		"addToPath": "Add to PATH",
-		"addedToPath": "Successfully added to PATH",
-		"failedToAddPath": "Failed to add to PATH",
-		"pathSuccessTitle": "Success!",
-		"pathSuccessMessage": "tauri-app-template has been added to your system's PATH for easier CLI usage.",
-		"pathSuccessRunNow": "To use the command in your terminal right now, run:",
-		"pathSuccessNote": "On some systems (like Ubuntu), you may need to log out and log back in for this change to take effect permanently.",
 		"onboarding": "Onboarding",
 		"rerunOnboarding": "Re-run Onboarding",
 		"onboardingDescription": "Re-run the initial setup process again.",
@@ -118,6 +111,23 @@
 		"telemetryDescription": "Manage anonymous usage data and error reporting.",
 		"enableTelemetry": "Enable Analytics & Error Tracking",
 		"telemetryStatus": "Opt-in to help us improve the app with anonymous data."
+	},
+	"cliSettings": {
+		"title": "CLI Integration",
+		"description": "Manage the command-line interface for tauri-app-template.",
+		"status": "CLI Status",
+		"notInstalled": "Not Installed",
+		"upToDate": "Up to Date",
+		"versionMismatch": "Version Mismatch",
+		"installCli": "Install CLI",
+		"updateCli": "Update CLI",
+		"installed": "Installed",
+		"installSuccess": "CLI installed successfully",
+		"installFailed": "Failed to install CLI",
+		"howToUse": "How to use",
+		"usageDescription": "Once installed, you can use the CLI from any terminal to interact with the application database and perform system tasks.",
+		"pathNoteTitle": "System PATH",
+		"pathNoteDescription": "The installer will attempt to add the CLI to your system's PATH. You may need to restart your terminal or log out for the changes to take effect."
 	},
 	"appearanceSettings": {
 		"title": "Appearance",

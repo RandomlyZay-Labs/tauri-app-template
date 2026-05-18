@@ -219,7 +219,7 @@ test.describe('Comprehensive User Flows', () => {
 		await expect(dialog.getByText('Cancelled', { exact: true })).toBeVisible();
 	});
 
-	test('General Settings - resets and AppImage', async ({ page }) => {
+	test('Settings - Resets and CLI Management', async ({ page }) => {
 		await page.goto('/#/settings');
 		await page.getByTestId('tab-trigger-general').click();
 
@@ -259,23 +259,34 @@ test.describe('Comprehensive User Flows', () => {
 		await telemetrySwitch.click();
 		await expect(page.getByText(/Telemetry updated/i)).toBeVisible();
 
-		// AppImage integration (mock isAppImage to true)
+		// CLI Management (Mock not installed)
 		await injectMockIpc(page, {
-			isAppimage: true,
+			get_cli_status: { installed: false, version: null },
 		});
 		await page.reload();
-		await page.getByTestId('tab-trigger-general').click();
-		await expect(page.getByText('AppImage', { exact: true })).toBeVisible();
+		await page.getByTestId('tab-trigger-cli').click();
 
-		const integrateBtn = page.locator('#appimage-integrate-btn');
-		await expect(integrateBtn).toBeVisible();
-		await integrateBtn.click();
+		await expect(page.getByText(/CLI Integration/i)).toBeVisible();
+		await expect(page.getByText(/Not Installed/i)).toBeVisible();
 
-		await expect(page.getByText('Success!', { exact: true })).toBeVisible();
-		await expect(
-			page.getByText(/has been added to your system's PATH/i),
-		).toBeVisible();
-		await page.getByRole('button', { name: /^Done$/i }).click();
+		const installBtn = page.getByRole('button', { name: /Install CLI/i });
+		await expect(installBtn).toBeVisible();
+
+		// Mock success after install using the dynamic update event
+		await page.evaluate(() => {
+			window.dispatchEvent(
+				new CustomEvent('tauri-mock-update', {
+					detail: {
+						command: 'get_cli_status',
+						response: { installed: true, version: '0.1.0' },
+					},
+				}),
+			);
+		});
+
+		await installBtn.click();
+		await expect(page.getByText(/CLI installed successfully/i)).toBeVisible();
+		await expect(page.getByText(/Up to Date/i)).toBeVisible();
 	});
 
 	test('Debug Settings - tray, notifications, dialogs, logs, crash', async ({

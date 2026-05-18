@@ -43,9 +43,9 @@ pub fn collect() -> Builder {
             // Watcher commands
             commands::watcher::watch_path,
             commands::watcher::unwatch_path,
-            // AppImage commands
-            commands::appimage::is_appimage,
-            commands::appimage::integrate_appimage,
+            // CLI management commands
+            commands::cli_mgmt::get_cli_status,
+            commands::cli_mgmt::install_cli,
             // Theme commands
             commands::theme::get_system_theme,
             commands::theme::set_theme,

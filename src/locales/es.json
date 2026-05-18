@@ -15,7 +15,9 @@
 		"offline": "No tienes conexión a internet",
 		"reset": "Restablecer",
 		"close": "Cerrar",
-		"note": "Nota"
+		"note": "Nota",
+		"copy": "Copiar al portapapeles",
+		"copied": "¡Copiado!"
 	},
 	"sidebar": {
 		"appName": "Tauri App Template",
@@ -70,6 +72,7 @@
 		"general": "General",
 		"appearance": "Apariencia",
 		"backups": "Copias de seguridad",
+		"cli": "CLI",
 		"debug": "Depuración"
 	},
 	"generalSettings": {
@@ -102,16 +105,6 @@
 		"failedToResetApp": "Error al restablecer la aplicación",
 		"couldNotOpenLogDir": "No se pudo abrir el directorio de registros",
 		"couldNotOpenDataDir": "No se pudo abrir el directorio de datos",
-		"appImage": "AppImage",
-		"appImageIntegration": "Integración de AppImage",
-		"appImageIntegrationDescription": "Integra la AppImage con tu sistema añadiéndola a tu PATH.",
-		"addToPath": "Añadir a PATH",
-		"addedToPath": "Añadido exitosamente a PATH",
-		"failedToAddPath": "Error al añadir a PATH",
-		"pathSuccessTitle": "¡Éxito!",
-		"pathSuccessMessage": "tauri-app-template se ha añadido al PATH de tu sistema para facilitar el uso de la CLI.",
-		"pathSuccessRunNow": "Para usar el comando en tu terminal ahora mismo, ejecuta:",
-		"pathSuccessNote": "En algunos sistemas (como Ubuntu), es posible que debas cerrar sesión y volver a entrar para que este cambio surta efecto de forma permanente.",
 		"onboarding": "Bienvenida e introducción",
 		"rerunOnboarding": "Volver a ejecutar bienvenida",
 		"onboardingDescription": "Vuelve a ejecutar el proceso de configuración inicial.",
@@ -119,6 +112,23 @@
 		"telemetryDescription": "Gestionar datos de uso anónimos e informes de errores.",
 		"enableTelemetry": "Habilitar análisis y seguimiento de errores",
 		"telemetryStatus": "Participa para ayudarnos a mejorar la aplicación con datos anónimos."
+	},
+	"cliSettings": {
+		"title": "Integración de CLI",
+		"description": "Gestionar la interfaz de línea de comandos para tauri-app-template.",
+		"status": "Estado de CLI",
+		"notInstalled": "No instalado",
+		"upToDate": "Actualizado",
+		"versionMismatch": "Versión no coincidente",
+		"installCli": "Instalar CLI",
+		"updateCli": "Actualizar CLI",
+		"installed": "Instalado",
+		"installSuccess": "CLI instalado correctamente",
+		"installFailed": "Error al instalar la CLI",
+		"howToUse": "Cómo utilizar",
+		"usageDescription": "Una vez instalado, puede utilizar la CLI desde cualquier terminal para interactuar con la base de datos de la aplicación y realizar tareas del sistema.",
+		"pathNoteTitle": "PATH del sistema",
+		"pathNoteDescription": "El instalador intentará añadir la CLI al PATH de su sistema. Es posible que deba reiniciar su terminal o cerrar sesión para que los cambios surtan efecto."
 	},
 	"appearanceSettings": {
 		"title": "Apariencia",

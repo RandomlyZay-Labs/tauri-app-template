@@ -81,23 +81,24 @@ test.describe('Edge Cases & Resiliency', () => {
 		await expect(page.getByPlaceholder('Type a command')).not.toBeVisible();
 	});
 
-	test('AppImage integration failure recovery', async ({ page }) => {
-		// Mock integrateAppimage to FAIL using special __THROW__ property
+	test('CLI installation failure recovery', async ({ page }) => {
+		// Mock install_cli to FAIL using special __THROW__ property
 		await injectMockIpc(page, {
-			isAppimage: true,
-			integrateAppimage: { __THROW__: 'Permission denied: /usr/local/bin' },
+			get_cli_status: { installed: false, version: null },
+			install_cli: { __THROW__: 'Download failed: 404 Not Found' },
 		});
 
 		await page.goto('/#/settings');
+		await page.getByTestId('tab-trigger-cli').click();
 
-		// 1. Ensure AppImage section is visible
-		const integrateBtn = page.locator('#appimage-integrate-btn');
-		await expect(integrateBtn).toBeVisible({ timeout: 10000 });
+		// 1. Ensure Install button is visible
+		const installBtn = page.getByRole('button', { name: /Install CLI/i });
+		await expect(installBtn).toBeVisible();
 
-		// 2. Click Integrate
-		await integrateBtn.click();
+		// 2. Click Install
+		await installBtn.click();
 
 		// 3. Verify error handling (should show error toast)
-		await expect(page.getByText(/Failed to add to PATH/i)).toBeVisible();
+		await expect(page.getByText(/Failed to install CLI/i)).toBeVisible();
 	});
 });

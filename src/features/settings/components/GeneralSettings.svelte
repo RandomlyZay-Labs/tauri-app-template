@@ -4,8 +4,6 @@ import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
 import { logger } from '@/lib/logger';
 import {
-    checkIsAppImage,
-    integrateAppImage,
     openDataDirectory,
     openLogDirectory,
     relaunchApp,
@@ -41,12 +39,10 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 let showResetDialog = $state(false);
 let showPrefResetDialog = $state(false);
 let deleteConfirmation = $state('');
-let isAppImage = $state(false);
 let showPathSuccessDialog = $state(false);
 let copied = $state(false);
 
 onMount(() => {
-        void checkIsAppImage().then((v) => (isAppImage = v));
 });
 
 const confirmPhrase = t('generalSettings.confirmPhrase');
@@ -87,15 +83,6 @@ function handleOpenData() {
         });
 }
 
-function handleIntegrateAppImage() {
-        void executeSafeAction(
-                async () => {
-                        await integrateAppImage();
-                        showPathSuccessDialog = true;
-                },
-                { errorMessage: t('generalSettings.failedToAddPath') },
-        );
-}
 function handleRerunOnboarding() {
         uiStore.setOnboardingCompleted(false);
         void push('/onboarding');
@@ -177,32 +164,6 @@ async function copyCommand() {
 			</Tooltip.Root>
 		</Card.Content>
 	</Card.Root>
-
-	{#if isAppImage}
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{t('generalSettings.appImage')}</Card.Title>
-			</Card.Header>
-			<Card.Content>
-				<Tooltip.Root>
-					<Tooltip.Trigger class="w-full text-left">
-						<div class="flex items-center justify-between">
-							<div class="space-y-0.5">
-								<label for="appimage-integrate-btn" class="text-sm font-medium leading-none">{t('generalSettings.appImageIntegration')}</label>
-							</div>
-							<Button id="appimage-integrate-btn" variant="outline" onclick={handleIntegrateAppImage}>
-								<Terminal class="mr-2 size-4" />
-								{t('generalSettings.addToPath')}
-							</Button>
-						</div>
-					</Tooltip.Trigger>
-					<Tooltip.Content side="top" align="center">
-						<p>{t('generalSettings.appImageIntegrationDescription')}</p>
-					</Tooltip.Content>
-				</Tooltip.Root>
-			</Card.Content>
-		</Card.Root>
-	{/if}
 
 	<Card.Root>
 		<Card.Header>
