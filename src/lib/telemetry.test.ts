@@ -1,4 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -14,11 +13,11 @@ vi.mock('@/stores/uiStore.svelte', () => ({
 
 describe('telemetry', () => {
 	beforeEach(async () => {
+		vi.resetModules();
+		vi.clearAllMocks();
 		const uiStoreMod = await import('@/stores/uiStore.svelte');
 		uiStoreMod.uiStore.telemetryEnabled = true;
 		uiStoreMod.uiStore._hasHydrated = true;
-		vi.resetModules();
-		vi.clearAllMocks();
 	});
 
 	it('initializes telemetry correctly', async () => {
@@ -29,6 +28,7 @@ describe('telemetry', () => {
 
 	it('captures events if enabled and initialized', async () => {
 		const { initTelemetry, captureEvent } = await import('./telemetry');
+		const { invoke } = await import('@tauri-apps/api/core');
 		initTelemetry();
 		captureEvent('test_event', { foo: 'bar' });
 
@@ -40,6 +40,7 @@ describe('telemetry', () => {
 
 	it('does not capture events if not initialized', async () => {
 		const { captureEvent } = await import('./telemetry');
+		const { invoke } = await import('@tauri-apps/api/core');
 		captureEvent('test_event', { foo: 'bar' });
 
 		expect(invoke).not.toHaveBeenCalled();
@@ -50,6 +51,7 @@ describe('telemetry', () => {
 		uiStoreMod.uiStore.telemetryEnabled = false;
 
 		const { initTelemetry, captureEvent } = await import('./telemetry');
+		const { invoke } = await import('@tauri-apps/api/core');
 		initTelemetry();
 		captureEvent('test_event', { foo: 'bar' });
 
@@ -60,6 +62,7 @@ describe('telemetry', () => {
 		const { initTelemetry, updateTelemetryConsent } = await import(
 			'./telemetry'
 		);
+		const { invoke } = await import('@tauri-apps/api/core');
 		initTelemetry();
 
 		updateTelemetryConsent(true);

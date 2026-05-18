@@ -272,4 +272,41 @@ describe('themeStore', () => {
 		expect(mockSetTheme).not.toHaveBeenCalled();
 		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 	});
+
+	it('updates class to light and calls setTheme(null) when system-theme-changed fires with no-preference on non-Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		await freshStore();
+		mockSetTheme.mockClear();
+
+		// Get the callback registered with listen
+		const callback = mockListen.mock.calls.find(
+			(call) => call[0] === 'system-theme-changed',
+		)?.[1];
+		expect(callback).toBeDefined();
+
+		// Simulate event with 'no-preference'
+		callback({ payload: 'no-preference' });
+
+		expect(document.documentElement.classList.contains('light')).toBe(true);
+		expect(mockSetTheme).toHaveBeenCalledWith(null);
+	});
+
+	it('updates class to light but does NOT call setTheme when system-theme-changed fires with no-preference on Windows', async () => {
+		vi.stubGlobal('navigator', { userAgent: 'Windows' });
+		await freshStore();
+		mockSetTheme.mockClear();
+
+		// Get the callback registered with listen
+		const callback = mockListen.mock.calls.find(
+			(call) => call[0] === 'system-theme-changed',
+		)?.[1];
+		expect(callback).toBeDefined();
+
+		// Simulate event with 'no-preference'
+		callback({ payload: 'no-preference' });
+
+		expect(document.documentElement.classList.contains('light')).toBe(true);
+		expect(mockSetTheme).not.toHaveBeenCalled();
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+	});
 });

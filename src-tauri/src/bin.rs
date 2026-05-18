@@ -1,29 +1,35 @@
-#![allow(clippy::expect_used)]
 use clap::Parser;
 use tauri_app_template_lib::cli::{CliArgs, StandaloneContext, CliResult, run_cli};
 use tauri_app_template_lib::services::job_service::JobManager;
 use tauri_app_template_lib::services::download_service::DownloadManager;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> std::process::ExitCode {
     let args = CliArgs::parse();
     
     // Resolve data dir (mirrors Tauri's default logic for the app identifier)
     let data_dir = if let Ok(val) = std::env::var("TAURI_APP_TEMPLATE_DATA_DIR") {
         tauri_app_template_lib::util::resolve_dev_data_dir(val)
     } else {
-        // Standard Tauri formula: {base_data_dir}/{identifier}
         let identifier = "io.github.randomlyzay-labs.tauri-app-template";
-        dirs::data_dir()
-            .expect("Failed to resolve base data directory")
-            .join(identifier)
+        match dirs::data_dir() {
+            Some(dir) => dir.join(identifier),
+            None => {
+                eprintln!("Error: Failed to resolve base data directory");
+                return std::process::ExitCode::from(1);
+            }
+        }
     };
 
     let log_dir = data_dir.join("logs");
 
-    let db_pool = tauri_app_template_lib::setup::database::init(Some(&data_dir))
-        .await
-        .expect("Failed to initialize database");
+    let db_pool = match tauri_app_template_lib::setup::database::init(Some(&data_dir)).await {
+        Ok(pool) => pool,
+        Err(err) => {
+            eprintln!("Error: Failed to initialize database: {err}");
+            return std::process::ExitCode::from(1);
+        }
+    };
 
     let ctx = StandaloneContext {
         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -33,13 +39,15 @@ async fn main() {
         db: db_pool,
         data_dir,
         log_dir,
+        download_timeout: None,
     };
 
     match run_cli(&ctx, &args).await {
-        CliResult::Exit => {}
+        CliResult::Exit => std::process::ExitCode::SUCCESS,
         CliResult::Error(msg) => {
             eprintln!("{msg}");
-            std::process::exit(1);
+            std::process::ExitCode::from(1)
         }
     }
 }
+

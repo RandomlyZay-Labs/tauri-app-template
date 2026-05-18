@@ -341,7 +341,7 @@ async function copyCommand() {
 				</div>
 
 				<p class="text-muted-foreground text-sm">
-					<strong>Note:</strong> {t('generalSettings.pathSuccessNote')}
+					<strong>{t('common.note')}:</strong> {t('generalSettings.pathSuccessNote')}
 				</p>
 			</Dialog.Description>
 		</Dialog.Header>

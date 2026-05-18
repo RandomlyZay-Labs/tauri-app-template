@@ -23,6 +23,9 @@ vi.mock('@/lib/toast', () => ({
 	},
 }));
 
+// Helper to flush the microtask/promise queue
+const flushPromises = () => Promise.resolve();
+
 describe('GeneralSettings', () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
@@ -170,14 +173,17 @@ describe('GeneralSettings', () => {
 
 		render(GeneralSettings);
 
-		// Wait for onMount and isAppImage state to update
-		await tick();
+		// First, flush the asynchronous checkIsAppImage() promise scheduled in onMount.
+		// Then, await the subsequent Svelte reactive update cycle to render the AppImage card.
+		await flushPromises();
 		await tick();
 
 		const integrateBtn = await screen.findByText('generalSettings.addToPath');
 		await fireEvent.click(integrateBtn);
 
-		await tick();
+		// First, flush the asynchronous integrateAppImage() promise scheduled inside the button's click handler.
+		// Then, await the subsequent Svelte reactive update cycle to render the PATH success dialog.
+		await flushPromises();
 		await tick();
 
 		expect(screen.getByText('generalSettings.pathSuccessTitle')).toBeTruthy();

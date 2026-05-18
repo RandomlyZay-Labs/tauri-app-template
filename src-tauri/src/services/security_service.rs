@@ -1,7 +1,7 @@
 use crate::error::{CResult, Error};
 use keyring::Entry;
 
-const SERVICE_NAME: &str = "io.github.randomlyzay.tauri-app-template";
+const SERVICE_NAME: &str = "io.github.randomlyzay-labs.tauri-app-template";
 
 pub fn set_secret(key: &str, value: &str) -> CResult<()> {
     log::debug!("[SecurityService] Setting secret");

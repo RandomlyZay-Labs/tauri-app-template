@@ -137,6 +137,7 @@ pub fn spawn_theme_watcher<R: tauri::Runtime>(app_handle: tauri::AppHandle<R>) {
 
         // Clean up the child process
         let _ = child.kill();
+        let _ = child.wait();
     });
 }
 

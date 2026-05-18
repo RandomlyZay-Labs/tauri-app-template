@@ -78,18 +78,24 @@ class ThemeStore {
 		void listen<string>('system-theme-changed', (event) => {
 			if (this.theme !== 'system') return;
 
-			const resolved = event.payload === 'dark' ? 'dark' : 'light';
+			const resolved = ['dark', 'light', 'no-preference'].includes(
+				event.payload,
+			)
+				? event.payload
+				: 'light';
 
 			const root = window.document.documentElement;
 			root.classList.remove('light', 'dark');
-			root.classList.add(resolved);
+			root.classList.add(resolved === 'no-preference' ? 'light' : resolved);
 
 			// On non-Windows platforms (like Linux), we need to explicitly lock the backend theme
 			// to ensure the window decorations (titlebar) update correctly.
 			// On Windows, we skip this to maintain the native theme tracking state (setTheme(null)).
 			const isWindows = navigator.userAgent.includes('Win');
 			if (!isWindows) {
-				void executeSafeAction(() => commands.setTheme(resolved));
+				void executeSafeAction(() =>
+					commands.setTheme(resolved === 'no-preference' ? null : resolved),
+				);
 			}
 		});
 	}

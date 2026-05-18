@@ -188,6 +188,7 @@ pub struct StandaloneContext {
     pub db: sqlx::SqlitePool,
     pub data_dir: std::path::PathBuf,
     pub log_dir: std::path::PathBuf,
+    pub download_timeout: Option<std::time::Duration>,
 }
 
 #[async_trait]
@@ -236,14 +237,28 @@ impl CliContext for StandaloneContext {
         ).await?;
 
         // Poll until terminal state in CLI
-        loop {
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            let current = self.job_manager.get_job(&job.id).await?;
-            if current.status == JobStatus::Completed
-                || current.status == JobStatus::Failed
-                || current.status == JobStatus::Cancelled
-            {
-                break;
+        let max_duration = self.download_timeout.unwrap_or(std::time::Duration::from_secs(600));
+
+        let poll_res = tokio::time::timeout(max_duration, async {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                let current = self.job_manager.get_job(&job.id).await?;
+                if current.status == JobStatus::Completed
+                    || current.status == JobStatus::Failed
+                    || current.status == JobStatus::Cancelled
+                {
+                    break Ok::<(), crate::error::Error>(());
+                }
+            }
+        }).await;
+
+        match poll_res {
+            Ok(inner) => inner?,
+            Err(_) => {
+                return Err(crate::error::Error::Unknown(format!(
+                    "Timed out waiting for job {} to reach a terminal JobStatus",
+                    job.id
+                )));
             }
         }
 
@@ -377,13 +392,19 @@ async fn run_jobs_cli(ctx: &impl CliContext, command: &JobsCommands, json_format
         JobsCommands::Cancel { id } => {
             match ctx.cancel_job(id).await {
                 Ok(_) => {
-                    let _ = ctx.update_job_status(id, JobStatus::Cancelled, None, Some("Cancelled via CLI")).await;
-                    if json_format {
-                        println!("{}", json!({ "status": "success", "message": "Job cancelled" }));
-                    } else {
-                        println!("Job {id} cancelled successfully.");
+                    match ctx.update_job_status(id, JobStatus::Cancelled, None, Some("Cancelled via CLI")).await {
+                        Ok(_) => {
+                            if json_format {
+                                println!("{}", json!({ "status": "success", "message": "Job cancelled" }));
+                            } else {
+                                println!("Job {id} cancelled successfully.");
+                            }
+                            CliResult::Exit
+                        }
+                        Err(e) => CliResult::Error(format!(
+                            "Error in JobsCommands::Cancel: ctx.cancel_job succeeded, but ctx.update_job_status failed to persist JobStatus::Cancelled (json_format={json_format}): {e}"
+                        )),
                     }
-                    CliResult::Exit
                 }
                 Err(e) => CliResult::Error(format!("Error cancelling job: {e}")),
             }
@@ -648,6 +669,7 @@ mod tests {
         log_path_val: String,
         data_dir_val: Option<String>,
         fail_ops: bool,
+        fail_update_job_status: bool,
     }
 
     impl MockContext {
@@ -662,6 +684,7 @@ mod tests {
                 log_path_val: "/tmp/logs".to_string(),
                 data_dir_val: Some("/tmp/data".to_string()),
                 fail_ops: false,
+                fail_update_job_status: false,
             }
         }
         fn with_jobs(mut self, jobs: Vec<JobRow>) -> Self { self.jobs = jobs; self }
@@ -671,6 +694,7 @@ mod tests {
         fn with_downloads(mut self, downloads: Vec<String>) -> Self { self.downloads = downloads; self }
         #[allow(dead_code)]
         fn with_failure(mut self) -> Self { self.fail_ops = true; self.jobs = vec![]; self.backups = vec![]; self.downloads = vec![]; self }
+        fn with_fail_update_status(mut self) -> Self { self.fail_update_job_status = true; self }
     }
 
     #[async_trait]
@@ -697,7 +721,12 @@ mod tests {
             Ok(())
         }
 
-        async fn update_job_status(&self, _: &str, _: JobStatus, _: Option<f64>, _: Option<&str>) -> CResult<()> { Ok(()) }
+        async fn update_job_status(&self, _: &str, _: JobStatus, _: Option<f64>, _: Option<&str>) -> CResult<()> {
+            if self.fail_update_job_status {
+                return Err(Error::Unknown("update_job_status failed".into()));
+            }
+            Ok(())
+        }
 
         async fn submit_download(&self, _url: &str, _dest: &str, _filename: Option<&str>) -> CResult<JobRow> {
             if self.fail_ops { return Err(Error::Unknown("submit failed".into())); }
@@ -786,5 +815,100 @@ mod tests {
             })
         };
         assert_eq!(run_cli(&ctx, &args).await, CliResult::Exit);
+    }
+
+    #[tokio::test]
+    async fn test_submit_download_timeout() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = tempfile::tempdir()?;
+        let data_dir = tmp.path().to_path_buf();
+        let log_dir = data_dir.join("logs");
+        let db = crate::setup::database::init(Some(&data_dir)).await?;
+        let job_manager = crate::services::job_service::JobManager::new(db.clone());
+        let download_manager = crate::services::download_service::DownloadManager::new(3);
+
+        let ctx = StandaloneContext {
+            version: "1.0.0".to_string(),
+            product_name: "TestApp".to_string(),
+            job_manager,
+            download_manager,
+            db,
+            data_dir: data_dir.clone(),
+            log_dir,
+            download_timeout: Some(std::time::Duration::from_secs(0)),
+        };
+
+        let dest_str = data_dir.to_str().ok_or("Invalid path")?;
+        let result = ctx.submit_download("http://example.com/file", dest_str, None).await;
+
+        assert!(result.is_err());
+        let err_msg = match result {
+            Err(e) => e.to_string(),
+            Ok(_) => return Err("Expected download to timeout".into()),
+        };
+        assert!(err_msg.contains("Timed out waiting for job"));
+        assert!(err_msg.contains("to reach a terminal JobStatus"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_jobs_cancel_success() {
+        let ctx = MockContext::new();
+        let args = CliArgs {
+            json: false,
+            command: Some(Commands::Jobs {
+                command: JobsCommands::Cancel { id: "job1".to_string() }
+            })
+        };
+        assert_eq!(run_cli(&ctx, &args).await, CliResult::Exit);
+    }
+
+    #[tokio::test]
+    async fn test_jobs_cancel_json_success() {
+        let ctx = MockContext::new();
+        let args = CliArgs {
+            json: true,
+            command: Some(Commands::Jobs {
+                command: JobsCommands::Cancel { id: "job1".to_string() }
+            })
+        };
+        assert_eq!(run_cli(&ctx, &args).await, CliResult::Exit);
+    }
+
+    #[tokio::test]
+    async fn test_jobs_cancel_fail_cancel() {
+        let ctx = MockContext::new().with_failure();
+        let args = CliArgs {
+            json: false,
+            command: Some(Commands::Jobs {
+                command: JobsCommands::Cancel { id: "job1".to_string() }
+            })
+        };
+        let res = run_cli(&ctx, &args).await;
+        match res {
+            CliResult::Error(e) => assert!(e.contains("Error cancelling job")),
+            _ => panic!("Expected Error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_jobs_cancel_fail_update_status() {
+        let ctx = MockContext::new().with_fail_update_status();
+        let args = CliArgs {
+            json: false,
+            command: Some(Commands::Jobs {
+                command: JobsCommands::Cancel { id: "job1".to_string() }
+            })
+        };
+        let res = run_cli(&ctx, &args).await;
+        match res {
+            CliResult::Error(e) => {
+                assert!(e.contains("JobsCommands::Cancel"));
+                assert!(e.contains("ctx.cancel_job"));
+                assert!(e.contains("ctx.update_job_status"));
+                assert!(e.contains("JobStatus::Cancelled"));
+                assert!(e.contains("json_format"));
+            }
+            _ => panic!("Expected Error"),
+        }
     }
 }
