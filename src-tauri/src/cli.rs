@@ -1,7 +1,5 @@
 use crate::services::backup_service::BackupMetadata;
 use crate::services::job_service::{JobRow, JobStatus};
-use crate::services::events::{AppEmitter, NoopEmitter};
-use std::sync::Arc;
 use clap::{Parser, Subcommand};
 use serde_json::json;
 use async_trait::async_trait;
@@ -27,11 +25,7 @@ pub enum Commands {
         #[command(subcommand)]
         command: JobsCommands,
     },
-    /// Manage downloads
-    Download {
-        #[command(subcommand)]
-        command: DownloadCommands,
-    },
+
     /// Manage backups
     Backup {
         #[command(subcommand)]
@@ -68,25 +62,7 @@ pub enum JobsCommands {
     },
 }
 
-#[derive(Subcommand, Debug)]
-pub enum DownloadCommands {
-    /// Submit a new download job
-    Submit {
-        #[arg(short, long, required = true, help = "URL to download")]
-        url: String,
-        #[arg(short, long, required = true, help = "Destination directory")]
-        dest: String,
-        #[arg(short, long, help = "Override output filename")]
-        filename: Option<String>,
-    },
-    /// Cancel an active download
-    Cancel {
-        #[arg(index = 1, help = "Download ID")]
-        id: String,
-    },
-    /// List active downloads
-    List,
-}
+
 
 #[derive(Subcommand, Debug)]
 pub enum BackupCommands {
@@ -161,9 +137,7 @@ pub trait CliContext {
         progress: Option<f64>,
         message: Option<&str>,
     ) -> crate::error::CResult<()>;
-    async fn submit_download(&self, url: &str, dest_dir: &str, filename: Option<&str>) -> crate::error::CResult<JobRow>;
-    async fn cancel_download(&self, download_id: &str) -> crate::error::CResult<()>;
-    async fn list_active_downloads(&self) -> crate::error::CResult<Vec<String>>;
+
     async fn create_backup(&self, label: Option<&str>) -> crate::error::CResult<BackupMetadata>;
     async fn list_backups(&self) -> crate::error::CResult<Vec<BackupMetadata>>;
     async fn delete_backup(&self, backup_id: &str) -> crate::error::CResult<()>;
@@ -184,11 +158,9 @@ pub struct StandaloneContext {
     pub version: String,
     pub product_name: String,
     pub job_manager: crate::services::job_service::JobManager,
-    pub download_manager: crate::services::download_service::DownloadManager,
     pub db: sqlx::SqlitePool,
     pub data_dir: std::path::PathBuf,
     pub log_dir: std::path::PathBuf,
-    pub download_timeout: Option<std::time::Duration>,
 }
 
 #[async_trait]
@@ -218,60 +190,7 @@ impl CliContext for StandaloneContext {
         self.job_manager.update_status(job_id, status, progress, message).await
     }
 
-    async fn submit_download(&self, url: &str, dest_dir: &str, filename: Option<&str>) -> crate::error::CResult<JobRow> {
-        use crate::services::download_service::DownloadRequest;
-        use crate::services::job_service;
 
-        let request = DownloadRequest {
-            url: url.to_string(),
-            dest_dir: dest_dir.to_string(),
-            filename: filename.map(|s| s.to_string()),
-        };
-
-        let emitter = Arc::new(NoopEmitter) as Arc<dyn AppEmitter>;
-        let job = job_service::spawn_download_job(
-            emitter,
-            &self.job_manager,
-            &self.download_manager,
-            request,
-        ).await?;
-
-        // Poll until terminal state in CLI
-        let max_duration = self.download_timeout.unwrap_or(std::time::Duration::from_secs(600));
-
-        let poll_res = tokio::time::timeout(max_duration, async {
-            loop {
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                let current = self.job_manager.get_job(&job.id).await?;
-                if current.status == JobStatus::Completed
-                    || current.status == JobStatus::Failed
-                    || current.status == JobStatus::Cancelled
-                {
-                    break Ok::<(), crate::error::Error>(());
-                }
-            }
-        }).await;
-
-        match poll_res {
-            Ok(inner) => inner?,
-            Err(_) => {
-                return Err(crate::error::Error::Unknown(format!(
-                    "Timed out waiting for job {} to reach a terminal JobStatus",
-                    job.id
-                )));
-            }
-        }
-
-        Ok(job)
-    }
-
-    async fn cancel_download(&self, download_id: &str) -> crate::error::CResult<()> {
-        self.download_manager.cancel_download(download_id).await
-    }
-
-    async fn list_active_downloads(&self) -> crate::error::CResult<Vec<String>> {
-        Ok(self.download_manager.list_active().await)
-    }
 
     async fn create_backup(&self, label: Option<&str>) -> crate::error::CResult<BackupMetadata> {
         crate::services::backup_service::create_backup(&self.db, &self.data_dir, label.map(|s| s.to_string())).await
@@ -335,7 +254,7 @@ pub async fn run_cli(ctx: &impl CliContext, args: &CliArgs) -> CliResult {
 
     match command {
         Commands::Jobs { command } => run_jobs_cli(ctx, command, args.json).await,
-        Commands::Download { command } => run_download_cli(ctx, command, args.json).await,
+
         Commands::Backup { command } => run_backup_cli(ctx, command, args.json).await,
         Commands::Secret { command } => run_secret_cli(ctx, command, args.json).await,
         Commands::Info { command } => run_info_cli(ctx, command, args.json).await,
@@ -412,61 +331,7 @@ async fn run_jobs_cli(ctx: &impl CliContext, command: &JobsCommands, json_format
     }
 }
 
-async fn run_download_cli(ctx: &impl CliContext, command: &DownloadCommands, json_format: bool) -> CliResult {
-    match command {
-        DownloadCommands::Submit { url, dest, filename } => {
-            match ctx.submit_download(url, dest, filename.as_deref()).await {
-                Ok(job) => {
-                    if json_format {
-                        match serde_json::to_string_pretty(&job) {
-                            Ok(json_str) => println!("{}", json_str),
-                            Err(e) => return CliResult::Error(format!("Serialization error: {}", e)),
-                        }
-                    } else {
-                        println!("Download submitted.");
-                        println!("  Job ID: {}", job.id);
-                    }
-                    CliResult::Exit
-                }
-                Err(e) => CliResult::Error(format!("Error submitting download: {e}")),
-            }
-        }
-        DownloadCommands::Cancel { id } => {
-            match ctx.cancel_download(id).await {
-                Ok(_) => {
-                    if json_format {
-                        println!("{}", json!({ "status": "success", "message": "Download cancelled" }));
-                    } else {
-                        println!("Download {id} cancelled.");
-                    }
-                    CliResult::Exit
-                }
-                Err(e) => CliResult::Error(format!("Error cancelling download: {e}")),
-            }
-        }
-        DownloadCommands::List => {
-            match ctx.list_active_downloads().await {
-                Ok(ids) => {
-                    if json_format {
-                        match serde_json::to_string_pretty(&ids) {
-                            Ok(json_str) => println!("{}", json_str),
-                            Err(e) => return CliResult::Error(format!("Serialization error: {}", e)),
-                        }
-                    } else if ids.is_empty() {
-                        println!("No active downloads.");
-                    } else {
-                        println!("Active downloads:");
-                        for id in ids {
-                            println!("  {id}");
-                        }
-                    }
-                    CliResult::Exit
-                }
-                Err(e) => CliResult::Error(format!("Error listing downloads: {e}")),
-            }
-        }
-    }
-}
+
 
 async fn run_backup_cli(ctx: &impl CliContext, command: &BackupCommands, json_format: bool) -> CliResult {
     match command {
@@ -728,20 +593,7 @@ mod tests {
             Ok(())
         }
 
-        async fn submit_download(&self, _url: &str, _dest: &str, _filename: Option<&str>) -> CResult<JobRow> {
-            if self.fail_ops { return Err(Error::Unknown("submit failed".into())); }
-            Ok(make_job("dl-job-1", JobStatus::Pending))
-        }
 
-        async fn cancel_download(&self, id: &str) -> CResult<()> {
-            if self.fail_ops { return Err(Error::NotFound(format!("No download: {id}"))); }
-            Ok(())
-        }
-
-        async fn list_active_downloads(&self) -> CResult<Vec<String>> {
-            if self.fail_ops { return Err(Error::Unknown("list failed".into())); }
-            Ok(self.downloads.clone())
-        }
 
         async fn create_backup(&self, _label: Option<&str>) -> CResult<BackupMetadata> {
             if self.fail_ops { return Err(Error::Unknown("backup failed".into())); }
@@ -817,38 +669,7 @@ mod tests {
         assert_eq!(run_cli(&ctx, &args).await, CliResult::Exit);
     }
 
-    #[tokio::test]
-    async fn test_submit_download_timeout() -> Result<(), Box<dyn std::error::Error>> {
-        let tmp = tempfile::tempdir()?;
-        let data_dir = tmp.path().to_path_buf();
-        let log_dir = data_dir.join("logs");
-        let db = crate::setup::database::init(Some(&data_dir)).await?;
-        let job_manager = crate::services::job_service::JobManager::new(db.clone());
-        let download_manager = crate::services::download_service::DownloadManager::new(3);
 
-        let ctx = StandaloneContext {
-            version: "1.0.0".to_string(),
-            product_name: "TestApp".to_string(),
-            job_manager,
-            download_manager,
-            db,
-            data_dir: data_dir.clone(),
-            log_dir,
-            download_timeout: Some(std::time::Duration::from_secs(0)),
-        };
-
-        let dest_str = data_dir.to_str().ok_or("Invalid path")?;
-        let result = ctx.submit_download("http://example.com/file", dest_str, None).await;
-
-        assert!(result.is_err());
-        let err_msg = match result {
-            Err(e) => e.to_string(),
-            Ok(_) => return Err("Expected download to timeout".into()),
-        };
-        assert!(err_msg.contains("Timed out waiting for job"));
-        assert!(err_msg.contains("to reach a terminal JobStatus"));
-        Ok(())
-    }
 
     #[tokio::test]
     async fn test_jobs_cancel_success() {

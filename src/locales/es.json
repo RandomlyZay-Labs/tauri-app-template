@@ -232,19 +232,7 @@
 		"fileChanged": "Archivo cambiado: {{path}}",
 		"fileWatcherEvent": "Evento del observador de archivos"
 	},
-	"downloadCard": {
-		"title": "Gestor de descargas",
-		"description": "Iniciar una descarga de archivo a través del sistema de trabajos.",
-		"url": "URL",
-		"urlPlaceholder": "https://ejemplo.com/archivo.zip",
-		"destination": "Destino",
-		"chooseDirPlaceholder": "Elegir un directorio…",
-		"chooseDir": "Explorar",
-		"download": "Descargar",
-		"downloading": "Enviando…",
-		"downloadSubmitted": "Trabajo de descarga enviado",
-		"failedToSubmit": "Error al enviar la descarga"
-	},
+
 	"jobsCard": {
 		"cancel": "Cancelar"
 	},

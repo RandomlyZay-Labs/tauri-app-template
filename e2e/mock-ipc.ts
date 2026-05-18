@@ -62,22 +62,7 @@ export const MOCK_IPC_DEFAULTS: Partial<Commands> = {
 	async notify(_title: string, _body: string) {
 		return null;
 	},
-	async submitDownloadJob(request: {
-		url: string;
-		destDir: string;
-		filename: string | null;
-	}) {
-		return {
-			id: 'mock-job-1',
-			kind: 'download',
-			status: 'running',
-			progress: 0,
-			message: 'Mock download started',
-			metadata: JSON.stringify(request),
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-		};
-	},
+
 	async cancelJob(_jobId: string) {
 		return null;
 	},
@@ -96,19 +81,7 @@ export const MOCK_IPC_DEFAULTS: Partial<Commands> = {
 			updatedAt: new Date().toISOString(),
 		};
 	},
-	async startDownload(_request) {
-		return {
-			downloadId: 'mock-dl-1',
-			filePath: '/mock/file',
-			totalBytes: 1024,
-		};
-	},
-	async cancelDownload(_downloadId: string) {
-		return null;
-	},
-	async listActiveDownloads() {
-		return [];
-	},
+
 	async exportDiagnostics() {
 		return true;
 	},
@@ -207,16 +180,7 @@ export async function injectMockIpc(
 			getCliStatus: () => ({ installed: false, version: null }),
 			installCli: () => null,
 			notify: () => null,
-			submitDownloadJob: (args: unknown) => ({
-				id: 'mock-job-1',
-				kind: 'download',
-				status: 'running',
-				progress: 0,
-				message: 'Mock download started',
-				metadata: JSON.stringify(args),
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString(),
-			}),
+
 			cancelJob: () => null,
 			listJobs: () => [],
 			getJob: (args: { jobId: string }) => ({
@@ -229,13 +193,7 @@ export async function injectMockIpc(
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
 			}),
-			startDownload: () => ({
-				downloadId: 'mock-dl-1',
-				filePath: '/mock/file',
-				totalBytes: 1024,
-			}),
-			cancelDownload: () => null,
-			listActiveDownloads: () => [],
+
 			exportDiagnostics: () => true,
 			setSecret: () => null,
 			getSecret: () => 'mock-secret-value',

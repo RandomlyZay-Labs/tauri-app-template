@@ -15,28 +15,6 @@ test.describe('Edge Cases & Resiliency', () => {
 		});
 	});
 
-	test('network degradation: download guard', async ({ page }) => {
-		await injectMockIpc(page);
-		await page.goto('/');
-
-		// 1. Fill in some data
-		await page
-			.getByPlaceholder('https://example.com/file.zip')
-			.fill('https://test.com/large-file.bin');
-		await page.getByRole('button', { name: 'Browse', exact: true }).click();
-
-		// 2. Go offline via native event
-		await page.evaluate(() => {
-			window.dispatchEvent(new Event('offline'));
-		});
-
-		// 3. Attempt to download
-		await page.getByRole('button', { name: 'Download', exact: true }).click();
-
-		// 4. Verify offline toast
-		await expect(page.getByText(/You are currently offline/i)).toBeVisible();
-	});
-
 	test('command palette: search & destructive actions', async ({ page }) => {
 		await injectMockIpc(page);
 		await page.goto('/');

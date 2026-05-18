@@ -27,15 +27,10 @@ pub fn collect() -> Builder {
             commands::backup::restore_backup,
             commands::backup::prune_backups,
             commands::backup::delete_backup,
-            // Download commands
-            commands::download::start_download,
-            commands::download::cancel_download,
-            commands::download::list_active_downloads,
             // Job commands
             commands::job::list_jobs,
             commands::job::get_job,
             commands::job::cancel_job,
-            commands::job::submit_download_job,
             // Security commands
             commands::security::set_secret,
             commands::security::get_secret,

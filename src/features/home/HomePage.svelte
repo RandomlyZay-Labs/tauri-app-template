@@ -2,7 +2,6 @@
 import AppLayout from '@/components/layout/AppLayout.svelte';
 import { t } from '@/lib/i18n';
 import { Command } from '@lucide/svelte';
-import DownloadCard from './components/DownloadCard.svelte';
 import FileWatcherCard from './components/FileWatcherCard.svelte';
 import SecureStorageCard from './components/SecureStorageCard.svelte';
 
@@ -34,7 +33,6 @@ const shortcutLabel = isMac ? t('home.shortcutMac') : t('home.shortcutWindows');
 		</div>
 
 		<div class="grid gap-6 lg:grid-cols-2">
-			<DownloadCard />
 			<SecureStorageCard />
 			<FileWatcherCard />
 		</div>

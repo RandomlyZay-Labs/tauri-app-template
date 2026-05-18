@@ -232,19 +232,7 @@
 		"fileChanged": "File changed: {{path}}",
 		"fileWatcherEvent": "File Watcher Event"
 	},
-	"downloadCard": {
-		"title": "Download Manager",
-		"description": "Initiate a file download via the job system.",
-		"url": "URL",
-		"urlPlaceholder": "https://example.com/file.zip",
-		"destination": "Destination",
-		"chooseDirPlaceholder": "Choose a directory…",
-		"chooseDir": "Browse",
-		"download": "Download",
-		"downloading": "Submitting…",
-		"downloadSubmitted": "Download job submitted",
-		"failedToSubmit": "Failed to submit download"
-	},
+
 	"jobsCard": {
 		"cancel": "Cancel"
 	},

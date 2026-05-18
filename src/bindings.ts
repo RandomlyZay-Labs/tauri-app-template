@@ -50,15 +50,6 @@ async pruneBackups(maxBackups: number) : Promise<bigint> {
 async deleteBackup(backupId: string) : Promise<null> {
     return await TAURI_INVOKE("delete_backup", { backupId });
 },
-async startDownload(request: DownloadRequest) : Promise<DownloadResult> {
-    return await TAURI_INVOKE("start_download", { request });
-},
-async cancelDownload(downloadId: string) : Promise<null> {
-    return await TAURI_INVOKE("cancel_download", { downloadId });
-},
-async listActiveDownloads() : Promise<string[]> {
-    return await TAURI_INVOKE("list_active_downloads");
-},
 async listJobs(statusFilter: string | null) : Promise<JobRow[]> {
     return await TAURI_INVOKE("list_jobs", { statusFilter });
 },
@@ -67,9 +58,6 @@ async getJob(jobId: string) : Promise<JobRow> {
 },
 async cancelJob(jobId: string) : Promise<null> {
     return await TAURI_INVOKE("cancel_job", { jobId });
-},
-async submitDownloadJob(request: DownloadRequest) : Promise<JobRow> {
-    return await TAURI_INVOKE("submit_download_job", { request });
 },
 async setSecret(key: string, value: string) : Promise<null> {
     return await TAURI_INVOKE("set_secret", { key, value });
