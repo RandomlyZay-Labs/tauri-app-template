@@ -19,7 +19,15 @@ const appVersion = $derived(getAppVersion());
 const commandText = 'tauri-app-template-cli --help';
 
 async function refreshStatus() {
-    cliStatus = await getCliStatus();
+    let status: { installed: boolean; version: string | null } | null = null;
+    await executeSafeAction(
+        async () => {
+            status = await getCliStatus();
+        }
+    );
+    if (status) {
+        cliStatus = status;
+    }
 }
 
 onMount(() => {
@@ -27,9 +35,15 @@ onMount(() => {
 });
 
 async function handleCopy() {
-    await writeText(commandText);
-    copied = true;
-    setTimeout(() => (copied = false), 2000);
+    await executeSafeAction(
+        () => writeText(commandText),
+        {
+            onSuccess: () => {
+                copied = true;
+                setTimeout(() => (copied = false), 2000);
+            }
+        }
+    );
 }
 
 async function handleInstallOrUpdate() {
@@ -79,7 +93,7 @@ const needsUpdate = $derived(cliStatus?.installed && cliStatus.version !== appVe
                             </span>
                         {:else}
                             <span class="text-amber-500 flex items-center gap-1">
-                                <RefreshCw class="size-3 animate-spin-slow" />
+                                <RefreshCw class="size-3 animate-spin duration-150" />
                                 {t('cliSettings.versionMismatch')} (v{cliStatus.version} vs v{appVersion})
                             </span>
                         {/if}
@@ -92,7 +106,7 @@ const needsUpdate = $derived(cliStatus?.installed && cliStatus.version !== appVe
                     onclick={handleInstallOrUpdate}
                 >
                     {#if isLoading}
-                        <RefreshCw class="mr-2 size-4 animate-spin" />
+                        <RefreshCw class="mr-2 size-4 animate-spin duration-150" />
                         {t('common.loading')}...
                     {:else if needsUpdate}
                         <RefreshCw class="mr-2 size-4" />
@@ -164,12 +178,4 @@ const needsUpdate = $derived(cliStatus?.installed && cliStatus.version !== appVe
     </Card.Root>
 </div>
 
-<style>
-    :global(.animate-spin-slow) {
-        animation: spin 3s linear infinite;
-    }
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-</style>
+

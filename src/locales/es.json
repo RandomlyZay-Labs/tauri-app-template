@@ -15,9 +15,9 @@
 		"offline": "No tienes conexión a internet",
 		"reset": "Restablecer",
 		"close": "Cerrar",
-		"note": "Nota",
 		"copy": "Copiar al portapapeles",
-		"copied": "¡Copiado!"
+		"copied": "¡Copiado!",
+		"loading": "Cargando"
 	},
 	"sidebar": {
 		"appName": "Tauri App Template",
@@ -40,28 +40,19 @@
 		"pruneBackups": "Limpiar Copias de Seguridad",
 		"resetApp": "Reiniciar Aplicación"
 	},
-
 	"home": {
 		"title": "Panel",
 		"greetingMorning": "Buenos días",
 		"greetingAfternoon": "Buenas tardes",
 		"greetingEvening": "Buenas noches",
 		"shortcutMac": "⌘K",
-		"shortcutWindows": "Ctrl+K",
-		"commandHint": "Presiona {{shortcut}} para abrir la paleta de comandos",
-		"viewSummary": "Ver {{id}}",
-		"cardActivated": "Tarjeta {{id}} activada",
-		"cardClicked": "Tarjeta {{id}} seleccionada",
-		"viewMainContent": "Ver contenido principal",
-		"viewSidebarContent": "Ver contenido lateral",
-		"viewFullWidthContent": "Ver contenido de ancho completo"
+		"shortcutWindows": "Ctrl+K"
 	},
 	"about": {
 		"title": "Tauri App Template",
 		"description": "El veloz zorro marrón salta sobre el perro perezoso.",
 		"supportOnKofi": "Apóyame en Ko-fi",
 		"checkOutProjects": "Mira mis otros proyectos",
-		"visitGitHub": "Visita mi perfil de GitHub para ver otros proyectos",
 		"failedToOpenLink": "Error al abrir el enlace",
 		"license": "Licencia AGPLv3",
 		"madeWith": "Hecho con ❤️ por RandomlyZay"
@@ -77,7 +68,6 @@
 	},
 	"generalSettings": {
 		"storageLogs": "Almacenamiento y registros",
-		"storageLogsDescription": "Administra datos locales y accede a archivos del sistema.",
 		"applicationData": "Datos de la aplicación",
 		"openDataFolder": "Abrir la carpeta de datos local.",
 		"openData": "Abrir datos",
@@ -85,7 +75,6 @@
 		"viewLogs": "Abrir la carpeta de registros local.",
 		"openLogs": "Abrir registros",
 		"resetDangerZone": "Restablecer y zona de peligro",
-		"resetDangerZoneDescription": "Configura el comportamiento general de la aplicación y la gestión de datos.",
 		"resetPreferences": "Restablecer preferencias",
 		"restoreDefaultSettings": "Restaurar configuración predeterminada.",
 		"resetDefaults": "Restablecer valores",
@@ -132,11 +121,9 @@
 	},
 	"appearanceSettings": {
 		"title": "Apariencia",
-		"description": "Personaliza la apariencia de la aplicación.",
 		"themeMode": "Modo de tema",
 		"selectTheme": "Selecciona tu tema de color preferido",
 		"resetThemeMode": "Restablecer modo de tema",
-		"resetToDefault": "Restablecer predeterminado",
 		"animations": "Animaciones",
 		"animationsDescription": "Habilitar o deshabilitar animaciones de interfaz",
 		"resetAnimations": "Restablecer animaciones",
@@ -150,9 +137,7 @@
 		"automatedBackups": "Copias de seguridad automáticas",
 		"automatedBackupsDescription": "Habilitar o deshabilitar copias de seguridad automáticas.",
 		"enableAutoBackup": "Habilitar copia automática",
-		"periodicallySave": "Guardar periódicamente tu base de datos.",
 		"frequency": "Frecuencia",
-		"selectFrequency": "Seleccionar frecuencia",
 		"everyHour": "Cada hora",
 		"daily": "Diario",
 		"weekly": "Semanal",
@@ -160,7 +145,6 @@
 		"keepLast_one": "Mantener último {{count}}",
 		"keepLast_other": "Mantener últimos {{count}}",
 		"backupHistory": "Historial de copias",
-		"manageSnapshots": "Administra tus instantáneas existentes.",
 		"createBackup": "Crear copia",
 		"noBackupsFound": "No se encontraron copias de seguridad.",
 		"restoreBackup": "Restaurar esta copia",
@@ -184,7 +168,6 @@
 	},
 	"debugSettings": {
 		"title": "Herramientas de depuración",
-		"description": "Utilidades para desarrollo y solución de problemas (Mostrando plugins de Tauri).",
 		"minimizeToTray": "Minimizar a bandeja",
 		"minimizeToTrayDescription": "Mantener la aplicación en segundo plano al cerrarla.",
 		"notifyWhenMinimized": "Notificar al minimizar",
@@ -193,13 +176,6 @@
 		"developerToolsDescription": "Habilitar menú contextual del navegador (Inspeccionar elemento, Recargar).",
 		"debugMode": "Modo de depuración",
 		"debugModeDescription": "Habilitar registro detallado de depuración. Los cambios requieren un reinicio.",
-		"logLevel": "Nivel de registro",
-		"logLevelDescription": "Configura la verbosidad de los registros de la aplicación escritos en el disco. Los cambios requieren un reinicio.",
-		"logLevelTrace": "Traza",
-		"logLevelDebug": "Depuración",
-		"logLevelInfo": "Información",
-		"logLevelWarn": "Advertencia",
-		"logLevelError": "Error",
 		"nativeFeatures": "Características nativas",
 		"nativeFeaturesDescription": "Probar notificaciones del SO y diálogos nativos.",
 		"notification": "Notificación",
@@ -228,12 +204,6 @@
 		"failedToExit": "Error al salir de la aplicación",
 		"resultYes": "Sí",
 		"resultNo": "No",
-		"testActivity": "Probar Actividad",
-		"activitySimulating": "Simulando descarga…",
-		"activityConnecting": "Conectando al servidor…",
-		"activityDownloading": "Descargando…",
-		"activityDone": "¡Descarga completa!",
-		"activityConnectionRefused": "Conexión rechazada",
 		"secureStorage": "Almacenamiento seguro",
 		"secureStorageDescription": "Integración del llavero del SO.",
 		"secretKey": "Clave",
@@ -273,22 +243,10 @@
 		"download": "Descargar",
 		"downloading": "Enviando…",
 		"downloadSubmitted": "Trabajo de descarga enviado",
-		"failedToSubmit": "Error al enviar la descarga",
-		"invalidUrl": "Ingrese una URL válida"
+		"failedToSubmit": "Error al enviar la descarga"
 	},
 	"jobsCard": {
-		"title": "Trabajos recientes",
-		"description": "Ver y gestionar tareas en segundo plano.",
-		"empty": "Sin trabajos aún",
-		"cancel": "Cancelar",
-		"cancelSuccess": "Trabajo cancelado",
-		"failedToCancel": "Error al cancelar el trabajo",
-		"failedToLoad": "Error al cargar los trabajos",
-		"statusPending": "Pendiente",
-		"statusRunning": "En ejecución",
-		"statusCompleted": "Completado",
-		"statusFailed": "Fallido",
-		"statusCancelled": "Cancelado"
+		"cancel": "Cancelar"
 	},
 	"onboarding": {
 		"welcome": "Bienvenida",
@@ -336,13 +294,7 @@
 		"somethingWentWrong": "Algo salió mal",
 		"unexpectedError": "Ha ocurrido un error inesperado. Hemos registrado este problema para investigación.",
 		"unknownError": "Error desconocido",
-		"copyError": "Copiar error",
 		"reload": "Recargar",
-		"errorDetailsCopied": "Detalles del error copiados al portapapeles",
-		"failedToCopy": "Error al copiar al portapapeles",
-		"exportLogs": "Exportar Registros",
-		"exportLogsSuccess": "Registros exportados exitosamente",
-		"exportLogsFailed": "Error al exportar registros",
 		"database": "Error de base de datos: {{message}}",
 		"notFound": "No encontrado: {{message}}",
 		"io": "Error de E/S: {{message}}",
@@ -361,15 +313,12 @@
 		"statusCompleted": "Completado",
 		"statusFailed": "Fallido",
 		"statusCancelled": "Cancelado",
-		"statusInterrupted": "Interrumpido",
-		"eta": "ETA: {{time}}",
-		"speed": "Velocidad: {{speed}}"
+		"statusInterrupted": "Interrumpido"
 	},
 	"notifications": {
 		"title": "Notificaciones",
 		"openNotifications": "Abrir notificaciones",
 		"clearAll": "Borrar todo",
-		"removeNotification": "Eliminar notificación",
 		"empty": "No hay notificaciones",
 		"markAsRead": "Marcar como leído",
 		"markAllAsRead": "Marcar todo como leído"
