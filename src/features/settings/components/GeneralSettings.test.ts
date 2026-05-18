@@ -23,9 +23,6 @@ vi.mock('@/lib/toast', () => ({
 	},
 }));
 
-// Helper to flush the microtask/promise queue
-const flushPromises = () => Promise.resolve();
-
 describe('GeneralSettings', () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
@@ -35,7 +32,6 @@ describe('GeneralSettings', () => {
 			if (cmd === 'open_log_dir') return null;
 			if (cmd === 'open_data_dir') return null;
 			if (cmd === 'reset_application') return null;
-			if (cmd === 'is_appimage') return false;
 		});
 	});
 
@@ -161,32 +157,5 @@ describe('GeneralSettings', () => {
 
 		await tick();
 		vi.runAllTimers();
-	});
-
-	it('shows path success dialog when integrateAppImage is successful', {
-		timeout: 10000,
-	}, async () => {
-		mockIPC((cmd) => {
-			if (cmd === 'is_appimage') return true;
-			if (cmd === 'integrate_appimage') return null;
-		});
-
-		render(GeneralSettings);
-
-		// First, flush the asynchronous checkIsAppImage() promise scheduled in onMount.
-		// Then, await the subsequent Svelte reactive update cycle to render the AppImage card.
-		await flushPromises();
-		await tick();
-
-		const integrateBtn = await screen.findByText('generalSettings.addToPath');
-		await fireEvent.click(integrateBtn);
-
-		// First, flush the asynchronous integrateAppImage() promise scheduled inside the button's click handler.
-		// Then, await the subsequent Svelte reactive update cycle to render the PATH success dialog.
-		await flushPromises();
-		await tick();
-
-		expect(screen.getByText('generalSettings.pathSuccessTitle')).toBeTruthy();
-		expect(screen.getByText('generalSettings.pathSuccessMessage')).toBeTruthy();
 	});
 });

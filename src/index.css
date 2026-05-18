@@ -137,31 +137,31 @@
 }
 
 @custom-variant data-open (&:is(
-		[data-state="open"],
-		[data-open]:not([data-open="false"])
-	));
+	[data-state="open"],
+	[data-open]:not([data-open="false"])
+));
 @custom-variant data-closed (&:is(
-		[data-state="closed"],
-		[data-closed]:not([data-closed="false"])
-	));
+	[data-state="closed"],
+	[data-closed]:not([data-closed="false"])
+));
 @custom-variant data-checked (&:is(
-		[data-state="checked"],
-		[data-checked]:not([data-checked="false"])
-	));
+	[data-state="checked"],
+	[data-checked]:not([data-checked="false"])
+));
 @custom-variant data-unchecked (&:is(
-		[data-state="unchecked"],
-		[data-unchecked]:not([data-unchecked="false"])
-	));
+	[data-state="unchecked"],
+	[data-unchecked]:not([data-unchecked="false"])
+));
 
 @custom-variant data-selected (&:is([data-selected]));
 @custom-variant data-disabled (&:is(
-		[data-disabled="true"],
-		[data-disabled]:not([data-disabled="false"])
-	));
+	[data-disabled="true"],
+	[data-disabled]:not([data-disabled="false"])
+));
 @custom-variant data-active (&:is(
-		[data-state="active"],
-		[data-active]:not([data-active="false"])
-	));
+	[data-state="active"],
+	[data-active]:not([data-active="false"])
+));
 @custom-variant data-horizontal (&:is([data-orientation="horizontal"]));
 @custom-variant data-vertical (&:is([data-orientation="vertical"]));
 

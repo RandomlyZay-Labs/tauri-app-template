@@ -1,4 +1,4 @@
-pub mod appimage_service;
+pub mod cli_mgmt_service;
 pub mod backup_service;
 pub mod download_service;
 pub mod events;

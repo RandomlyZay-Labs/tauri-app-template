@@ -82,7 +82,7 @@ jobs:
           workspaces: 'src-tauri -> target'
           key: windows-${{ matrix.target }}-${{ matrix.arch }}
           # Prevents PRs/branches from poisoning the main cache, but always caches on act
-          #save-if: ${{ github.ref == 'refs/heads/main' || github.actor == 'nektos/act' }}
+          save-if: ${{ github.ref == 'refs/heads/main' || github.actor == 'nektos/act' }}
       
       # -- Build --
       - name: Install Dependencies
@@ -171,7 +171,7 @@ jobs:
         with:
           workspaces: 'src-tauri -> target'
           key: linux-${{ matrix.arch }}
-          #save-if: ${{ github.ref == 'refs/heads/main' || github.actor == 'nektos/act' }}
+          save-if: ${{ github.ref == 'refs/heads/main' || github.actor == 'nektos/act' }}
 
       - name: Cache Tauri Tools
         uses: actions/cache@v5

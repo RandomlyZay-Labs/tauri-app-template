@@ -54,6 +54,7 @@ describe('SettingsPage', () => {
 			if (cmd === 'list_backups') return [];
 			if (cmd === 'get_log_path') return '/mock/logs';
 			if (cmd === 'get_data_dir') return '/mock/data';
+			if (cmd === 'get_cli_status') return { installed: false, version: null };
 		});
 	});
 

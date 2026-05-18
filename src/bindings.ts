@@ -50,15 +50,6 @@ async pruneBackups(maxBackups: number) : Promise<bigint> {
 async deleteBackup(backupId: string) : Promise<null> {
     return await TAURI_INVOKE("delete_backup", { backupId });
 },
-async startDownload(request: DownloadRequest) : Promise<DownloadResult> {
-    return await TAURI_INVOKE("start_download", { request });
-},
-async cancelDownload(downloadId: string) : Promise<null> {
-    return await TAURI_INVOKE("cancel_download", { downloadId });
-},
-async listActiveDownloads() : Promise<string[]> {
-    return await TAURI_INVOKE("list_active_downloads");
-},
 async listJobs(statusFilter: string | null) : Promise<JobRow[]> {
     return await TAURI_INVOKE("list_jobs", { statusFilter });
 },
@@ -67,9 +58,6 @@ async getJob(jobId: string) : Promise<JobRow> {
 },
 async cancelJob(jobId: string) : Promise<null> {
     return await TAURI_INVOKE("cancel_job", { jobId });
-},
-async submitDownloadJob(request: DownloadRequest) : Promise<JobRow> {
-    return await TAURI_INVOKE("submit_download_job", { request });
 },
 async setSecret(key: string, value: string) : Promise<null> {
     return await TAURI_INVOKE("set_secret", { key, value });
@@ -86,11 +74,11 @@ async watchPath(path: string) : Promise<null> {
 async unwatchPath(path: string) : Promise<null> {
     return await TAURI_INVOKE("unwatch_path", { path });
 },
-async isAppimage() : Promise<boolean> {
-    return await TAURI_INVOKE("is_appimage");
+async getCliStatus() : Promise<CliStatus> {
+    return await TAURI_INVOKE("get_cli_status");
 },
-async integrateAppimage() : Promise<null> {
-    return await TAURI_INVOKE("integrate_appimage");
+async installCli() : Promise<null> {
+    return await TAURI_INVOKE("install_cli");
 },
 /**
  * Returns the system color-scheme preference on Linux via the Freedesktop portal.
@@ -119,6 +107,7 @@ async setTheme(theme: string | null) : Promise<null> {
 /** user-defined types **/
 
 export type BackupMetadata = { id: string; name: string; path: string; size_bytes: bigint; created_at: string; is_manual: boolean; label: string | null }
+export type CliStatus = { installed: boolean; version: string | null }
 export type DownloadProgress = { downloadId: string; url: string; bytesDownloaded: bigint; totalBytes: bigint | null; 
 /**
  * 0.0 – 100.0; `None` when content-length is unknown

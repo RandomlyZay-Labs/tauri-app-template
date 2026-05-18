@@ -1,9 +1,9 @@
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-	checkIsAppImage,
 	exitApp,
-	integrateAppImage,
+	getCliStatus,
+	installCli,
 	openDataDirectory,
 	openExternalLink,
 	openLogDirectory,
@@ -37,8 +37,9 @@ describe('system-utils', () => {
 			if (cmd === 'open_log_dir') return Promise.resolve(null);
 			if (cmd === 'open_data_dir') return Promise.resolve(null);
 			if (cmd === 'reset_application') return Promise.resolve(null);
-			if (cmd === 'is_appimage') return Promise.resolve(false);
-			if (cmd === 'integrate_appimage') return Promise.resolve(null);
+			if (cmd === 'get_cli_status')
+				return Promise.resolve({ installed: false, version: null });
+			if (cmd === 'install_cli') return Promise.resolve(null);
 		});
 	});
 
@@ -201,26 +202,27 @@ describe('system-utils', () => {
 		});
 	});
 
-	describe('checkIsAppImage', () => {
-		it('calls isAppimage command', async () => {
+	describe('getCliStatus', () => {
+		it('calls get_cli_status command', async () => {
 			mockIPC((cmd) => {
-				if (cmd === 'is_appimage') return Promise.resolve(true);
+				if (cmd === 'get_cli_status')
+					return Promise.resolve({ installed: true, version: '0.1.0' });
 			});
-			const result = await checkIsAppImage();
-			expect(result).toBe(true);
+			const result = await getCliStatus();
+			expect(result).toEqual({ installed: true, version: '0.1.0' });
 		});
 	});
 
-	describe('integrateAppImage', () => {
-		it('calls integrateAppimage command', async () => {
+	describe('installCli', () => {
+		it('calls install_cli command', async () => {
 			let captured = false;
 			mockIPC((cmd) => {
-				if (cmd === 'integrate_appimage') {
+				if (cmd === 'install_cli') {
 					captured = true;
 					return Promise.resolve(null);
 				}
 			});
-			await integrateAppImage();
+			await installCli();
 			expect(captured).toBe(true);
 		});
 	});

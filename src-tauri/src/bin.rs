@@ -1,7 +1,6 @@
 use clap::Parser;
 use tauri_app_template_lib::cli::{CliArgs, StandaloneContext, CliResult, run_cli};
 use tauri_app_template_lib::services::job_service::JobManager;
-use tauri_app_template_lib::services::download_service::DownloadManager;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
@@ -35,11 +34,9 @@ async fn main() -> std::process::ExitCode {
         version: env!("CARGO_PKG_VERSION").to_string(),
         product_name: "Tauri App Template".to_string(),
         job_manager: JobManager::new(db_pool.clone()),
-        download_manager: DownloadManager::new(3),
         db: db_pool,
         data_dir,
         log_dir,
-        download_timeout: None,
     };
 
     match run_cli(&ctx, &args).await {

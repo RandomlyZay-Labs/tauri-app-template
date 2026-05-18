@@ -68,6 +68,9 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             let log_plugin = setup::logging::init(&app_data_dir, &app_log_dir);
             app.handle().plugin(log_plugin).expect("Failed to initialize log plugin");
 
+            // 2c. Initialize Keyring Store
+            keyring::use_native_store(true).expect("Failed to initialize native keyring store");
+
             log::info!("==================================");
             log::info!("App Version: {}", env!("CARGO_PKG_VERSION"));
             log::info!("OS: {} ({})", std::env::consts::OS, std::env::consts::ARCH);

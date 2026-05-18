@@ -22,77 +22,6 @@ test.describe('Comprehensive User Flows', () => {
 		});
 	});
 
-	test('Dashboard - Downloads flow', async ({ page }) => {
-		await page.goto('/');
-
-		// Fill URL
-		await page.getByLabel(/^URL$/i).fill('https://example.com/file.zip');
-
-		// Browse for destination (mocked to return /mock/selected/path)
-		await page.getByRole('button', { name: /^Browse$/i }).click();
-		await expect(page.locator('#download-dest')).toHaveValue(
-			'/mock/selected/path',
-		);
-
-		// Submit download
-		await page.getByRole('button', { name: /^Download$/i }).click();
-		await expect(page.getByText(/Download job submitted/i)).toBeVisible();
-
-		// Manually trigger progress events to simulate backend activity
-		await page.evaluate(
-			(detail) => {
-				window.dispatchEvent(new CustomEvent('tauri-mock-event', { detail }));
-			},
-			{
-				event: 'job://progress',
-				payload: {
-					jobId: 'mock-job-1',
-					kind: 'download',
-					status: 'running',
-					progress: 50,
-					message: 'Downloading...',
-					updatedAt: new Date().toISOString(),
-				},
-			},
-		);
-
-		// Open Activity Center
-		await page.getByLabel(/Open Activity Center/i).click();
-		// Specifically look for the job title in the sheet, not the card on home page
-		await expect(
-			page.getByRole('dialog').getByText('Download', { exact: true }),
-		).toBeVisible();
-
-		// Cancel the job
-		const cancelButton = page
-			.getByRole('dialog')
-			.getByRole('button', { name: /^Cancel$/i });
-		await expect(cancelButton).toBeVisible();
-		await cancelButton.click();
-
-		// Manually trigger cancellation event
-		await page.evaluate(
-			(detail) => {
-				window.dispatchEvent(new CustomEvent('tauri-mock-event', { detail }));
-			},
-			{
-				event: 'job://progress',
-				payload: {
-					jobId: 'mock-job-1',
-					kind: 'download',
-					status: 'cancelled',
-					progress: 50,
-					message: 'Cancelled by user',
-					updatedAt: new Date().toISOString(),
-				},
-			},
-		);
-
-		await expect(
-			page.getByRole('dialog').getByText('Cancelled', { exact: true }),
-		).toBeVisible();
-	});
-
 	test('Dashboard - Secure Storage flow', async ({ page }) => {
 		await page.goto('/');
 
@@ -149,77 +78,7 @@ test.describe('Comprehensive User Flows', () => {
 		).not.toBeVisible();
 	});
 
-	test('Activity Center - active jobs and cancellation', async ({ page }) => {
-		await page.goto('/');
-
-		// Trigger a job
-		await page.getByLabel(/^URL$/i).fill('https://example.com/test.zip');
-		await expect(page.getByLabel(/^URL$/i)).toHaveValue(
-			'https://example.com/test.zip',
-		);
-		// Browse for destination (needed to enable download button)
-		await page.getByRole('button', { name: /^Browse$/i }).click();
-		await expect(page.locator('#download-dest')).toHaveValue(
-			'/mock/selected/path',
-		);
-
-		await page.getByRole('button', { name: /^Download$/i }).click();
-		await expect(page.getByText(/Download job submitted/i)).toBeVisible();
-
-		// Manually trigger progress event to ensure it's tracked
-		await page.evaluate(
-			(detail) => {
-				window.dispatchEvent(new CustomEvent('tauri-mock-event', { detail }));
-			},
-			{
-				event: 'job://progress',
-				payload: {
-					jobId: 'mock-job-1',
-					kind: 'download',
-					status: 'running',
-					progress: 10,
-					message: 'Starting...',
-					updatedAt: new Date().toISOString(),
-				},
-			},
-		);
-
-		// Open sheet
-		await page.getByLabel(/Open Activity Center/i).click();
-
-		const dialog = page.getByRole('dialog');
-		await expect(dialog).toBeVisible();
-
-		// Specifically look for the job title in the sheet
-		await expect(dialog.getByText('Download', { exact: true })).toBeVisible();
-
-		// Cancel from sheet
-		const cancelButton = dialog.getByRole('button', { name: /^Cancel$/i });
-		await expect(cancelButton).toBeVisible();
-		await cancelButton.click();
-
-		// Manually trigger cancellation event
-		await page.evaluate(
-			(detail) => {
-				window.dispatchEvent(new CustomEvent('tauri-mock-event', { detail }));
-			},
-			{
-				event: 'job://progress',
-				payload: {
-					jobId: 'mock-job-1',
-					kind: 'download',
-					status: 'cancelled',
-					progress: 10,
-					message: 'Cancelled by user',
-					updatedAt: new Date().toISOString(),
-				},
-			},
-		);
-
-		await expect(dialog.getByText('Cancelled', { exact: true })).toBeVisible();
-	});
-
-	test('General Settings - resets and AppImage', async ({ page }) => {
+	test('Settings - Resets and CLI Management', async ({ page }) => {
 		await page.goto('/#/settings');
 		await page.getByTestId('tab-trigger-general').click();
 
@@ -259,23 +118,35 @@ test.describe('Comprehensive User Flows', () => {
 		await telemetrySwitch.click();
 		await expect(page.getByText(/Telemetry updated/i)).toBeVisible();
 
-		// AppImage integration (mock isAppImage to true)
+		// CLI Management (Mock not installed)
 		await injectMockIpc(page, {
-			isAppimage: true,
+			get_cli_status: { installed: false, version: null },
 		});
 		await page.reload();
-		await page.getByTestId('tab-trigger-general').click();
-		await expect(page.getByText('AppImage', { exact: true })).toBeVisible();
+		await page.getByTestId('tab-trigger-cli').click();
 
-		const integrateBtn = page.locator('#appimage-integrate-btn');
-		await expect(integrateBtn).toBeVisible();
-		await integrateBtn.click();
+		await expect(page.getByText(/CLI Integration/i)).toBeVisible();
+		await expect(page.getByText(/Not Installed/i)).toBeVisible();
 
-		await expect(page.getByText('Success!', { exact: true })).toBeVisible();
-		await expect(
-			page.getByText(/has been added to your system's PATH/i),
-		).toBeVisible();
-		await page.getByRole('button', { name: /^Done$/i }).click();
+		const installBtn = page.getByRole('button', { name: /Install CLI/i });
+		await expect(installBtn).toBeVisible();
+
+		// Mock success after install using the dynamic update event
+		await page.evaluate(() => {
+			window.dispatchEvent(
+				new CustomEvent('tauri-mock-update', {
+					detail: {
+						command: 'get_cli_status',
+						response: { installed: true, version: '0.1.0' },
+					},
+				}),
+			);
+		});
+
+		await installBtn.click();
+		await expect(page.getByText(/CLI installed successfully/i)).toBeVisible();
+		await expect(page.getByText(/Up to Date/i)).toBeVisible();
+		await expect(page.getByText(/v0\.1\.0/)).toBeVisible();
 	});
 
 	test('Debug Settings - tray, notifications, dialogs, logs, crash', async ({

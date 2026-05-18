@@ -68,12 +68,12 @@ export async function resetApplication() {
 	await commands.resetApplication();
 }
 
-export async function checkIsAppImage() {
-	void logger.debug('[systemUtils] checkIsAppImage called');
-	return await commands.isAppimage();
+export async function getCliStatus() {
+	void logger.debug('[systemUtils] getCliStatus called');
+	return await commands.getCliStatus();
 }
 
-export async function integrateAppImage() {
-	void logger.debug('[systemUtils] integrateAppImage called');
-	await commands.integrateAppimage();
+export async function installCli() {
+	void logger.debug('[systemUtils] installCli called');
+	await commands.installCli();
 }

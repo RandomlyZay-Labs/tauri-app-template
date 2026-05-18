@@ -1,10 +1,7 @@
 use crate::error::CResult;
-use crate::services::download_service::DownloadRequest;
-use crate::services::job_service::{self, JobRow};
+use crate::services::job_service::JobRow;
 use crate::state::AppState;
 use tauri::State;
-use std::sync::Arc;
-use crate::services::events::AppEmitter;
 
 #[tauri::command]
 #[specta::specta]
@@ -25,21 +22,4 @@ pub async fn get_job(state: State<'_, AppState>, job_id: String) -> CResult<JobR
 #[specta::specta]
 pub async fn cancel_job(state: State<'_, AppState>, job_id: String) -> CResult<()> {
     state.job_manager.cancel_job(&job_id).await
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn submit_download_job(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-    request: DownloadRequest,
-) -> CResult<JobRow> {
-    log::debug!("[Command] submit_download_job called with url: {}", request.url);
-    job_service::spawn_download_job(
-        Arc::new(app) as Arc<dyn AppEmitter>,
-        &state.job_manager,
-        &state.download_manager,
-        request,
-    )
-    .await
 }
