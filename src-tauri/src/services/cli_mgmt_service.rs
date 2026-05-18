@@ -680,8 +680,14 @@ mod tests {
         let result = CliMgmtService::install_cli(handle.clone()).await;
         assert!(result.is_err());
 
+        #[derive(sqlx::FromRow)]
+        struct TestJobRow {
+            status: String,
+            message: Option<String>,
+        }
+
         // Verify the job was marked as failed in the database
-        let jobs = sqlx::query!("SELECT status, message FROM jobs")
+        let jobs: Vec<TestJobRow> = sqlx::query_as("SELECT status, message FROM jobs")
             .fetch_all(&db)
             .await?;
         
