@@ -152,10 +152,12 @@ describe('i18n translation files', () => {
 				searchKey = key.slice(0, -6);
 			}
 
-			// Check if searchKey is present as a substring in any file
-			const isUsed = fileContents.some((content) =>
-				content.includes(searchKey),
+			// Check if searchKey is present in any file using key-aware regex matching
+			const escapedKey = searchKey.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+			const regex = new RegExp(
+				`(?:\\b(?:t|i18n\\.t)\\(\\s*['"\`]|\\bi18nKey=\\s*['"\`]|['"\`])${escapedKey}['"\`]`,
 			);
+			const isUsed = fileContents.some((content) => regex.test(content));
 			return !isUsed;
 		});
 
