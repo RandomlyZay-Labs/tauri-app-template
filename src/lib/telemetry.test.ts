@@ -21,9 +21,10 @@ describe('telemetry', () => {
 	});
 
 	it('initializes telemetry correctly', async () => {
-		const { initTelemetry } = await import('./telemetry');
-		initTelemetry();
-		// No side effects other than setting a flag
+		const telemetry = await import('./telemetry');
+		expect(telemetry.telemetryInitialized).toBe(false);
+		telemetry.initTelemetry();
+		expect(telemetry.telemetryInitialized).toBe(true);
 	});
 
 	it('captures events if enabled and initialized', async () => {

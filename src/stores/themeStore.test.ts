@@ -250,8 +250,10 @@ describe('themeStore', () => {
 		// Simulate event
 		callback({ payload: 'dark' });
 
-		expect(document.documentElement.classList.contains('dark')).toBe(true);
-		expect(mockSetTheme).toHaveBeenCalledWith('dark');
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+			expect(mockSetTheme).toHaveBeenCalledWith('dark');
+		});
 	});
 
 	it('updates class but does NOT call setTheme when system-theme-changed fires on Windows', async () => {
@@ -268,8 +270,10 @@ describe('themeStore', () => {
 		// Simulate event
 		callback({ payload: 'dark' });
 
-		expect(document.documentElement.classList.contains('dark')).toBe(true);
-		expect(mockSetTheme).not.toHaveBeenCalled();
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+			expect(mockSetTheme).not.toHaveBeenCalled();
+		});
 		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 	});
 
@@ -287,8 +291,10 @@ describe('themeStore', () => {
 		// Simulate event with 'no-preference'
 		callback({ payload: 'no-preference' });
 
-		expect(document.documentElement.classList.contains('light')).toBe(true);
-		expect(mockSetTheme).toHaveBeenCalledWith(null);
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('light')).toBe(true);
+			expect(mockSetTheme).toHaveBeenCalledWith(null);
+		});
 	});
 
 	it('updates class to light but does NOT call setTheme when system-theme-changed fires with no-preference on Windows', async () => {
@@ -305,8 +311,10 @@ describe('themeStore', () => {
 		// Simulate event with 'no-preference'
 		callback({ payload: 'no-preference' });
 
-		expect(document.documentElement.classList.contains('light')).toBe(true);
-		expect(mockSetTheme).not.toHaveBeenCalled();
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('light')).toBe(true);
+			expect(mockSetTheme).not.toHaveBeenCalled();
+		});
 		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 	});
 });

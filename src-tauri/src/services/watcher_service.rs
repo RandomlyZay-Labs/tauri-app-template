@@ -155,14 +155,6 @@ mod tests {
     }
 
     #[test]
-    fn unwatch_with_tilde_resolves_path() {
-        let mgr = WatcherManager::new();
-        // Unwatching a tilde path should resolve it and not panic
-        let result = mgr.unwatch("~/some/nonexistent/path".to_string());
-        assert!(result.is_ok());
-    }
-
-    #[test]
     fn watch_fails_for_nonexistent_path() {
         let mgr = WatcherManager::new();
         let app = tauri::test::mock_app();

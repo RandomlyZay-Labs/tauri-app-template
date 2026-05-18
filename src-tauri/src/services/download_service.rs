@@ -716,6 +716,11 @@ mod tests {
                 // Only write partial response then close
                 let response = "HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\n0123";
                 let _ = stream.write_all(response.as_bytes()).await;
+                let _ = stream.flush().await;
+
+                // Sleep briefly to allow the client to read the partial response
+                // before the connection is closed.
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                 // stream closes here as it goes out of scope
             }
         });

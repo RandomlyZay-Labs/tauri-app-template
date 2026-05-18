@@ -1,4 +1,6 @@
 use std::process::Command;
+use std::time::Duration;
+use wait_timeout::ChildExt;
 
 /// Freedesktop portal color-scheme values.
 /// - 0: No preference
@@ -32,18 +34,41 @@ impl ColorScheme {
 /// Queries the Freedesktop portal for the current color-scheme preference.
 /// Returns `None` if the portal is unavailable (non-Linux, no D-Bus, etc.).
 pub fn query_freedesktop_color_scheme() -> Option<ColorScheme> {
-    let output = Command::new("gdbus")
-        .args([
-            "call",
-            "--session",
-            "--dest=org.freedesktop.portal.Desktop",
-            "--object-path=/org/freedesktop/portal/desktop",
-            "--method=org.freedesktop.portal.Settings.Read",
-            "org.freedesktop.appearance",
-            "color-scheme",
-        ])
-        .output()
+    let mut cmd = Command::new("gdbus");
+    cmd.args([
+        "call",
+        "--session",
+        "--dest=org.freedesktop.portal.Desktop",
+        "--object-path=/org/freedesktop/portal/desktop",
+        "--method=org.freedesktop.portal.Settings.Read",
+        "org.freedesktop.appearance",
+        "color-scheme",
+    ]);
+    query_color_scheme_internal(cmd, Duration::from_secs(1))
+}
+
+fn query_color_scheme_internal(mut cmd: Command, timeout: Duration) -> Option<ColorScheme> {
+    let mut child = cmd
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
         .ok()?;
+
+    match child.wait_timeout(timeout) {
+        Ok(Some(_status)) => {}
+        Ok(None) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return None;
+        }
+        Err(_) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return None;
+        }
+    }
+
+    let output = child.wait_with_output().ok()?;
 
     if !output.status.success() {
         return None;
@@ -194,5 +219,31 @@ mod tests {
         assert_eq!(ColorScheme::Dark.as_str(), "dark");
         assert_eq!(ColorScheme::Light.as_str(), "light");
         assert_eq!(ColorScheme::NoPreference.as_str(), "no-preference");
+    }
+
+    #[test]
+    fn test_query_color_scheme_spawn_failure() {
+        let cmd = Command::new("non_existent_command_xyz_123");
+        let result = query_color_scheme_internal(cmd, Duration::from_secs(1));
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_query_color_scheme_success() {
+        let mut cmd = Command::new("echo");
+        cmd.arg("(<<uint32 1>>,)");
+        let result = query_color_scheme_internal(cmd, Duration::from_secs(1));
+        assert_eq!(result, Some(ColorScheme::Dark));
+    }
+
+    #[test]
+    fn test_query_color_scheme_timeout() {
+        let mut cmd = Command::new("sleep");
+        cmd.arg("5");
+        let start = std::time::Instant::now();
+        let result = query_color_scheme_internal(cmd, Duration::from_millis(100));
+        let elapsed = start.elapsed();
+        assert_eq!(result, None);
+        assert!(elapsed < Duration::from_secs(2));
     }
 }

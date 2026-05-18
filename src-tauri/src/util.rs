@@ -1,9 +1,7 @@
 use crate::error::CResult;
-use regex::Regex;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
 
 // --- CONSTANTS ---
 const MARKER_WIPE_NAME: &str = ".pending_wipe";
@@ -11,46 +9,9 @@ pub const MARKER_RESTORE_NAME: &str = ".pending_restore";
 pub const RESTORE_STAGING_NAME: &str = "restore.db.tmp";
 const DB_NAME: &str = "tauri_app_template.db";
 
-// Global regexes for path expansion. 
-// These are allowed to use `.expect()` because they are static initializers.
-#[allow(clippy::expect_used)]
-static RE_UNIX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\$(\w+)|\$\{(\w+)\}").expect("Invalid RE_UNIX"));
-
-#[allow(clippy::expect_used)]
-static RE_WIN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"%(\w+)%").expect("Invalid RE_WIN"));
-
-/// Resolves a path string with support for `~`, `$VAR`, and `%VAR%` expansion.
+/// Resolves a path string.
 pub fn resolve_path(path_str: &str) -> CResult<PathBuf> {
-    // 1. Expand `~` to user's home directory
-    let mut expanded = if path_str.starts_with("~/") || path_str == "~" {
-        if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
-            path_str.replacen("~", home.to_string_lossy().as_ref(), 1)
-        } else {
-            path_str.to_string()
-        }
-    } else {
-        path_str.to_string()
-    };
-
-    // 2. Expand environment variables (Unix style: $VAR or ${VAR})
-    expanded = RE_UNIX
-        .replace_all(&expanded, |caps: &regex::Captures| {
-            let key = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str()).unwrap_or_default();
-            env::var(key).unwrap_or_else(|_| caps.get(0).map(|m| m.as_str()).unwrap_or_default().to_string())
-        })
-        .to_string();
-
-    // 3. Expand environment variables (Windows style: %VAR%)
-    expanded = RE_WIN
-        .replace_all(&expanded, |caps: &regex::Captures| {
-            let key = caps.get(1).map(|m| m.as_str()).unwrap_or_default();
-            env::var(key).unwrap_or_else(|_| caps.get(0).map(|m| m.as_str()).unwrap_or_default().to_string())
-        })
-        .to_string();
-
-    Ok(PathBuf::from(expanded))
+    Ok(PathBuf::from(path_str))
 }
 
 /// Resolves the development data directory relative to the Project Root.
@@ -242,28 +203,12 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_path_env_vars() {
-        unsafe {
-            env::set_var("TEST_RESOLVE_VAR", "my_value");
-        }
-        let p = resolve_path("$TEST_RESOLVE_VAR/file.txt").expect("failed to resolve path");
-        assert!(p.to_string_lossy().contains("my_value"));
+    fn test_resolve_path_remains_literal() {
+        let tilde_path = resolve_path("~/test").expect("failed to resolve");
+        assert_eq!(tilde_path, PathBuf::from("~/test"));
 
-        // Windows style
-        let p_win = resolve_path("%TEST_RESOLVE_VAR%/file.txt").expect("failed to resolve path win");
-        assert!(p_win.to_string_lossy().contains("my_value"));
-
-        unsafe {
-            env::remove_var("TEST_RESOLVE_VAR");
-        }
-    }
-
-    #[test]
-    fn test_resolve_path_home() {
-        let p = resolve_path("~/test").expect("failed to resolve home");
-        let s = p.to_string_lossy();
-        assert!(s.ends_with("test"));
-        assert!(!s.starts_with("~"));
+        let env_var_path = resolve_path("$VAR/test").expect("failed to resolve");
+        assert_eq!(env_var_path, PathBuf::from("$VAR/test"));
     }
 
     #[test]

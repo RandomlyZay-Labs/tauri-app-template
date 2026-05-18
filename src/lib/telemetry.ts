@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { uiStore } from '@/stores/uiStore.svelte';
 
-let isInitialized = false;
+export let telemetryInitialized = false;
 
 /**
  * Marks telemetry as initialized once the UI store has hydrated.
@@ -10,15 +10,15 @@ let isInitialized = false;
  * consent flag has been read from persistent storage.
  */
 export function initTelemetry() {
-	if (isInitialized || !uiStore._hasHydrated) return;
-	isInitialized = true;
+	if (telemetryInitialized || !uiStore._hasHydrated) return;
+	telemetryInitialized = true;
 }
 
 export function captureEvent(
 	event: string,
 	properties?: Record<string, unknown>,
 ) {
-	if (!uiStore.telemetryEnabled || !isInitialized) return;
+	if (!uiStore.telemetryEnabled || !telemetryInitialized) return;
 	void invoke('plugin:better-posthog|capture', { event, properties });
 }
 
@@ -27,7 +27,7 @@ export function captureEvent(
  * because we simply don't invoke the plugin when disabled.
  */
 export function updateTelemetryConsent(enabled: boolean) {
-	if (!isInitialized) return;
+	if (!telemetryInitialized) return;
 	if (enabled) {
 		captureEvent('telemetry_opted_in');
 	}
