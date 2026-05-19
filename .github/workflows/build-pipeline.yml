@@ -456,82 +456,129 @@ jobs:
           # Disable GPU hardware acceleration and sandbox for headless CI environment
           $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--disable-gpu --disable-software-rasterizer --no-sandbox"
 
-          $OutFile = "$env:TEMP\tauri_app_stdout.log"
-          $ErrFile = "$env:TEMP\tauri_app_stderr.log"
-          Remove-Item $OutFile -ErrorAction SilentlyContinue
-          Remove-Item $ErrFile -ErrorAction SilentlyContinue
+          Write-Host "Searching for cdb.exe..."
+          $Cdb = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits" -Filter cdb.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
 
-          Write-Host "Launching app: $AppPath"
-          $Proc = Start-Process -FilePath $AppPath -PassThru -NoNewWindow -RedirectStandardOutput $OutFile -RedirectStandardError $ErrFile
-          
-          # Give it a few seconds to boot and see if it crashes
-          Start-Sleep -Seconds 5
-          
-          $RunningProcess = Get-Process -Id $Proc.Id -ErrorAction SilentlyContinue
-          if ($RunningProcess) {
-              Write-Host "SUCCESS: Windows app launched and didn't immediately die."
-              Stop-Process -Id $Proc.Id -Force
-          } else {
-              Write-Host "Diagnosing failure..."
+          if ($Cdb) {
+              Write-Host "Found cdb.exe at: $($Cdb.FullName)"
+              $DebugLog = "$env:TEMP\cdb_debug.log"
+              Remove-Item $DebugLog -ErrorAction SilentlyContinue
               
-              $TraceFile = "$env:TEMP\tauri_launch_trace.txt"
-              if (Test-Path $TraceFile) {
-                  Write-Host "--- Startup Trace Checkpoints ($TraceFile) ---"
-                  Get-Content $TraceFile
+              Write-Host "Launching app under CDB: $AppPath"
+              # Launch CDB in background, catching child process exits and exceptions
+              # -o: debug child processes
+              # -g: ignore initial breakpoint
+              # -G: ignore final exit breakpoint
+              # -c "g; !analyze -v; k; q": run 'go', and on exception print analysis, stack trace, then quit
+              $Proc = Start-Process -FilePath $Cdb.FullName -ArgumentList "-o -g -G -c `"g; !analyze -v; k; q`" `"$AppPath`"" -PassThru -NoNewWindow -RedirectStandardOutput $DebugLog -RedirectStandardError $DebugLog
+              
+              Start-Sleep -Seconds 5
+              
+              $RunningProcess = Get-Process -Id $Proc.Id -ErrorAction SilentlyContinue
+              if ($RunningProcess) {
+                  Write-Host "SUCCESS: Windows app launched and didn't immediately die."
+                  Stop-Process -Id $Proc.Id -Force
+                  
+                  if (Test-Path $DebugLog) {
+                      Write-Host "--- CDB Debugger Log ---"
+                      Get-Content $DebugLog
+                  }
               } else {
-                  Write-Host "No startup trace checkpoints file found at $TraceFile."
+                  Write-Host "FAIL: App terminated or crashed under CDB."
+                  if (Test-Path $DebugLog) {
+                      Write-Host "--- CDB Debugger Log ---"
+                      Get-Content $DebugLog
+                  } else {
+                      Write-Host "No CDB debugger log found."
+                  }
+                  
+                  $TraceFile = "$env:TEMP\tauri_launch_trace.txt"
+                  if (Test-Path $TraceFile) {
+                      Write-Host "--- Startup Trace Checkpoints ($TraceFile) ---"
+                      Get-Content $TraceFile
+                  }
+                  
+                  Write-Error "FAIL: Windows app crashed or closed instantly on launch."
+                  exit 1
               }
+          } else {
+              Write-Host "cdb.exe not found on the runner. Falling back to direct launch..."
+              $OutFile = "$env:TEMP\tauri_app_stdout.log"
+              $ErrFile = "$env:TEMP\tauri_app_stderr.log"
+              Remove-Item $OutFile -ErrorAction SilentlyContinue
+              Remove-Item $ErrFile -ErrorAction SilentlyContinue
 
-              Write-Host "--- App Standard Output ($OutFile) ---"
-              if (Test-Path $OutFile) { Get-Content $OutFile }
+              Write-Host "Launching app: $AppPath"
+              $Proc = Start-Process -FilePath $AppPath -PassThru -NoNewWindow -RedirectStandardOutput $OutFile -RedirectStandardError $ErrFile
               
-              Write-Host "--- App Standard Error ($ErrFile) ---"
-              if (Test-Path $ErrFile) { Get-Content $ErrFile }
+              Start-Sleep -Seconds 5
+              
+              $RunningProcess = Get-Process -Id $Proc.Id -ErrorAction SilentlyContinue
+              if ($RunningProcess) {
+                  Write-Host "SUCCESS: Windows app launched and didn't immediately die."
+                  Stop-Process -Id $Proc.Id -Force
+              } else {
+                  Write-Host "Diagnosing failure..."
+                  
+                  $TraceFile = "$env:TEMP\tauri_launch_trace.txt"
+                  if (Test-Path $TraceFile) {
+                      Write-Host "--- Startup Trace Checkpoints ($TraceFile) ---"
+                      Get-Content $TraceFile
+                  } else {
+                      Write-Host "No startup trace checkpoints file found at $TraceFile."
+                  }
 
-              $LogDirs = @(
-                  "$env:LOCALAPPDATA\Tauri App Template\logs",
-                  "$env:LOCALAPPDATA\io.github.randomlyzay-labs.tauri-app-template\logs",
-                  "$env:LOCALAPPDATA\io.github.randomlyzay-labs.tauri-app-template"
-              )
-              foreach ($Dir in $LogDirs) {
-                  if (Test-Path $Dir) {
-                      Write-Host "Checking log directory: $Dir"
-                      Get-ChildItem -Path $Dir -Recurse -Filter *.log | ForEach-Object {
-                          Write-Host "--- Log file: $_.FullName ---"
-                          Get-Content $_.FullName
+                  Write-Host "--- App Standard Output ($OutFile) ---"
+                  if (Test-Path $OutFile) { Get-Content $OutFile }
+                  
+                  Write-Host "--- App Standard Error ($ErrFile) ---"
+                  if (Test-Path $ErrFile) { Get-Content $ErrFile }
+
+                  $LogDirs = @(
+                      "$env:LOCALAPPDATA\Tauri App Template\logs",
+                      "$env:LOCALAPPDATA\io.github.randomlyzay-labs.tauri-app-template\logs",
+                      "$env:LOCALAPPDATA\io.github.randomlyzay-labs.tauri-app-template"
+                  )
+                  foreach ($Dir in $LogDirs) {
+                      if (Test-Path $Dir) {
+                          Write-Host "Checking log directory: $Dir"
+                          Get-ChildItem -Path $Dir -Recurse -Filter *.log | ForEach-Object {
+                              Write-Host "--- Log file: $_.FullName ---"
+                              Get-Content $_.FullName
+                          }
                       }
                   }
-              }
 
-              Write-Host "Checking Event Viewer for recent Application errors:"
-              Get-EventLog -LogName Application -EntryType Error -Newest 10 | Format-List
+                  Write-Host "Checking Event Viewer for recent Application errors:"
+                  Get-EventLog -LogName Application -EntryType Error -Newest 10 | Format-List
 
-              Write-Host "Checking for crash dumps in $DumpFolder..."
-              $Dumps = Get-ChildItem -Path $DumpFolder -Filter *.dmp
-              if ($Dumps) {
-                  Write-Host "Found crash dump(s):"
-                  $Dumps | ForEach-Object { Write-Host "- $_.FullName (Size: $($_.Length) bytes)" }
-                  
-                  # Copy dumps to workspace for GHA artifact upload
-                  New-Item -Path ./crash-dumps -ItemType Directory -Force | Out-Null
-                  Copy-Item -Path "$DumpFolder\*" -Destination ./crash-dumps -Force
-                  Write-Host "Copied crash dumps to workspace: ./crash-dumps"
-                  
-                  # Find cdb.exe
-                  $Cdb = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits" -Filter cdb.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-                  if ($Cdb) {
-                      Write-Host "Analyzing dump using $($Cdb.FullName)..."
-                      $DumpFile = $Dumps[0].FullName
-                      & $Cdb.FullName -z $DumpFile -c "!analyze -v; k; q"
+                  Write-Host "Checking for crash dumps in $DumpFolder..."
+                  $Dumps = Get-ChildItem -Path $DumpFolder -Filter *.dmp
+                  if ($Dumps) {
+                      Write-Host "Found crash dump(s):"
+                      $Dumps | ForEach-Object { Write-Host "- $_.FullName (Size: $($_.Length) bytes)" }
+                      
+                      # Copy dumps to workspace for GHA artifact upload
+                      New-Item -Path ./crash-dumps -ItemType Directory -Force | Out-Null
+                      Copy-Item -Path "$DumpFolder\*" -Destination ./crash-dumps -Force
+                      Write-Host "Copied crash dumps to workspace: ./crash-dumps"
+                      
+                      # Find cdb.exe
+                      $Cdb = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits" -Filter cdb.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+                      if ($Cdb) {
+                          Write-Host "Analyzing dump using $($Cdb.FullName)..."
+                          $DumpFile = $Dumps[0].FullName
+                          & $Cdb.FullName -z $DumpFile -c "!analyze -v; k; q"
+                      } else {
+                          Write-Host "cdb.exe not found on the runner."
+                      }
                   } else {
-                      Write-Host "cdb.exe not found on the runner."
+                      Write-Host "No crash dump was generated."
                   }
-              } else {
-                  Write-Host "No crash dump was generated."
+                  
+                  Write-Error "FAIL: Windows app crashed or closed instantly on launch."
+                  exit 1
               }
-              
-              Write-Error "FAIL: Windows app crashed or closed instantly on launch."
-              exit 1
           }
 
       - name: Upload Crash Dumps (on failure)
