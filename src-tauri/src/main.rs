@@ -1,11 +1,23 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-// DEBUG_VERSION: 1.0.1
+// DEBUG_VERSION: 1.0.2
 use std::env;
 
 use tauri_app_template_lib::{run_app, util};
 
+fn trace(msg: &str) {
+    if let Ok(temp_dir) = std::env::var("TEMP") {
+        let path = std::path::Path::new(&temp_dir).join("tauri_launch_trace.txt");
+        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            use std::io::Write;
+            let _ = writeln!(file, "[MAIN] TRACE: {}", msg);
+        }
+    }
+}
+
 fn main() {
+    trace("main started");
     let _ = fix_path_env::fix();
+    trace("fix_path_env called");
 
     // ---------------------------------------------------------
     // 1. GENERATE BINDINGS (Dev Only)
@@ -45,8 +57,7 @@ fn main() {
         .ok()
         .map(util::resolve_dev_data_dir);
 
-    // ---------------------------------------------------------
-    // 3. RUN APP
-    // ---------------------------------------------------------
+    trace("calling run_app");
     run_app(dev_data_dir);
+    trace("run_app exited (should not happen in normal GUI run)");
 }

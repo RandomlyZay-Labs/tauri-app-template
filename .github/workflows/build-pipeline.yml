@@ -447,12 +447,20 @@ jobs:
           
           $ProcessName = $ExeName.Replace(".exe", "")
           $RunningProcess = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
-          
-          if ($RunningProcess) {
+                    if ($RunningProcess) {
               Write-Host "SUCCESS: Windows app launched and didn't immediately die."
               Stop-Process -Name $ProcessName -Force
           } else {
               Write-Host "Diagnosing failure..."
+              
+              $TraceFile = "$env:TEMP\tauri_launch_trace.txt"
+              if (Test-Path $TraceFile) {
+                  Write-Host "--- Startup Trace Checkpoints ($TraceFile) ---"
+                  Get-Content $TraceFile
+              } else {
+                  Write-Host "No startup trace checkpoints file found at $TraceFile."
+              }
+
               $LogDirs = @(
                   "$env:LOCALAPPDATA\Tauri App Template\logs",
                   "$env:LOCALAPPDATA\io.github.randomlyzay-labs.tauri-app-template\logs",

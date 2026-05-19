@@ -27,18 +27,33 @@ fn handle_single_instance<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _args: V
     }
 }
 
+fn trace_lib(msg: &str) {
+    if let Ok(temp_dir) = std::env::var("TEMP") {
+        let path = std::path::Path::new(&temp_dir).join("tauri_launch_trace.txt");
+        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            use std::io::Write;
+            let _ = writeln!(file, "[LIB] TRACE: {}", msg);
+        }
+    }
+}
+
 /// Runs the Main Application logic.
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 pub fn run_app(dev_data_dir: Option<PathBuf>) {
+    trace_lib("run_app entered");
     let specta_builder = api::collect();
+    trace_lib("specta collect done");
 
     // Initialize PostHog analytics (Rust-side HTTP, bypasses WebView CORS).
+    trace_lib("initializing PostHog guard");
     let _posthog_guard = better_posthog::init(better_posthog::ClientOptions {
         api_key: Some("phc_nAKTTsOrVMFGq9yakG0UNEyQemz1UvPRueal5dvkaD5".into()),
         ..Default::default()
     });
+    trace_lib("PostHog guard initialized");
 
-    tauri::Builder::default()
+    trace_lib("building tauri builder");
+    let builder_res = tauri::Builder::default()
         .plugin(tauri_plugin_better_posthog::init())
         .plugin(tauri_plugin_single_instance::init(handle_single_instance))
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -50,6 +65,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app| {
+            trace_lib("setup closure entered");
             // 1. Resolve Data Directory
             let app_data_dir = if let Some(ref dir) = dev_data_dir {
                 dir.clone()
@@ -64,14 +80,18 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                  app.path().app_log_dir().expect("Failed to resolve app log dir")
             };
 
+            trace_lib("initializing logging plugin");
             // 2b. Initialize Logging
             let log_plugin = setup::logging::init(&app_data_dir, &app_log_dir);
             app.handle().plugin(log_plugin).expect("Failed to initialize log plugin");
+            trace_lib("logging plugin initialized");
 
+            trace_lib("initializing keyring native store");
             // 2c. Initialize Keyring Store
             if let Err(err) = keyring::use_native_store(true) {
                 log::warn!("Failed to initialize native keyring store: {err}. Keyring-dependent features will not be available.");
             }
+            trace_lib("keyring native store initialized");
 
             log::info!("==================================");
             log::info!("App Version: {}", env!("CARGO_PKG_VERSION"));
@@ -80,14 +100,19 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             log::info!("Resolved Log Directory: {}", app_log_dir.display());
             log::info!("==================================");
 
+            trace_lib("performing checks and resets");
             // 3. Lifecycle Checks (Reset / Restore)
             util::check_and_perform_reset(&app_data_dir);
             util::check_and_perform_restore(&app_data_dir);
+            trace_lib("checks and resets complete");
 
+            trace_lib("initializing database");
             // 4. Initialize Database
             let db_pool = tauri::async_runtime::block_on(setup::database::init(Some(&app_data_dir)))
                 .expect("Failed to initialize database");
+            trace_lib("database initialized");
 
+            trace_lib("managing app state");
             // 5. Manage App State
             app.manage(AppState {
                 db: db_pool.clone(),
@@ -101,13 +126,16 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                 job_manager: services::job_service::JobManager::new(db_pool),
                 watcher_manager: services::watcher_service::WatcherManager::new(),
             });
+            trace_lib("app state managed");
 
+            trace_lib("setting up webview window builder");
             // 7. Webview Window Setup
             let state = app.state::<AppState>();
             let context_data_dir = state.app_data_dir.as_ref().unwrap();
             let webview_data_dir = context_data_dir.join("webview");
 
-            tauri::WebviewWindowBuilder::new(
+            trace_lib("building webview window");
+            let build_result = tauri::WebviewWindowBuilder::new(
                 app,
                 "main",
                 tauri::WebviewUrl::App("index.html".into()),
@@ -122,8 +150,17 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                     let _ = window.set_focus();
                 }
             })
-            .build()?;
+            .build();
 
+            match build_result {
+                Ok(_) => trace_lib("webview window built successfully"),
+                Err(e) => {
+                    trace_lib(&format!("webview window build failed: {}", e));
+                    return Err(e.into());
+                }
+            }
+
+            trace_lib("setting up system tray");
             // 8. System Tray Setup
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
@@ -138,19 +175,32 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                 .on_tray_icon_event(handle_tray_icon_event)
                 .build(app)?;
             tray.set_visible(false)?;
+            trace_lib("system tray setup complete");
 
+            trace_lib("spawning backup scheduler");
             // 9. Backup Scheduler
             services::scheduler::spawn_scheduler(app.handle().clone());
+            trace_lib("backup scheduler spawned");
 
             // 10. Linux Theme Watcher (Freedesktop portal)
             #[cfg(target_os = "linux")]
-            services::theme_service::spawn_theme_watcher(app.handle().clone());
+            {
+                trace_lib("spawning linux theme watcher");
+                services::theme_service::spawn_theme_watcher(app.handle().clone());
+            }
 
+            trace_lib("setup closure exiting cleanly");
             Ok(())
         })
-        .on_window_event(handle_window_event)
+        .on_window_event(handle_window_event);
+
+    trace_lib("tauri builder constructed successfully");
+
+    trace_lib("calling tauri run");
+    builder_res
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+    trace_lib("tauri run exited");
 }
 
 fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
