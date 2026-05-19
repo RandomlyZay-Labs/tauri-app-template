@@ -102,6 +102,30 @@ describe('executeSafeAction', () => {
 		);
 	});
 
+	it('suppresses error toasts when silent option is true', async () => {
+		const action = vi.fn().mockRejectedValue(new Error('connection refused'));
+
+		await executeSafeAction(action, { silent: true });
+
+		expect(toast.error).not.toHaveBeenCalled();
+		expect(logger.error).toHaveBeenCalledWith(
+			'translated-errors.unexpectedError',
+			expect.any(Error),
+		);
+	});
+
+	it('suppresses error toasts when hideErrorToast option is true', async () => {
+		const action = vi.fn().mockRejectedValue(new Error('connection refused'));
+
+		await executeSafeAction(action, { hideErrorToast: true });
+
+		expect(toast.error).not.toHaveBeenCalled();
+		expect(logger.error).toHaveBeenCalledWith(
+			'translated-errors.unexpectedError',
+			expect.any(Error),
+		);
+	});
+
 	it('calls onError callback when the action throws', async () => {
 		const error = new Error('boom');
 		const action = vi.fn().mockRejectedValue(error);

@@ -11,6 +11,10 @@ interface SafeActionOptions {
 	onSuccess?: () => void;
 	/** Callback to run on error. */
 	onError?: (error: unknown) => void;
+	/** If true, error toasts will not be shown. */
+	silent?: boolean;
+	/** If true, error toasts will not be shown. Alternative name for silent. */
+	hideErrorToast?: boolean;
 }
 
 /**
@@ -30,6 +34,8 @@ export async function executeSafeAction<T>(
 		successMessage,
 		onSuccess,
 		onError,
+		silent = false,
+		hideErrorToast = false,
 	} = options;
 
 	try {
@@ -58,7 +64,9 @@ export async function executeSafeAction<T>(
 		}
 
 		void logger.error(errorMessage, error);
-		toast.error(`${errorMessage}: ${message}`);
+		if (!silent && !hideErrorToast) {
+			toast.error(`${errorMessage}: ${message}`);
+		}
 		onError?.(error);
 		return undefined;
 	}

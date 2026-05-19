@@ -20,8 +20,9 @@ export function captureEvent(
 	properties?: Record<string, unknown>,
 ) {
 	if (!uiStore.telemetryEnabled || !telemetryInitialized) return;
-	void executeSafeAction(() =>
-		invoke('plugin:better-posthog|capture', { event, properties }),
+	void executeSafeAction(
+		() => invoke('plugin:better-posthog|capture', { event, properties }),
+		{ silent: true },
 	);
 }
 

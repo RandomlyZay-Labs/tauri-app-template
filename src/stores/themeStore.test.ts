@@ -309,6 +309,9 @@ describe('themeStore', () => {
 	});
 
 	it('ignores stale applyTheme runs when theme changes rapidly', async () => {
+		const store = await freshStore();
+		mockSetTheme.mockClear();
+
 		let firstResolve: ((value: unknown) => void) | undefined;
 		const firstPromise = new Promise((resolve) => {
 			firstResolve = resolve;
@@ -316,9 +319,6 @@ describe('themeStore', () => {
 
 		mockGetSystemTheme.mockImplementationOnce(() => firstPromise);
 		mockGetSystemTheme.mockResolvedValueOnce('light');
-
-		const store = await freshStore();
-		mockSetTheme.mockClear();
 
 		store.setTheme('system');
 
