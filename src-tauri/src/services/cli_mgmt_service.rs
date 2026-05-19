@@ -57,9 +57,36 @@ impl CliMgmtService {
         }
 
         // Try to run the CLI to get its version
-        let output = Command::new(&path)
+        use wait_timeout::ChildExt;
+        use std::time::Duration;
+
+        let child = Command::new(&path)
             .arg("--version")
-            .output();
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn();
+
+        let output = match child {
+            Ok(mut child_proc) => {
+                match child_proc.wait_timeout(Duration::from_secs(3)) {
+                    Ok(Some(_status)) => child_proc.wait_with_output(),
+                    Ok(None) => {
+                        let _ = child_proc.kill();
+                        let _ = child_proc.wait();
+                        Err(std::io::Error::new(
+                            std::io::ErrorKind::TimedOut,
+                            "CLI process timed out",
+                        ))
+                    }
+                    Err(e) => {
+                        let _ = child_proc.kill();
+                        let _ = child_proc.wait();
+                        Err(e)
+                    }
+                }
+            }
+            Err(e) => Err(e),
+        };
 
         match output {
             Ok(out) if out.status.success() => {
@@ -253,22 +280,42 @@ impl CliMgmtService {
 
                 // 5. Write/Rename to target path
                 if let Err(e) = std::fs::rename(&tmp_path, &target_path) {
-                    let _ = std::fs::remove_file(&tmp_path);
-                    let msg = format!("Failed to rename binary: {}", e);
-                    job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                    emit_job_progress(
-                        &*emitter,
-                        EmitJobProgressArgs {
-                            job_id: &job_id,
-                            kind: &JobKind::Download,
-                            status: JobStatus::Failed,
-                            percent: None,
-                            speed_bps: None,
-                            eta_secs: None,
-                            message: Some(&msg),
-                        },
-                    );
-                    return Err(Error::Io(e.to_string()));
+                    let is_already_exists = e.kind() == std::io::ErrorKind::AlreadyExists;
+                    let mut retry_success = false;
+                    let mut secondary_error = None;
+
+                    if is_already_exists {
+                        if let Err(rm_err) = std::fs::remove_file(&target_path) {
+                            secondary_error = Some(format!("Failed to remove existing target file: {}", rm_err));
+                        } else if let Err(rename_err) = std::fs::rename(&tmp_path, &target_path) {
+                            secondary_error = Some(format!("Failed to rename binary on retry: {}", rename_err));
+                        } else {
+                            retry_success = true;
+                        }
+                    }
+
+                    if !retry_success {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = if let Some(sec_err) = secondary_error {
+                            format!("Failed to rename binary: {}. Secondary error: {}", e, sec_err)
+                        } else {
+                            format!("Failed to rename binary: {}", e)
+                        };
+                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(Error::Io(msg));
+                    }
                 }
 
                 // 5b. Set executable permissions on Unix
@@ -696,6 +743,105 @@ mod tests {
         assert_eq!(jobs[0].status, "failed");
         assert!(jobs[0].message.as_deref().unwrap_or_default().contains("Failed to read temporary download file"));
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_cli_status_timeout() -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let path = temp.path().join("tauri-app-template-cli-slow");
+        
+        // Write a mock script that sleeps to simulate a hanging CLI process
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::write(&path, "#!/bin/sh\nsleep 10\n")?;
+            let mut perms = std::fs::metadata(&path)?.permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&path, perms)?;
+        }
+        #[cfg(windows)]
+        {
+            // On Windows we can write a batch file that sleeps
+            std::fs::write(&path, "@echo off\ntimeout /t 10 /nobreak > nul\n")?;
+        }
+
+        TEST_CLI_PATH.with(|p| {
+            *p.borrow_mut() = Some(path.clone());
+        });
+
+        let start = std::time::Instant::now();
+        let status = CliMgmtService::get_cli_status()?;
+        let elapsed = start.elapsed();
+
+        // Check that it returned within 5 seconds (our timeout is 3 seconds)
+        assert!(elapsed < std::time::Duration::from_secs(5));
+        assert!(status.installed);
+        assert!(status.version.is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_install_cli_target_exists() -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let path = temp.path().join("tauri-app-template-cli");
+        
+        // Pre-create the target file with some dummy content
+        std::fs::write(&path, "existing CLI binary content")?;
+
+        TEST_CLI_PATH.with(|p| {
+            *p.borrow_mut() = Some(path.clone());
+        });
+
+        // Generate checksum for mock binary
+        let mock_binary = b"mock CLI binary content".to_vec();
+        use sha2::{Sha256, Digest};
+        let mut hasher = Sha256::new();
+        hasher.update(&mock_binary);
+        let computed_sha = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let mock_checksum = format!("{}  tauri-app-template-cli\n", computed_sha);
+
+        // Setup mock tauri app and AppState
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+
+        let db = sqlx::SqlitePool::connect("sqlite::memory:").await?;
+        
+        // Run database migrations to set up the jobs table
+        sqlx::migrate!("./migrations")
+            .run(&db)
+            .await?;
+
+        let mock_network = Arc::new(MockCliNetwork {
+            checksum: mock_checksum,
+            binary: mock_binary,
+        });
+
+        let download_manager = DownloadManager::with_mocks(
+            1,
+            mock_network,
+            Arc::new(RealFileSystem),
+        );
+
+        handle.manage(AppState {
+            db: db.clone(),
+            log_dir: temp.path().join("logs"),
+            app_data_dir: Some(temp.path().to_path_buf()),
+            tray_settings: Mutex::new(TraySettings {
+                minimize_to_tray: false,
+                notify_on_minimize: false,
+            }),
+            download_manager,
+            job_manager: JobManager::new(db),
+            watcher_manager: WatcherManager::new(),
+        });
+
+        let result = CliMgmtService::install_cli(handle.clone()).await;
+        assert!(result.is_ok());
+
+        // Verify the file was overwritten with the new mock binary content
+        let file_content = std::fs::read(&path)?;
+        assert_eq!(file_content, b"mock CLI binary content");
         Ok(())
     }
 }

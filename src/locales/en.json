@@ -113,6 +113,7 @@
 		"installed": "Installed",
 		"installSuccess": "CLI installed successfully",
 		"installFailed": "Failed to install CLI",
+		"unknownVersion": "Unknown Version",
 		"howToUse": "How to use",
 		"usageDescription": "Once installed, you can use the CLI from any terminal to interact with the application database and perform system tasks.",
 		"pathNoteTitle": "System PATH",

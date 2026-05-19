@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { executeSafeAction } from '@/lib/async-utils';
 import { uiStore } from '@/stores/uiStore.svelte';
 
 export let telemetryInitialized = false;
@@ -19,7 +20,10 @@ export function captureEvent(
 	properties?: Record<string, unknown>,
 ) {
 	if (!uiStore.telemetryEnabled || !telemetryInitialized) return;
-	void invoke('plugin:better-posthog|capture', { event, properties });
+	void executeSafeAction(
+		() => invoke('plugin:better-posthog|capture', { event, properties }),
+		{ silent: true },
+	);
 }
 
 /**

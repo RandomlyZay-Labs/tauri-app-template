@@ -178,6 +178,17 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                         .title("Tauri App Template")
                         .body("Application minimized to tray")
                         .show();
+
+                    #[cfg(target_os = "linux")]
+                    {
+                        if let Err(e) = std::process::Command::new("notify-send")
+                            .arg("Tauri App Template")
+                            .arg("Application minimized to tray")
+                            .spawn()
+                        {
+                            log::error!("Failed to spawn fallback notify-send: {}", e);
+                        }
+                    }
                 }
             }
         }

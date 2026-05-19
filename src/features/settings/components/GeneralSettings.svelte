@@ -91,9 +91,15 @@ function handleTelemetryToggle(enabled: boolean) {
 }
 
 async function copyCommand() {
-        await writeText('tauri-app-template');
-        copied = true;
-        setTimeout(() => (copied = false), 2000);
+	await executeSafeAction(
+		() => writeText('tauri-app-template'),
+		{
+			onSuccess: () => {
+				copied = true;
+				setTimeout(() => (copied = false), 2000);
+			}
+		}
+	);
 }
 </script>
 

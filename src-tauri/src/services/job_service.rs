@@ -13,8 +13,9 @@ use super::download_service::ProgressCallback;
 // Types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq, clap::ValueEnum)]
 #[serde(rename_all = "camelCase")]
+#[value(rename_all = "lower")]
 pub enum JobStatus {
     Pending,
     Running,
@@ -496,5 +497,39 @@ mod tests {
         mgr.cancel_job(&job.id).await?;
         assert!(token.is_cancelled());
         Ok(())
+    }
+
+    #[test]
+    fn test_job_status_cli_parsing() {
+        use clap::ValueEnum;
+
+        // Verify accepted inputs: exact lower-case variants present in JobStatus successfully convert to the corresponding variant
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("pending", false),
+            Ok(JobStatus::Pending)
+        );
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("running", false),
+            Ok(JobStatus::Running)
+        );
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("completed", false),
+            Ok(JobStatus::Completed)
+        );
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("failed", false),
+            Ok(JobStatus::Failed)
+        );
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("cancelled", false),
+            Ok(JobStatus::Cancelled)
+        );
+
+        // Verify that mixed/upper-case variants and unsupported strings are not accepted
+        assert!(<JobStatus as ValueEnum>::from_str("Pending", false).is_err());
+        assert!(<JobStatus as ValueEnum>::from_str("PENDING", false).is_err());
+        assert!(<JobStatus as ValueEnum>::from_str("running_cased_incorrectly", false).is_err());
+        assert!(<JobStatus as ValueEnum>::from_str("in_progress", false).is_err());
+        assert!(<JobStatus as ValueEnum>::from_str("unknown", false).is_err());
     }
 }

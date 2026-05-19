@@ -30,6 +30,11 @@ async fn main() -> std::process::ExitCode {
         }
     };
 
+    if let Err(err) = keyring::use_native_store(true) {
+        eprintln!("Error: Failed to initialize native keyring store: {err}");
+        return std::process::ExitCode::from(1);
+    }
+
     let ctx = StandaloneContext {
         version: env!("CARGO_PKG_VERSION").to_string(),
         product_name: "Tauri App Template".to_string(),

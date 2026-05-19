@@ -102,6 +102,30 @@ describe('executeSafeAction', () => {
 		);
 	});
 
+	it('suppresses error toasts when silent option is true', async () => {
+		const action = vi.fn().mockRejectedValue(new Error('connection refused'));
+
+		await executeSafeAction(action, { silent: true });
+
+		expect(toast.error).not.toHaveBeenCalled();
+		expect(logger.error).toHaveBeenCalledWith(
+			'translated-errors.unexpectedError',
+			expect.any(Error),
+		);
+	});
+
+	it('suppresses error toasts when hideErrorToast option is true', async () => {
+		const action = vi.fn().mockRejectedValue(new Error('connection refused'));
+
+		await executeSafeAction(action, { hideErrorToast: true });
+
+		expect(toast.error).not.toHaveBeenCalled();
+		expect(logger.error).toHaveBeenCalledWith(
+			'translated-errors.unexpectedError',
+			expect.any(Error),
+		);
+	});
+
 	it('calls onError callback when the action throws', async () => {
 		const error = new Error('boom');
 		const action = vi.fn().mockRejectedValue(error);
@@ -170,5 +194,21 @@ describe('executeSafeAction', () => {
 		expect(action).toHaveBeenCalledOnce();
 		expect(toast.success).not.toHaveBeenCalled();
 		expect(toast.error).not.toHaveBeenCalled();
+	});
+
+	it('returns the resolved value of the action on success', async () => {
+		const action = vi.fn().mockResolvedValue('success-value');
+
+		const result = await executeSafeAction(action);
+
+		expect(result).toBe('success-value');
+	});
+
+	it('returns undefined when the action throws an error', async () => {
+		const action = vi.fn().mockRejectedValue(new Error('failure'));
+
+		const result = await executeSafeAction(action);
+
+		expect(result).toBeUndefined();
 	});
 });
