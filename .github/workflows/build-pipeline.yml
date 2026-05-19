@@ -105,7 +105,7 @@ jobs:
           SQLX_OFFLINE: true
         run: |
           if ("${{ matrix.arch }}" -eq "arm64") {
-            $env:RUSTFLAGS = "-C target-feature=+crt-static"
+            $env:RUSTFLAGS = ""
           } else {
             $env:RUSTFLAGS = "-C linker=rust-lld -C target-feature=+crt-static"
           }
@@ -118,7 +118,7 @@ jobs:
           SQLX_OFFLINE: true
         run: |
           if ("${{ matrix.arch }}" -eq "arm64") {
-            $env:RUSTFLAGS = "-C target-feature=+crt-static"
+            $env:RUSTFLAGS = ""
           } else {
             $env:RUSTFLAGS = "-C linker=rust-lld -C target-feature=+crt-static"
           }
@@ -474,6 +474,3 @@ jobs:
               Write-Error "FAIL: Windows app crashed or closed instantly on launch."
               exit 1
           }
-
-
-
