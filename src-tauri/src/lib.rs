@@ -54,8 +54,8 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
 
     trace_lib("building tauri builder");
     let builder_res = tauri::Builder::default()
-        .plugin(tauri_plugin_better_posthog::init())
         .plugin(tauri_plugin_single_instance::init(handle_single_instance))
+        .plugin(tauri_plugin_better_posthog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_process::init())
