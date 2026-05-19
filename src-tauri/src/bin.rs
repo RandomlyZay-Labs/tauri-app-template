@@ -31,8 +31,7 @@ async fn main() -> std::process::ExitCode {
     };
 
     if let Err(err) = keyring::use_native_store(true) {
-        eprintln!("Error: Failed to initialize native keyring store: {err}");
-        return std::process::ExitCode::from(1);
+        eprintln!("Warning: Failed to initialize native keyring store: {err}. Keyring-dependent features will not be available.");
     }
 
     let ctx = StandaloneContext {

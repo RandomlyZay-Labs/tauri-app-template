@@ -69,7 +69,9 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             app.handle().plugin(log_plugin).expect("Failed to initialize log plugin");
 
             // 2c. Initialize Keyring Store
-            keyring::use_native_store(true).expect("Failed to initialize native keyring store");
+            if let Err(err) = keyring::use_native_store(true) {
+                log::warn!("Failed to initialize native keyring store: {err}. Keyring-dependent features will not be available.");
+            }
 
             log::info!("==================================");
             log::info!("App Version: {}", env!("CARGO_PKG_VERSION"));
