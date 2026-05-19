@@ -440,16 +440,24 @@ jobs:
           $AppPath = "$env:LOCALAPPDATA\Tauri App Template\$ExeName"
           
           $env:RUST_BACKTRACE = "1"
-          Start-Process -FilePath $AppPath
+          # Disable GPU hardware acceleration and sandbox for headless CI environment
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--disable-gpu --disable-software-rasterizer --no-sandbox"
+
+          $OutFile = "$env:TEMP\tauri_app_stdout.log"
+          $ErrFile = "$env:TEMP\tauri_app_stderr.log"
+          Remove-Item $OutFile -ErrorAction SilentlyContinue
+          Remove-Item $ErrFile -ErrorAction SilentlyContinue
+
+          Write-Host "Launching app: $AppPath"
+          $Proc = Start-Process -FilePath $AppPath -PassThru -NoNewWindow -RedirectStandardOutput $OutFile -RedirectStandardError $ErrFile
           
           # Give it a few seconds to boot and see if it crashes
           Start-Sleep -Seconds 5
           
-          $ProcessName = $ExeName.Replace(".exe", "")
-          $RunningProcess = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
-                    if ($RunningProcess) {
+          $RunningProcess = Get-Process -Id $Proc.Id -ErrorAction SilentlyContinue
+          if ($RunningProcess) {
               Write-Host "SUCCESS: Windows app launched and didn't immediately die."
-              Stop-Process -Name $ProcessName -Force
+              Stop-Process -Id $Proc.Id -Force
           } else {
               Write-Host "Diagnosing failure..."
               
@@ -460,6 +468,12 @@ jobs:
               } else {
                   Write-Host "No startup trace checkpoints file found at $TraceFile."
               }
+
+              Write-Host "--- App Standard Output ($OutFile) ---"
+              if (Test-Path $OutFile) { Get-Content $OutFile }
+              
+              Write-Host "--- App Standard Error ($ErrFile) ---"
+              if (Test-Path $ErrFile) { Get-Content $ErrFile }
 
               $LogDirs = @(
                   "$env:LOCALAPPDATA\Tauri App Template\logs",
