@@ -392,6 +392,17 @@ jobs:
           .\cli-artifact\tauri-app-template-cli.exe --help
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
+      - name: Install WebView2 Runtime
+        shell: pwsh
+        run: |
+          Write-Host "Downloading WebView2 Evergreen Bootstrapper..."
+          $installerPath = "$env:TEMP\MicrosoftEdgeWebview2Setup.exe"
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile $installerPath
+          
+          Write-Host "Installing WebView2 silently..."
+          Start-Process -FilePath $installerPath -ArgumentList "/silent /install" -Wait -NoNewWindow
+          Write-Host "WebView2 installation completed."
+
       - name: Install and Launch App
         shell: pwsh
         run: |
@@ -409,6 +420,7 @@ jobs:
           $ExeName = "tauri-app-template.exe"
           $AppPath = "$env:LOCALAPPDATA\Tauri App Template\$ExeName"
           
+          $env:RUST_BACKTRACE = "1"
           Start-Process -FilePath $AppPath
           
           # Give it a few seconds to boot and see if it crashes
@@ -421,6 +433,26 @@ jobs:
               Write-Host "SUCCESS: Windows app launched and didn't immediately die."
               Stop-Process -Name $ProcessName -Force
           } else {
+              Write-Host "Diagnosing failure..."
+              $LogDirs = @(
+                  "$env:LOCALAPPDATA\Tauri App Template\logs",
+                  "$env:LOCALAPPDATA\io.github.randomlyzay-labs.tauri-app-template\logs",
+                  "$env:LOCALAPPDATA\io.github.randomlyzay-labs.tauri-app-template"
+              )
+              foreach ($Dir in $LogDirs) {
+                  if (Test-Path $Dir) {
+                      Write-Host "Checking log directory: $Dir"
+                      Get-ChildItem -Path $Dir -Recurse -Filter *.log | ForEach-Object {
+                          Write-Host "--- Log file: $_.FullName ---"
+                          Get-Content $_.FullName
+                      }
+                  }
+              }
+
+              Write-Host "Checking Event Viewer for recent Application errors:"
+              Get-EventLog -LogName Application -EntryType Error -Newest 10 | Format-List
+              
               Write-Error "FAIL: Windows app crashed or closed instantly on launch."
               exit 1
           }
+
