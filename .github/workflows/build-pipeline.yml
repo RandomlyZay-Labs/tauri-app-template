@@ -103,8 +103,12 @@ jobs:
         shell: pwsh
         env:
           SQLX_OFFLINE: true
-          RUSTFLAGS: "-C linker=rust-lld -C target-feature=+crt-static"
         run: |
+          if ("${{ matrix.arch }}" -eq "arm64") {
+            $env:RUSTFLAGS = "-C target-feature=+crt-static"
+          } else {
+            $env:RUSTFLAGS = "-C linker=rust-lld -C target-feature=+crt-static"
+          }
           $config = '{\"build\":{\"beforeBuildCommand\":\"\"}}'
           pnpm tauri build --target ${{ matrix.target }} --config $config
 
@@ -112,11 +116,16 @@ jobs:
         shell: pwsh
         env:
           SQLX_OFFLINE: true
-          RUSTFLAGS: "-C linker=rust-lld -C target-feature=+crt-static"
         run: |
+          if ("${{ matrix.arch }}" -eq "arm64") {
+            $env:RUSTFLAGS = "-C target-feature=+crt-static"
+          } else {
+            $env:RUSTFLAGS = "-C linker=rust-lld -C target-feature=+crt-static"
+          }
           Push-Location src-tauri
           cargo build --bin tauri-app-template-cli --release --target ${{ matrix.target }}
           Pop-Location
+
 
       - name: Upload GUI Artifacts
         uses: actions/upload-artifact@v7
@@ -259,10 +268,12 @@ jobs:
           ./cli-artifact/tauri-app-template-cli --help
 
       - name: Test .deb installation and launch
+        env:
+          RUST_BACKTRACE: "1"
         run: |
           sudo apt-get install -y ./artifacts/deb/*.deb
           
-          xvfb-run --auto-servernum tauri-app-template &
+          xvfb-run --auto-servernum tauri-app-template > deb-app.log 2>&1 &
           PID=$!
           
           sleep 5
@@ -272,17 +283,24 @@ jobs:
              kill $PID
           else
              echo "FAIL: Deb app crashed on launch."
+             echo "--- Standard Output / Error Logs ---"
+             cat deb-app.log
+             
+             echo "--- Tauri Application Logs ---"
+             cat "$HOME/.local/share/io.github.randomlyzay-labs.tauri-app-template/logs"/*.log 2>/dev/null || true
              exit 1
           fi
 
       - name: Test .AppImage launch
+        env:
+          RUST_BACKTRACE: "1"
         run: |
           chmod +x ./artifacts/appimage/*.AppImage
           
           # Extract AppImage to bypass FUSE requirements in CI
           ./artifacts/appimage/*.AppImage --appimage-extract
           
-          xvfb-run --auto-servernum ./squashfs-root/AppRun &
+          xvfb-run --auto-servernum ./squashfs-root/AppRun > appimage-app.log 2>&1 &
           PID=$!
           
           sleep 5
@@ -292,6 +310,11 @@ jobs:
              kill $PID
           else
              echo "FAIL: AppImage crashed on launch."
+             echo "--- Standard Output / Error Logs ---"
+             cat appimage-app.log
+             
+             echo "--- Tauri Application Logs ---"
+             cat "$HOME/.local/share/io.github.randomlyzay-labs.tauri-app-template/logs"/*.log 2>/dev/null || true
              exit 1
           fi
 
@@ -341,8 +364,10 @@ jobs:
           ./cli-artifact/tauri-app-template-cli --help
 
       - name: Test .rpm launch
+        env:
+          RUST_BACKTRACE: "1"
         run: |
-          xvfb-run --auto-servernum tauri-app-template &
+          xvfb-run --auto-servernum tauri-app-template > rpm-app.log 2>&1 &
           PID=$!
           
           sleep 5
@@ -352,6 +377,11 @@ jobs:
              kill $PID
           else
              echo "FAIL: RPM app crashed on launch."
+             echo "--- Standard Output / Error Logs ---"
+             cat rpm-app.log
+             
+             echo "--- Tauri Application Logs ---"
+             cat "$HOME/.local/share/io.github.randomlyzay-labs.tauri-app-template/logs"/*.log 2>/dev/null || true
              exit 1
           fi
 
@@ -391,17 +421,6 @@ jobs:
         run: |
           .\cli-artifact\tauri-app-template-cli.exe --help
           if ($LASTEXITCODE -ne 0) { exit 1 }
-
-      - name: Install WebView2 Runtime
-        shell: pwsh
-        run: |
-          Write-Host "Downloading WebView2 Evergreen Bootstrapper..."
-          $installerPath = "$env:TEMP\MicrosoftEdgeWebview2Setup.exe"
-          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile $installerPath
-          
-          Write-Host "Installing WebView2 silently..."
-          Start-Process -FilePath $installerPath -ArgumentList "/silent /install" -Wait -NoNewWindow
-          Write-Host "WebView2 installation completed."
 
       - name: Install and Launch App
         shell: pwsh
@@ -455,4 +474,6 @@ jobs:
               Write-Error "FAIL: Windows app crashed or closed instantly on launch."
               exit 1
           }
+
+
 
