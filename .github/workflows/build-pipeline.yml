@@ -431,6 +431,19 @@ jobs:
             exit 1
           }
 
+          Write-Host "Enabling Windows Error Reporting (WER) Local Dumps..."
+          $DumpFolder = "$env:TEMP\CrashDumps"
+          New-Item -Path $DumpFolder -ItemType Directory -Force | Out-Null
+          
+          $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps"
+          if (!(Test-Path $RegistryPath)) {
+              New-Item -Path $RegistryPath -Force | Out-Null
+          }
+          Set-ItemProperty -Path $RegistryPath -Name "DumpFolder" -Value $DumpFolder -Type ExpandString -Force
+          Set-ItemProperty -Path $RegistryPath -Name "DumpCount" -Value 10 -Type DWord -Force
+          Set-ItemProperty -Path $RegistryPath -Name "DumpType" -Value 2 -Type DWord -Force # 2 = Full Dump
+          Write-Host "Local Dumps enabled. Dumps will be written to: $DumpFolder"
+
           Write-Host "Installing: $($Installer.FullName)"
           # /S triggers silent install for NSIS
           Start-Process -FilePath $Installer.FullName -ArgumentList "/S" -Wait
@@ -492,7 +505,40 @@ jobs:
 
               Write-Host "Checking Event Viewer for recent Application errors:"
               Get-EventLog -LogName Application -EntryType Error -Newest 10 | Format-List
+
+              Write-Host "Checking for crash dumps in $DumpFolder..."
+              $Dumps = Get-ChildItem -Path $DumpFolder -Filter *.dmp
+              if ($Dumps) {
+                  Write-Host "Found crash dump(s):"
+                  $Dumps | ForEach-Object { Write-Host "- $_.FullName (Size: $($_.Length) bytes)" }
+                  
+                  # Copy dumps to workspace for GHA artifact upload
+                  New-Item -Path ./crash-dumps -ItemType Directory -Force | Out-Null
+                  Copy-Item -Path "$DumpFolder\*" -Destination ./crash-dumps -Force
+                  Write-Host "Copied crash dumps to workspace: ./crash-dumps"
+                  
+                  # Find cdb.exe
+                  $Cdb = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits" -Filter cdb.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+                  if ($Cdb) {
+                      Write-Host "Analyzing dump using $($Cdb.FullName)..."
+                      $DumpFile = $Dumps[0].FullName
+                      & $Cdb.FullName -z $DumpFile -c "!analyze -v; k; q"
+                  } else {
+                      Write-Host "cdb.exe not found on the runner."
+                  }
+              } else {
+                  Write-Host "No crash dump was generated."
+              }
               
               Write-Error "FAIL: Windows app crashed or closed instantly on launch."
               exit 1
           }
+
+      - name: Upload Crash Dumps (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-crash-dumps-${{ matrix.arch }}
+          path: ./crash-dumps/*.dmp
+          retention-days: 7
+          if-no-files-found: ignore
