@@ -280,7 +280,7 @@ impl CliMgmtService {
 
                 // 5. Write/Rename to target path
                 if let Err(e) = std::fs::rename(&tmp_path, &target_path) {
-                    let is_already_exists = e.kind() == std::io::ErrorKind::AlreadyExists || target_path.exists();
+                    let is_already_exists = e.kind() == std::io::ErrorKind::AlreadyExists;
                     let mut retry_success = false;
                     let mut secondary_error = None;
 
