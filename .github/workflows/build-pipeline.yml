@@ -461,8 +461,10 @@ jobs:
 
           if ($Cdb) {
               Write-Host "Found cdb.exe at: $($Cdb.FullName)"
-              $DebugLog = "$env:TEMP\cdb_debug.log"
-              Remove-Item $DebugLog -ErrorAction SilentlyContinue
+              $OutLog = "$env:TEMP\cdb_stdout.log"
+              $ErrLog = "$env:TEMP\cdb_stderr.log"
+              Remove-Item $OutLog -ErrorAction SilentlyContinue
+              Remove-Item $ErrLog -ErrorAction SilentlyContinue
               
               Write-Host "Launching app under CDB: $AppPath"
               # Launch CDB in background, catching child process exits and exceptions
@@ -470,7 +472,7 @@ jobs:
               # -g: ignore initial breakpoint
               # -G: ignore final exit breakpoint
               # -c "g; !analyze -v; k; q": run 'go', and on exception print analysis, stack trace, then quit
-              $Proc = Start-Process -FilePath $Cdb.FullName -ArgumentList "-o -g -G -c `"g; !analyze -v; k; q`" `"$AppPath`"" -PassThru -NoNewWindow -RedirectStandardOutput $DebugLog -RedirectStandardError $DebugLog
+              $Proc = Start-Process -FilePath $Cdb.FullName -ArgumentList "-o -g -G -c `"g; !analyze -v; k; q`" `"$AppPath`"" -PassThru -NoNewWindow -RedirectStandardOutput $OutLog -RedirectStandardError $ErrLog
               
               Start-Sleep -Seconds 5
               
@@ -479,18 +481,16 @@ jobs:
                   Write-Host "SUCCESS: Windows app launched and didn't immediately die."
                   Stop-Process -Id $Proc.Id -Force
                   
-                  if (Test-Path $DebugLog) {
-                      Write-Host "--- CDB Debugger Log ---"
-                      Get-Content $DebugLog
-                  }
+                  Write-Host "--- CDB Debugger Standard Output ---"
+                  if (Test-Path $OutLog) { Get-Content $OutLog }
+                  Write-Host "--- CDB Debugger Standard Error ---"
+                  if (Test-Path $ErrLog) { Get-Content $ErrLog }
               } else {
                   Write-Host "FAIL: App terminated or crashed under CDB."
-                  if (Test-Path $DebugLog) {
-                      Write-Host "--- CDB Debugger Log ---"
-                      Get-Content $DebugLog
-                  } else {
-                      Write-Host "No CDB debugger log found."
-                  }
+                  Write-Host "--- CDB Debugger Standard Output ---"
+                  if (Test-Path $OutLog) { Get-Content $OutLog }
+                  Write-Host "--- CDB Debugger Standard Error ---"
+                  if (Test-Path $ErrLog) { Get-Content $ErrLog }
                   
                   $TraceFile = "$env:TEMP\tauri_launch_trace.txt"
                   if (Test-Path $TraceFile) {
