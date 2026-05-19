@@ -78,6 +78,24 @@ describe('CliSettings', () => {
 		expect(screen.getByText('cliSettings.updateCli')).toBeTruthy();
 	});
 
+	it('renders unknown version state', async () => {
+		mockIPC((cmd) => {
+			if (cmd === 'get_cli_status') return { installed: true, version: null };
+			return null;
+		});
+
+		render(CliSettings);
+		await tick();
+
+		expect(await screen.findByText('cliSettings.unknownVersion')).toBeTruthy();
+
+		const installBtn = screen.getByRole('button', {
+			name: /cliSettings.installed/,
+		});
+		expect(installBtn).toBeTruthy();
+		expect(installBtn.hasAttribute('disabled')).toBe(false);
+	});
+
 	it('triggers installation when install button is clicked', async () => {
 		let capturedInstall = false;
 		mockIPC((cmd) => {

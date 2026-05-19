@@ -48,7 +48,7 @@ pub enum JobsCommands {
     /// List all jobs
     List {
         #[arg(short, long, help = "Filter by job status (pending, running, completed, failed, cancelled)")]
-        status: Option<String>,
+        status: Option<JobStatus>,
     },
     /// Get job details
     Get {
@@ -264,7 +264,8 @@ pub async fn run_cli(ctx: &impl CliContext, args: &CliArgs) -> CliResult {
 async fn run_jobs_cli(ctx: &impl CliContext, command: &JobsCommands, json_format: bool) -> CliResult {
     match command {
         JobsCommands::List { status } => {
-            match ctx.list_jobs(status.as_deref()).await {
+            let status_str = status.as_ref().map(|s| s.as_str());
+            match ctx.list_jobs(status_str).await {
                 Ok(jobs) => {
                     if json_format {
                         match serde_json::to_string_pretty(&jobs) {

@@ -157,14 +157,12 @@ describe('themeStore', () => {
 		const store = await freshStore();
 		expect(store.theme).toBe('system');
 
-		// Initially light
 		matches = false;
 		store.setTheme('system');
 		await vi.waitFor(() => {
 			expect(document.documentElement.classList.contains('light')).toBe(true);
 		});
 
-		// Switch to dark
 		matches = true;
 		if (changeHandler) (changeHandler as () => void)();
 
@@ -174,7 +172,7 @@ describe('themeStore', () => {
 		expect(document.documentElement.classList.contains('light')).toBe(false);
 
 		vi.unstubAllGlobals();
-		vi.stubGlobal('navigator', { userAgent: 'Linux' }); // restore default
+		vi.stubGlobal('navigator', { userAgent: 'Linux' });
 	});
 
 	it('uses portal theme when matchMedia is unreliable', async () => {
@@ -241,13 +239,11 @@ describe('themeStore', () => {
 		await freshStore();
 		mockSetTheme.mockClear();
 
-		// Get the callback registered with listen
 		const callback = mockListen.mock.calls.find(
 			(call) => call[0] === 'system-theme-changed',
 		)?.[1];
 		expect(callback).toBeDefined();
 
-		// Simulate event
 		callback({ payload: 'dark' });
 
 		await vi.waitFor(() => {
@@ -261,13 +257,11 @@ describe('themeStore', () => {
 		await freshStore();
 		mockSetTheme.mockClear();
 
-		// Get the callback registered with listen
 		const callback = mockListen.mock.calls.find(
 			(call) => call[0] === 'system-theme-changed',
 		)?.[1];
 		expect(callback).toBeDefined();
 
-		// Simulate event
 		callback({ payload: 'dark' });
 
 		await vi.waitFor(() => {
@@ -282,13 +276,11 @@ describe('themeStore', () => {
 		await freshStore();
 		mockSetTheme.mockClear();
 
-		// Get the callback registered with listen
 		const callback = mockListen.mock.calls.find(
 			(call) => call[0] === 'system-theme-changed',
 		)?.[1];
 		expect(callback).toBeDefined();
 
-		// Simulate event with 'no-preference'
 		callback({ payload: 'no-preference' });
 
 		await vi.waitFor(() => {
@@ -302,13 +294,11 @@ describe('themeStore', () => {
 		await freshStore();
 		mockSetTheme.mockClear();
 
-		// Get the callback registered with listen
 		const callback = mockListen.mock.calls.find(
 			(call) => call[0] === 'system-theme-changed',
 		)?.[1];
 		expect(callback).toBeDefined();
 
-		// Simulate event with 'no-preference'
 		callback({ payload: 'no-preference' });
 
 		await vi.waitFor(() => {
@@ -316,5 +306,37 @@ describe('themeStore', () => {
 			expect(mockSetTheme).not.toHaveBeenCalled();
 		});
 		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+	});
+
+	it('ignores stale applyTheme runs when theme changes rapidly', async () => {
+		let firstResolve: ((value: unknown) => void) | undefined;
+		const firstPromise = new Promise((resolve) => {
+			firstResolve = resolve;
+		});
+
+		mockGetSystemTheme.mockImplementationOnce(() => firstPromise);
+		mockGetSystemTheme.mockResolvedValueOnce('light');
+
+		const store = await freshStore();
+		mockSetTheme.mockClear();
+
+		store.setTheme('system');
+
+		store.setTheme('dark');
+
+		await vi.waitFor(() => {
+			expect(document.documentElement.classList.contains('dark')).toBe(true);
+			expect(mockSetTheme).toHaveBeenCalledWith('dark');
+		});
+
+		mockSetTheme.mockClear();
+
+		firstResolve?.('light');
+
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		expect(document.documentElement.classList.contains('dark')).toBe(true);
+		expect(document.documentElement.classList.contains('light')).toBe(false);
+		expect(mockSetTheme).not.toHaveBeenCalled();
 	});
 });

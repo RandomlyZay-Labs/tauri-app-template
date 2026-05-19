@@ -113,6 +113,7 @@
 		"installed": "Instalado",
 		"installSuccess": "CLI instalado correctamente",
 		"installFailed": "Error al instalar la CLI",
+		"unknownVersion": "Versión desconocida",
 		"howToUse": "Cómo utilizar",
 		"usageDescription": "Una vez instalado, puede utilizar la CLI desde cualquier terminal para interactuar con la base de datos de la aplicación y realizar tareas del sistema.",
 		"pathNoteTitle": "PATH del sistema",

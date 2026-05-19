@@ -21,10 +21,10 @@ interface SafeActionOptions {
  *   await apiCall();
  * }, { successMessage: 'Done!', errorMessage: 'Failed' });
  */
-export async function executeSafeAction(
-	action: () => Promise<unknown>,
+export async function executeSafeAction<T>(
+	action: () => Promise<T>,
 	options: SafeActionOptions = {},
-) {
+): Promise<T | undefined> {
 	const {
 		errorMessage = t('errors.unexpectedError'),
 		successMessage,
@@ -34,12 +34,13 @@ export async function executeSafeAction(
 
 	try {
 		void logger.debug('[executeSafeAction] Starting action');
-		await action();
+		const result = await action();
 		void logger.debug('[executeSafeAction] Action succeeded');
 		if (successMessage) {
 			toast.success(successMessage);
 		}
 		onSuccess?.();
+		return result;
 	} catch (error) {
 		let message: string;
 
@@ -59,5 +60,6 @@ export async function executeSafeAction(
 		void logger.error(errorMessage, error);
 		toast.error(`${errorMessage}: ${message}`);
 		onError?.(error);
+		return undefined;
 	}
 }

@@ -34,13 +34,9 @@ const persistConfig: PersistConfig<ThemePersistedState> = {
  * first (fixes Fedora/WebKitGTK), then falling back to `matchMedia`.
  */
 async function resolveSystemTheme(): Promise<'dark' | 'light'> {
-	try {
-		const portalTheme = await commands.getSystemTheme();
-		if (portalTheme === 'dark') return 'dark';
-		if (portalTheme === 'light') return 'light';
-	} catch {
-		// Portal unavailable (non-Linux, no D-Bus) — expected
-	}
+	const portalTheme = await executeSafeAction(() => commands.getSystemTheme());
+	if (portalTheme === 'dark') return 'dark';
+	if (portalTheme === 'light') return 'light';
 
 	return window.matchMedia('(prefers-color-scheme: dark)').matches
 		? 'dark'
@@ -49,6 +45,7 @@ async function resolveSystemTheme(): Promise<'dark' | 'light'> {
 
 class ThemeStore {
 	theme = $state<Theme>('system');
+	private themeApplyId = 0;
 
 	constructor() {
 		this.hydrate();
@@ -62,7 +59,8 @@ class ThemeStore {
 				.matchMedia('(prefers-color-scheme: dark)')
 				.addEventListener('change', () => {
 					if (this.theme === 'system') {
-						void this.applyTheme('system');
+						this.themeApplyId++;
+						void this.applyTheme('system', this.themeApplyId);
 					}
 				});
 		}
@@ -105,7 +103,8 @@ class ThemeStore {
 		if (saved.theme !== undefined) {
 			this.setTheme(saved.theme);
 		} else {
-			void this.applyTheme(this.theme);
+			this.themeApplyId++;
+			void this.applyTheme(this.theme, this.themeApplyId);
 		}
 	}
 
@@ -113,15 +112,16 @@ class ThemeStore {
 		void savePersistedState(persistConfig, { theme: this.theme });
 	}
 
-	private async applyTheme(theme: Theme) {
-		const root = window.document.documentElement;
-		root.classList.remove('light', 'dark');
-
+	private async applyTheme(theme: Theme, tokenId: number) {
 		let resolvedTheme: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light';
 		if (theme === 'system') {
 			resolvedTheme = await resolveSystemTheme();
 		}
 
+		if (tokenId !== this.themeApplyId) return;
+
+		const root = window.document.documentElement;
+		root.classList.remove('light', 'dark');
 		root.classList.add(resolvedTheme);
 
 		// On Windows, passing null for the 'system' theme enables native tracking for the titlebar.
@@ -134,7 +134,8 @@ class ThemeStore {
 
 	setTheme(theme: Theme) {
 		this.theme = theme;
-		void this.applyTheme(theme);
+		this.themeApplyId++;
+		void this.applyTheme(theme, this.themeApplyId);
 		this.persist();
 	}
 }

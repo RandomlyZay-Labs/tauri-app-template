@@ -6,7 +6,6 @@ import { getAppVersion } from '@/lib/app-version.svelte';
 import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
 import { getCliStatus, installCli } from '@/lib/system-utils';
-import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { AlertCircle, Check, CheckCircle2, Copy, Download, RefreshCw, Terminal } from '@lucide/svelte';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
@@ -53,9 +52,9 @@ async function handleInstallOrUpdate() {
             async () => {
                 await installCli();
                 await refreshStatus();
-                toast.success(t('cliSettings.installSuccess'));
             },
             { 
+                successMessage: t('cliSettings.installSuccess'),
                 errorMessage: t('cliSettings.installFailed')
             }
         );
@@ -64,8 +63,8 @@ async function handleInstallOrUpdate() {
     }
 }
 
-const isUpToDate = $derived(cliStatus?.installed && cliStatus.version === appVersion);
-const needsUpdate = $derived(cliStatus?.installed && cliStatus.version !== appVersion);
+const isUpToDate = $derived(!!(cliStatus?.installed && cliStatus.version !== null && cliStatus.version === appVersion));
+const needsUpdate = $derived(!!(cliStatus?.installed && cliStatus.version !== null && cliStatus.version !== appVersion));
 </script>
 
 <div class="space-y-6">
@@ -85,6 +84,11 @@ const needsUpdate = $derived(cliStatus?.installed && cliStatus.version !== appVe
                             <span class="text-destructive flex items-center gap-1">
                                 <AlertCircle class="size-3" />
                                 {t('cliSettings.notInstalled')}
+                            </span>
+                        {:else if cliStatus.version === null}
+                            <span class="text-amber-500 flex items-center gap-1">
+                                <AlertCircle class="size-3" />
+                                {t('cliSettings.unknownVersion')}
                             </span>
                         {:else if isUpToDate}
                             <span class="text-green-500 flex items-center gap-1">

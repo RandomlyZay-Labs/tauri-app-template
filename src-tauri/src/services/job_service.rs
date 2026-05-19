@@ -13,8 +13,9 @@ use super::download_service::ProgressCallback;
 // Types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq, clap::ValueEnum)]
 #[serde(rename_all = "camelCase")]
+#[value(rename_all = "lower")]
 pub enum JobStatus {
     Pending,
     Running,

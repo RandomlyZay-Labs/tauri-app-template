@@ -171,4 +171,20 @@ describe('executeSafeAction', () => {
 		expect(toast.success).not.toHaveBeenCalled();
 		expect(toast.error).not.toHaveBeenCalled();
 	});
+
+	it('returns the resolved value of the action on success', async () => {
+		const action = vi.fn().mockResolvedValue('success-value');
+
+		const result = await executeSafeAction(action);
+
+		expect(result).toBe('success-value');
+	});
+
+	it('returns undefined when the action throws an error', async () => {
+		const action = vi.fn().mockRejectedValue(new Error('failure'));
+
+		const result = await executeSafeAction(action);
+
+		expect(result).toBeUndefined();
+	});
 });
