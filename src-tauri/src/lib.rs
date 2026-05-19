@@ -37,6 +37,15 @@ fn trace_lib(msg: &str) {
     }
 }
 
+fn make_trace_plugin<R: tauri::Runtime>(name: &'static str, msg: &'static str) -> tauri::plugin::TauriPlugin<R> {
+    tauri::plugin::Builder::<R, ()>::new(name)
+        .setup(move |_, _| {
+            trace_lib(msg);
+            Ok(())
+        })
+        .build()
+}
+
 /// Runs the Main Application logic.
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 pub fn run_app(dev_data_dir: Option<PathBuf>) {
@@ -54,15 +63,25 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
 
     trace_lib("building tauri builder");
     let builder_res = tauri::Builder::default()
+        .plugin(make_trace_plugin("trace-1", "trace-1: single-instance next"))
         .plugin(tauri_plugin_single_instance::init(handle_single_instance))
+        .plugin(make_trace_plugin("trace-2", "trace-2: better-posthog next"))
         .plugin(tauri_plugin_better_posthog::init())
+        .plugin(make_trace_plugin("trace-3", "trace-3: store next"))
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(make_trace_plugin("trace-4", "trace-4: window-state next"))
         .plugin(tauri_plugin_window_state::Builder::new().build())
+        .plugin(make_trace_plugin("trace-5", "trace-5: process next"))
         .plugin(tauri_plugin_process::init())
+        .plugin(make_trace_plugin("trace-6", "trace-6: notification next"))
         .plugin(tauri_plugin_notification::init())
+        .plugin(make_trace_plugin("trace-7", "trace-7: clipboard next"))
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(make_trace_plugin("trace-8", "trace-8: opener next"))
         .plugin(tauri_plugin_opener::init())
+        .plugin(make_trace_plugin("trace-9", "trace-9: dialog next"))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(make_trace_plugin("trace-10", "trace-10: invoke-handler/setup next"))
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app| {
             trace_lib("setup closure entered");

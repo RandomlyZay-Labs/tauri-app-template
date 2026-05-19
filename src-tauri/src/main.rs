@@ -15,6 +15,16 @@ fn trace(msg: &str) {
 }
 
 fn main() {
+    std::panic::set_hook(Box::new(|info| {
+        if let Ok(temp_dir) = std::env::var("TEMP") {
+            let path = std::path::Path::new(&temp_dir).join("tauri_launch_trace.txt");
+            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+                use std::io::Write;
+                let _ = writeln!(file, "[PANIC] Rust panic occurred: {:?}", info);
+            }
+        }
+    }));
+
     trace("main started");
     let _ = fix_path_env::fix();
     trace("fix_path_env called");
