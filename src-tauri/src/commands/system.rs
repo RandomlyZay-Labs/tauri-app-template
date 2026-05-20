@@ -87,11 +87,11 @@ pub async fn open_log_dir(app: tauri::AppHandle, state: State<'_, AppState>) -> 
 #[tauri::command]
 #[specta::specta]
 pub async fn open_data_dir(app: tauri::AppHandle, state: State<'_, AppState>) -> CResult<()> {
-    let data_dir = if let Some(custom) = &state.app_data_dir {
-        custom.clone()
-    } else {
-        util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
-    };
+    let data_dir = state
+        .app_data_dir
+        .as_ref()
+        .ok_or_else(|| crate::error::Error::Validation("missing app_data_dir".into()))?;
+    
     app.opener()
         .open_path(data_dir.to_string_lossy().to_string(), None::<&str>)
         .map_err(|e| crate::error::Error::Io(e.to_string()))?;
@@ -103,12 +103,12 @@ pub async fn open_data_dir(app: tauri::AppHandle, state: State<'_, AppState>) ->
 pub async fn reset_application(state: State<'_, AppState>) -> CResult<()> {
     log::debug!("[Command] reset_application called");
     
-    let data_dir = if let Some(custom) = &state.app_data_dir {
-        custom.clone()
-    } else {
-        util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
-    };
-    util::schedule_factory_reset(&data_dir)?;
+    let data_dir = state
+        .app_data_dir
+        .as_ref()
+        .ok_or_else(|| crate::error::Error::Validation("missing app_data_dir".into()))?;
+
+    util::schedule_factory_reset(data_dir)?;
     Ok(())
 }
 
@@ -121,13 +121,12 @@ pub async fn set_log_level(state: State<'_, AppState>, level: String) -> CResult
         return Err(crate::error::Error::Validation("Invalid log level".into()));
     }
 
-    let data_dir = if let Some(custom) = &state.app_data_dir {
-        custom.clone()
-    } else {
-        util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
-    };
+    let data_dir = state
+        .app_data_dir
+        .as_ref()
+        .ok_or_else(|| crate::error::Error::Validation("missing app_data_dir".into()))?;
 
-    crate::services::log_service::update_config_log_level(&data_dir, &level).await
+    crate::services::log_service::update_config_log_level(data_dir, &level).await
 }
 
 #[cfg(test)]
@@ -151,7 +150,52 @@ mod tests {
         let output = generate_diagnostics_string("1.0.0", "linux", "x86_64", None, None);
         assert!(output.contains("Data Directory: "));
         assert!(output.contains("No log file found."));
-    }}
+    }
+
+    #[tokio::test]
+    async fn test_commands_missing_app_data_dir() {
+        use tauri::Manager;
+
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+
+        let db = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let log_dir = std::path::PathBuf::from("/tmp/logs");
+
+        handle.manage(AppState {
+            db: db.clone(),
+            log_dir,
+            app_data_dir: None,
+            tray_settings: std::sync::Mutex::new(crate::state::TraySettings {
+                minimize_to_tray: false,
+                notify_on_minimize: true,
+            }),
+            download_manager: crate::services::download_service::DownloadManager::new(1),
+            job_manager: crate::services::job_service::JobManager::new(db),
+            watcher_manager: crate::services::watcher_service::WatcherManager::new(),
+        });
+
+        let state = handle.state::<AppState>();
+
+        // 1. Test reset_application
+        let res_reset = reset_application(state.clone()).await;
+        assert!(res_reset.is_err());
+        if let Err(crate::error::Error::Validation(msg)) = res_reset {
+            assert_eq!(msg, "missing app_data_dir");
+        } else {
+            panic!("Expected Validation(\"missing app_data_dir\")");
+        }
+
+        // 2. Test set_log_level
+        let res_log = set_log_level(state, "debug".to_string()).await;
+        assert!(res_log.is_err());
+        if let Err(crate::error::Error::Validation(msg)) = res_log {
+            assert_eq!(msg, "missing app_data_dir");
+        } else {
+            panic!("Expected Validation(\"missing app_data_dir\")");
+        }
+    }
+}
 
 
 #[tauri::command]

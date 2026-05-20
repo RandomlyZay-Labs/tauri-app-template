@@ -1,9 +1,9 @@
 pub mod api;
-mod cli;
+pub mod cli;
 mod commands;
 mod error;
-mod repositories;
-mod services;
+pub mod repositories;
+pub mod services;
 pub mod setup;
 mod state;
 pub mod util;
@@ -14,137 +14,99 @@ use std::sync::Mutex;
 use tauri::Manager;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri_plugin_cli::CliExt;
 use tauri_plugin_notification::NotificationExt;
-
-/// Checks raw process args to detect CLI subcommands/flags that should
-/// bypass the single-instance lock. This runs before the Tauri builder
-/// so the second process can boot its own app context against the shared DB.
-fn is_cli_invocation() -> bool {
-    let args: Vec<String> = std::env::args().collect();
-    is_cli_invocation_from_args(&args)
-}
-
-fn is_cli_invocation_from_args(args: &[String]) -> bool {
-    if args.len() <= 1 {
-        return false;
-    }
-
-    // Ignore macOS process serial number arg often passed to GUI apps
-    if args.len() == 2 && args[1].starts_with("-psn") {
-        return false;
-    }
-
-    // Only treat known CLI subcommands and flags as CLI invocations.
-    // Arbitrary arguments (file paths, protocol URLs) should not bypass
-    // the single-instance lock.
-    let cli_commands = [
-        "jobs", "download", "backup", "secret", "info",
-        "--help", "-h", "--version", "-v", "--json", "-j",
-    ];
-    args.iter().skip(1).any(|arg| cli_commands.contains(&arg.as_str()))
-}
 
 fn handle_single_instance<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _args: Vec<String>, _cwd: String) {
     // A duplicate GUI launch was attempted — bring the existing window to focus
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.set_focus();
+        if let Some(tray) = app.tray_by_id("main-tray") {
+            let _ = tray.set_visible(false);
+        }
     }
 }
 
-/// Runs the Main Application logic with the resolved data directory.
+/// Runs the Main Application logic.
 #[allow(clippy::expect_used, clippy::unwrap_used)]
-pub fn run_app(custom_data_dir: Option<PathBuf>) {
+pub fn run_app(dev_data_dir: Option<PathBuf>) {
     let specta_builder = api::collect();
 
-    // Initialize Logging
-    let (app_log_dir, log_plugin) =
-        setup::logging::init(custom_data_dir.as_ref(), util::DATA_FOLDER_NAME);
+    // Initialize PostHog analytics (Rust-side HTTP, bypasses WebView CORS).
+    let _posthog_guard = better_posthog::init(better_posthog::ClientOptions {
+        api_key: Some("phc_nAKTTsOrVMFGq9yakG0UNEyQemz1UvPRueal5dvkaD5".into()),
+        ..Default::default()
+    });
 
-    log::info!("==================================");
-    log::info!("App Version: {}", env!("CARGO_PKG_VERSION"));
-    log::info!("OS: {} ({})", std::env::consts::OS, std::env::consts::ARCH);
-    log::info!("Resolved Data Directory: {}", app_log_dir.display());
-    log::info!("==================================");
-
-    // AppImage Auto-Integration (Unix only — AppImages don't exist on other platforms)
-    #[cfg(unix)]
-    {
-        if services::appimage_service::is_appimage()
-            && let Err(e) = services::appimage_service::integrate_appimage()
-        {
-            log::warn!("Failed to auto-integrate AppImage: {}", e);
-        }
-    }
-
-    // Initialize Database
-    let db_pool = tauri::async_runtime::block_on(setup::database::init(custom_data_dir.as_ref()))
-        .expect("Failed to initialize database");
-
-    let state_data_dir = custom_data_dir.clone();
-
-    let is_cli = is_cli_invocation();
-
-    let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_cli::init());
-
-    // Only enforce single-instance for GUI launches. CLI invocations need their
-    // own process to access stdout and run against the shared database.
-    if !is_cli {
-        builder = builder.plugin(tauri_plugin_single_instance::init(handle_single_instance));
-    }
-
-    builder
+    tauri::Builder::default()
+        .plugin(tauri_plugin_better_posthog::init())
+        .plugin(tauri_plugin_single_instance::init(handle_single_instance))
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(log_plugin)
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState {
-            db: db_pool.clone(),
-            log_dir: app_log_dir,
-            app_data_dir: state_data_dir.clone(),
-            tray_settings: Mutex::new(TraySettings {
-                minimize_to_tray: false,
-                notify_on_minimize: true,
-            }),
-            download_manager: services::download_service::DownloadManager::new(3),
-            job_manager: services::job_service::JobManager::new(db_pool),
-            watcher_manager: services::watcher_service::WatcherManager::new(),
-        })
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app| {
-            // --- CLI Handling ---
-            match app.cli().matches() {
-                Ok(matches) => {
-                    if cli::handle_cli(app.handle(), &matches) {
-                        app.handle().exit(0);
-                        return Ok(());
-                    }
-                }
-                Err(e) => {
-                    eprintln!("{}", e);
-                    std::process::exit(1);
-                }
-            }
-
-            // Determine the unified data directory
-            let context_data_dir = if let Some(dir) = &state_data_dir {
+            // 1. Resolve Data Directory
+            let app_data_dir = if let Some(ref dir) = dev_data_dir {
                 dir.clone()
             } else {
-                util::resolve_os_app_data_dir().join(util::DATA_FOLDER_NAME)
+                app.path().app_data_dir().expect("Failed to resolve app data directory")
             };
 
-            // We append "webview" to keep cache separate from DB/Logs
+            // 2. Resolve Log Directory
+            let app_log_dir = if dev_data_dir.is_some() {
+                 app_data_dir.join("logs")
+            } else {
+                 app.path().app_log_dir().expect("Failed to resolve app log dir")
+            };
+
+            // 2b. Initialize Logging
+            let log_plugin = setup::logging::init(&app_data_dir, &app_log_dir);
+            app.handle().plugin(log_plugin).expect("Failed to initialize log plugin");
+
+            // 2c. Initialize Keyring Store
+            if let Err(err) = keyring::use_native_store(true) {
+                log::warn!("Failed to initialize native keyring store: {err}. Keyring-dependent features will not be available.");
+            }
+
+            log::info!("==================================");
+            log::info!("App Version: {}", env!("CARGO_PKG_VERSION"));
+            log::info!("OS: {} ({})", std::env::consts::OS, std::env::consts::ARCH);
+            log::info!("Resolved Data Directory: {}", app_data_dir.display());
+            log::info!("Resolved Log Directory: {}", app_log_dir.display());
+            log::info!("==================================");
+
+            // 3. Lifecycle Checks (Reset / Restore)
+            util::check_and_perform_reset(&app_data_dir);
+            util::check_and_perform_restore(&app_data_dir);
+
+            // 4. Initialize Database
+            let db_pool = tauri::async_runtime::block_on(setup::database::init(Some(&app_data_dir)))
+                .expect("Failed to initialize database");
+
+            // 5. Manage App State
+            app.manage(AppState {
+                db: db_pool.clone(),
+                log_dir: app_log_dir,
+                app_data_dir: Some(app_data_dir),
+                tray_settings: Mutex::new(TraySettings {
+                    minimize_to_tray: false,
+                    notify_on_minimize: true,
+                }),
+                download_manager: services::download_service::DownloadManager::new(3),
+                job_manager: services::job_service::JobManager::new(db_pool),
+                watcher_manager: services::watcher_service::WatcherManager::new(),
+            });
+
+            // 7. Webview Window Setup
+            let state = app.state::<AppState>();
+            let context_data_dir = state.app_data_dir.as_ref().unwrap();
             let webview_data_dir = context_data_dir.join("webview");
 
-            // Use the standard WebviewWindowBuilder
-            // .data_directory() configures the WebContext internally
-            // .visible(false) + on_page_load eliminates white flash on startup
             tauri::WebviewWindowBuilder::new(
                 app,
                 "main",
@@ -162,22 +124,27 @@ pub fn run_app(custom_data_dir: Option<PathBuf>) {
             })
             .build()?;
 
-            // --- System Tray Setup ---
+            // 8. System Tray Setup
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
             let icon = app.default_window_icon().cloned().expect("Default window icon is required");
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::with_id("main-tray")
                 .icon(icon)
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(handle_menu_event)
                 .on_tray_icon_event(handle_tray_icon_event)
                 .build(app)?;
+            tray.set_visible(false)?;
 
-            // --- Backup Scheduler ---
+            // 9. Backup Scheduler
             services::scheduler::spawn_scheduler(app.handle().clone());
+
+            // 10. Linux Theme Watcher (Freedesktop portal)
+            #[cfg(target_os = "linux")]
+            services::theme_service::spawn_theme_watcher(app.handle().clone());
 
             Ok(())
         })
@@ -187,30 +154,56 @@ pub fn run_app(custom_data_dir: Option<PathBuf>) {
 }
 
 fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
-    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-        let app_handle = window.app_handle();
-        let state = app_handle.state::<AppState>();
-        let Ok(settings) = state.tray_settings.lock() else {
-            log::error!("Failed to acquire tray settings lock");
-            return;
-        };
+    match event {
+        tauri::WindowEvent::CloseRequested { api, .. } => {
+            let app_handle = window.app_handle();
+            let state = app_handle.state::<AppState>();
+            let Ok(settings) = state.tray_settings.lock() else {
+                log::error!("Failed to acquire tray settings lock");
+                return;
+            };
 
-        if settings.minimize_to_tray {
-            if let Err(e) = window.hide() {
-                log::error!("Failed to hide window: {}", e);
-            }
-            api.prevent_close();
+            if settings.minimize_to_tray {
+                if let Err(e) = window.hide() {
+                    log::error!("Failed to hide window: {}", e);
+                }
+                api.prevent_close();
 
-            if settings.notify_on_minimize {
-                let _ = app_handle
-                    .notification()
-                    .builder()
-                    .title("Tauri App Template")
-                    .body("Application minimized to tray")
-                    .show();
+                if let Some(tray) = app_handle.tray_by_id("main-tray") {
+                    let _ = tray.set_visible(true);
+                }
+
+                if settings.notify_on_minimize {
+                    let _ = app_handle
+                        .notification()
+                        .builder()
+                        .title("Tauri App Template")
+                        .body("Application minimized to tray")
+                        .show();
+
+                    #[cfg(target_os = "linux")]
+                    {
+                        if let Err(e) = std::process::Command::new("notify-send")
+                            .arg("Tauri App Template")
+                            .arg("Application minimized to tray")
+                            .spawn()
+                        {
+                            log::error!("Failed to spawn fallback notify-send: {}", e);
+                        }
+                    }
+                }
             }
         }
-        // If minimize_to_tray is false, the window closes normally (app exits if it's the main window)
+        #[cfg(target_os = "windows")]
+        tauri::WindowEvent::ThemeChanged(theme) => {
+            use tauri::Emitter;
+            let theme_str = match theme {
+                tauri::Theme::Dark => "dark",
+                _ => "light",
+            };
+            let _ = window.emit("system-theme-changed", theme_str);
+        }
+        _ => {}
     }
 }
 
@@ -223,6 +216,9 @@ fn handle_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: tauri:
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
+                if let Some(tray) = app.tray_by_id("main-tray") {
+                    let _ = tray.set_visible(false);
+                }
             }
         }
         _ => {}
@@ -241,9 +237,15 @@ fn handle_tray_icon_event<R: tauri::Runtime>(tray: &tauri::tray::TrayIcon<R>, ev
             // Toggle visibility
             if window.is_visible().unwrap_or(false) {
                 let _ = window.hide();
+                if let Some(tray) = app.tray_by_id("main-tray") {
+                    let _ = tray.set_visible(true);
+                }
             } else {
                 let _ = window.show();
                 let _ = window.set_focus();
+                if let Some(tray) = app.tray_by_id("main-tray") {
+                    let _ = tray.set_visible(false);
+                }
             }
         }
     }
@@ -254,27 +256,6 @@ fn handle_tray_icon_event<R: tauri::Runtime>(tray: &tauri::tray::TrayIcon<R>, ev
 mod tests {
     use super::*;
     use tauri::Manager;
-
-    #[test]
-    fn test_is_cli_invocation_from_args() {
-        // No args
-        assert!(!is_cli_invocation_from_args(&["app".to_string()]));
-        
-        // Known subcommand
-        assert!(is_cli_invocation_from_args(&["app".to_string(), "jobs".to_string()]));
-        
-        // Known flag
-        assert!(is_cli_invocation_from_args(&["app".to_string(), "--help".to_string()]));
-        
-        // Mixed
-        assert!(is_cli_invocation_from_args(&["app".to_string(), "backup".to_string(), "--json".to_string()]));
-
-        // macOS -psn
-        assert!(!is_cli_invocation_from_args(&["app".to_string(), "-psn_0_123456".to_string()]));
-
-        // Arbitrary arg (e.g. file path or URL)
-        assert!(!is_cli_invocation_from_args(&["app".to_string(), "/path/to/file".to_string()]));
-    }
 
     #[tokio::test]
     async fn test_handle_menu_event_show() {
@@ -332,7 +313,7 @@ mod tests {
             .build()
             .unwrap();
         
-        let tray = TrayIconBuilder::new().build(handle).unwrap();
+        let tray = TrayIconBuilder::with_id("main-tray").build(handle).unwrap();
 
         let event = TrayIconEvent::Click {
             id: "main-tray".into(),

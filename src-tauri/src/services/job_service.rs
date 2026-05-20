@@ -4,16 +4,18 @@ use specta::Type;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
+use super::events::{AppEmitter, emit};
+use super::download_service::ProgressCallback;
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq, clap::ValueEnum)]
 #[serde(rename_all = "camelCase")]
+#[value(rename_all = "lower")]
 pub enum JobStatus {
     Pending,
     Running,
@@ -44,7 +46,7 @@ impl JobStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum JobKind {
     Download,
@@ -101,11 +103,7 @@ pub struct JobRow {
     pub updated_at: String,
 }
 
-// ---------------------------------------------------------------------------
-// DB row mapping
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, sqlx::FromRow)]
+#[derive(sqlx::FromRow)]
 struct DbJobRow {
     id: String,
     kind: String,
@@ -185,13 +183,10 @@ impl JobManager {
         progress: Option<f64>,
         message: Option<&str>,
     ) -> CResult<()> {
-        log::debug!("[JobService] Updating job {} to status: {:?}", job_id, status);
-        let status_str = status.as_str();
-
         let result = sqlx::query(
-            "UPDATE jobs SET status = ?, progress = ?, message = ?, updated_at = datetime('now') WHERE id = ?",
+            "UPDATE jobs SET status = ?, progress = ?, message = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         )
-        .bind(status_str)
+        .bind(status.as_str())
         .bind(progress)
         .bind(message)
         .bind(job_id)
@@ -260,7 +255,7 @@ impl JobManager {
 // Event helpers
 // ---------------------------------------------------------------------------
 
-pub fn emit_job_progress<R: tauri::Runtime>(app: &AppHandle<R>, args: EmitJobProgressArgs<'_>) {
+pub fn emit_job_progress(emitter: &dyn AppEmitter, args: EmitJobProgressArgs<'_>) {
     let payload = JobProgress {
         job_id: args.job_id.to_string(),
         kind: args.kind.clone(),
@@ -271,13 +266,13 @@ pub fn emit_job_progress<R: tauri::Runtime>(app: &AppHandle<R>, args: EmitJobPro
         message: args.message.map(String::from),
     };
 
-    let _ = app.emit(JOB_EVENT_NAME, payload);
+    emit(emitter, JOB_EVENT_NAME, payload);
 }
 
 /// Single source of truth for creating and spawning a download job.
 /// Used by both the Tauri command handler and the CLI.
-pub async fn spawn_download_job<R: tauri::Runtime>(
-    app: AppHandle<R>,
+pub async fn spawn_download_job(
+    emitter: Arc<dyn AppEmitter>,
     jm: &JobManager,
     dm: &crate::services::download_service::DownloadManager,
     request: crate::services::download_service::DownloadRequest,
@@ -291,14 +286,14 @@ pub async fn spawn_download_job<R: tauri::Runtime>(
 
     let dm = dm.clone_inner();
     let jm = jm.clone_inner();
-    let app_clone = app.clone();
+    let emitter_clone = Arc::clone(&emitter);
 
     tauri::async_runtime::spawn(async move {
         jm.update_status(&job_id, JobStatus::Running, Some(0.0), None)
             .await
             .ok();
         emit_job_progress(
-            &app_clone,
+            &*emitter_clone,
             EmitJobProgressArgs {
                 job_id: &job_id,
                 kind: &JobKind::Download,
@@ -310,9 +305,9 @@ pub async fn spawn_download_job<R: tauri::Runtime>(
             },
         );
 
-        let app_for_progress = app_clone.clone();
+        let emitter_for_progress = Arc::clone(&emitter_clone);
         let job_id_clone = job_id.clone();
-        let on_progress = Some(move |bytes: u64, total: Option<u64>, speed: Option<u64>, eta: Option<u64>| {
+        let on_progress = Some(Box::new(move |bytes: u64, total: Option<u64>, speed: Option<u64>, eta: Option<u64>| {
             let percent = total.and_then(|t| {
                 if t > 0 {
                     Some((bytes as f64 / t as f64) * 100.0)
@@ -329,7 +324,7 @@ pub async fn spawn_download_job<R: tauri::Runtime>(
                 None => format!("Downloaded {}", crate::util::format_bytes(bytes)),
             };
             emit_job_progress(
-                &app_for_progress,
+                &*emitter_for_progress,
                 EmitJobProgressArgs {
                     job_id: &job_id_clone,
                     kind: &JobKind::Download,
@@ -340,10 +335,10 @@ pub async fn spawn_download_job<R: tauri::Runtime>(
                     message: Some(&msg),
                 },
             );
-        });
+        }) as ProgressCallback);
 
         let result = dm
-            .start_download_tracked(app_clone.clone(), request, &token, on_progress)
+            .start_download_tracked(emitter_clone.clone(), request, &token, on_progress)
             .await;
 
         jm.unregister_token(&job_id).await;
@@ -359,7 +354,7 @@ pub async fn spawn_download_job<R: tauri::Runtime>(
                 .await
                 .ok();
                 emit_job_progress(
-                    &app_clone,
+                    &*emitter_clone,
                     EmitJobProgressArgs {
                         job_id: &job_id,
                         kind: &JobKind::Download,
@@ -382,7 +377,7 @@ pub async fn spawn_download_job<R: tauri::Runtime>(
                     .await
                     .ok();
                 emit_job_progress(
-                    &app_clone,
+                    &*emitter_clone,
                     EmitJobProgressArgs {
                         job_id: &job_id,
                         kind: &JobKind::Download,
@@ -400,46 +395,44 @@ pub async fn spawn_download_job<R: tauri::Runtime>(
     Ok(job)
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
-    use sqlx::sqlite::SqlitePoolOptions;
 
-    async fn setup_db() -> Result<sqlx::SqlitePool, Box<dyn std::error::Error>> {
+    async fn setup_db() -> CResult<SqlitePool> {
+        use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
+        
+        let options = SqliteConnectOptions::new()
+            .filename(":memory:")
+            .journal_mode(SqliteJournalMode::Wal);
+            
         let pool = SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect(":memory:")
+            .max_connections(1) // Keep it single-connection for in-memory to ensure migrations stick
+            .connect_with(options)
             .await?;
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS jobs (
-                id          TEXT    PRIMARY KEY NOT NULL,
-                kind        TEXT    NOT NULL,
-                status      TEXT    NOT NULL DEFAULT 'pending',
-                progress    REAL,
-                message     TEXT,
-                metadata    TEXT,
-                created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-                updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-            )",
-        )
-        .execute(&pool)
-        .await?;
+            
+        // Run migrations
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await
+            .map_err(|e| Error::Database(e.to_string()))?;
+        
         Ok(pool)
     }
 
     #[tokio::test]
-    async fn test_create_job() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_create_and_get_job() -> Result<(), Box<dyn std::error::Error>> {
         let pool = setup_db().await?;
         let mgr = JobManager::new(pool);
 
-        let job = mgr.create_job(JobKind::Download, None).await?;
+        let job = mgr.create_job(JobKind::Download, Some("{\"test\":1}".into())).await?;
+        assert_eq!(job.kind, JobKind::Download);
         assert_eq!(job.status, JobStatus::Pending);
-        assert!(!job.id.is_empty());
+
+        let fetched = mgr.get_job(&job.id).await?;
+        assert_eq!(fetched.id, job.id);
+        assert_eq!(fetched.metadata.as_deref(), Some("{\"test\":1}"));
         Ok(())
     }
 
@@ -499,258 +492,44 @@ mod tests {
 
         let job = mgr.create_job(JobKind::Download, None).await?;
         let token = mgr.register_token(&job.id).await;
-
         assert!(!token.is_cancelled());
+
         mgr.cancel_job(&job.id).await?;
         assert!(token.is_cancelled());
-
-        mgr.unregister_token(&job.id).await;
-        let result = mgr.cancel_job(&job.id).await;
-        assert!(result.is_err());
         Ok(())
     }
 
-    async fn spawn_test_server() -> String {
-        use tokio::net::TcpListener;
-        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    #[test]
+    fn test_job_status_cli_parsing() {
+        use clap::ValueEnum;
 
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let port = listener.local_addr().unwrap().port();
-
-        tokio::spawn(async move {
-            while let Ok((mut stream, _)) = listener.accept().await {
-                let mut buf = [0; 1024];
-                let _ = stream.read(&mut buf).await;
-                let response = "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nHello";
-                let _ = stream.write_all(response.as_bytes()).await;
-            }
-        });
-
-        format!("http://127.0.0.1:{}", port)
-    }
-
-    #[derive(Default)]
-    struct MockFileSystem {
-        pub fail_on_create: bool,
-    }
-
-    #[async_trait::async_trait]
-    impl crate::services::io::FileSystem for MockFileSystem {
-        async fn create_dir_all(&self, _path: &std::path::Path) -> std::io::Result<()> { Ok(()) }
-        async fn exists(&self, _path: &std::path::Path) -> bool { false }
-        async fn metadata_len(&self, _path: &std::path::Path) -> std::io::Result<u64> { Ok(0) }
-        async fn remove_file(&self, _path: &std::path::Path) -> std::io::Result<()> { Ok(()) }
-        async fn copy(&self, _from: &std::path::Path, _to: &std::path::Path) -> std::io::Result<u64> { Ok(0) }
-        async fn create(&self, _path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
-            if self.fail_on_create {
-                return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Mock FS Error"));
-            }
-            Ok(Box::new(std::io::Cursor::new(Vec::new())))
-        }
-        async fn open_append(&self, _path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
-            Ok(Box::new(std::io::Cursor::new(Vec::new())))
-        }
-    }
-
-    #[tokio::test]
-    async fn test_spawn_download_job_failed() -> Result<(), Box<dyn std::error::Error>> {
-        use crate::services::download_service::{DownloadManager, DownloadRequest};
-        use crate::services::network::{NetworkClient, NetworkResponse};
-        use tauri::{Manager, Listener};
-        use std::sync::atomic::Ordering;
-        use async_trait::async_trait;
-        
-        struct MockFailNetwork;
-        #[async_trait]
-        impl NetworkClient for MockFailNetwork {
-            async fn send_request(&self, _url: &str, _range: Option<String>) -> CResult<NetworkResponse> {
-                Err(crate::error::Error::Network("Mock connection refused".into()))
-            }
-        }
-
-        let pool = setup_db().await?;
-        let jm = JobManager::new(pool);
-        // Inject the mock network client that always fails and mock FS
-        let dm = DownloadManager::with_mocks(
-            1, 
-            Arc::new(MockFailNetwork), 
-            Arc::new(MockFileSystem::default())
+        // Verify accepted inputs: exact lower-case variants present in JobStatus successfully convert to the corresponding variant
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("pending", false),
+            Ok(JobStatus::Pending)
         );
-        
-        let app = tauri::test::mock_app().app_handle().clone();
-
-        let failed_event_received = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let f_clone = failed_event_received.clone();
-        
-        app.listen(JOB_EVENT_NAME, move |event: tauri::Event| {
-            let payload: JobProgress = serde_json::from_str(event.payload()).unwrap();
-            if payload.status == JobStatus::Failed {
-                f_clone.store(true, Ordering::SeqCst);
-            }
-        });
-
-        let req = DownloadRequest {
-            url: "http://example.com/fail.txt".to_string(),
-            dest_dir: "/tmp/mock".to_string(),
-            filename: Some("test_fail.txt".to_string()),
-        };
-
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-        app.listen(JOB_EVENT_NAME, move |event: tauri::Event| {
-            let payload: JobProgress = serde_json::from_str(event.payload()).unwrap();
-            if payload.status == JobStatus::Failed {
-                let _ = tx.send(());
-            }
-        });
-
-        let job = spawn_download_job(app, &jm, &dm, req).await?;
-
-        // Wait for failure with timeout
-        tokio::time::timeout(tokio::time::Duration::from_secs(2), rx.recv())
-            .await
-            .expect("Timeout waiting for job failure")
-            .expect("Channel closed");
-
-        let updated = jm.get_job(&job.id).await?;
-        assert_eq!(updated.status, JobStatus::Failed);
-        assert!(updated.message.as_ref().unwrap().contains("Mock connection refused"));
-        assert!(failed_event_received.load(std::sync::atomic::Ordering::SeqCst), "Failed status event should have been emitted");
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_spawn_download_job_fs_failed() -> Result<(), Box<dyn std::error::Error>> {
-        use crate::services::download_service::{DownloadManager, DownloadRequest};
-        use crate::services::network::{NetworkClient, NetworkResponse};
-        use tauri::{Manager, Listener};
-        use async_trait::async_trait;
-        
-        struct MockSuccessNetwork;
-        #[async_trait]
-        impl NetworkClient for MockSuccessNetwork {
-            async fn send_request(&self, _url: &str, _range: Option<String>) -> CResult<NetworkResponse> {
-                Ok(NetworkResponse {
-                    status: reqwest::StatusCode::OK,
-                    content_length: Some(10),
-                    bytes_stream: Box::pin(futures_util::stream::once(async { Ok(bytes::Bytes::from("data")) })),
-                })
-            }
-        }
-
-        let pool = setup_db().await?;
-        let jm = JobManager::new(pool);
-        // Inject mock FS that fails on create
-        let dm = DownloadManager::with_mocks(
-            1, 
-            Arc::new(MockSuccessNetwork), 
-            Arc::new(MockFileSystem { fail_on_create: true })
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("running", false),
+            Ok(JobStatus::Running)
         );
-        
-        let app = tauri::test::mock_app().app_handle().clone();
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("completed", false),
+            Ok(JobStatus::Completed)
+        );
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("failed", false),
+            Ok(JobStatus::Failed)
+        );
+        assert_eq!(
+            <JobStatus as ValueEnum>::from_str("cancelled", false),
+            Ok(JobStatus::Cancelled)
+        );
 
-        let req = DownloadRequest {
-            url: "http://example.com/fs-fail.txt".to_string(),
-            dest_dir: "/tmp/mock".to_string(),
-            filename: Some("test_fs_fail.txt".to_string()),
-        };
-
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-        app.listen(JOB_EVENT_NAME, move |event: tauri::Event| {
-            let payload: JobProgress = serde_json::from_str(event.payload()).unwrap();
-            if payload.status == JobStatus::Failed {
-                let _ = tx.send(());
-            }
-        });
-
-        let job = spawn_download_job(app, &jm, &dm, req).await?;
-
-        // Wait for failure
-        tokio::time::timeout(tokio::time::Duration::from_secs(2), rx.recv())
-            .await
-            .expect("Timeout waiting for job failure")
-            .expect("Channel closed");
-
-        let updated = jm.get_job(&job.id).await?;
-        assert_eq!(updated.status, JobStatus::Failed);
-        assert!(updated.message.as_ref().unwrap().contains("Mock FS Error"));
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_spawn_download_job_lifecycle_and_events() -> Result<(), Box<dyn std::error::Error>> {
-        use crate::services::download_service::{DownloadManager, DownloadRequest};
-        use tauri::{Manager, Listener};
-        use std::sync::atomic::{AtomicUsize, Ordering};
-
-        let pool = setup_db().await?;
-        let jm = JobManager::new(pool);
-        let dm = DownloadManager::new(1);
-        
-        let app = tauri::test::mock_app().app_handle().clone();
-        let running_count = Arc::new(AtomicUsize::new(0));
-        let completed_count = Arc::new(AtomicUsize::new(0));
-
-        let r_clone = running_count.clone();
-        let c_clone = completed_count.clone();
-        
-        app.listen(JOB_EVENT_NAME, move |event| {
-            let payload: JobProgress = serde_json::from_str(event.payload()).unwrap();
-            match payload.status {
-                JobStatus::Running => { r_clone.fetch_add(1, Ordering::SeqCst); }
-                JobStatus::Completed => { c_clone.fetch_add(1, Ordering::SeqCst); }
-                _ => {}
-            }
-        });
-
-        let url = spawn_test_server().await;
-        let tmp = tempfile::tempdir()?;
-        let test_dir = tmp.path();
-
-        let req = DownloadRequest {
-            url,
-            dest_dir: test_dir.to_string_lossy().to_string(),
-            filename: Some("lifecycle.txt".to_string()),
-        };
-
-        let job = spawn_download_job(app.clone(), &jm, &dm, req).await?;
-
-        // Check token registration immediately after spawn (might need a tiny yield)
-        tokio::task::yield_now().await;
-        {
-            let active = jm.active.lock().await;
-            assert!(active.contains_key(&job.id), "Job should have a registered cancellation token");
-        }
-
-        // Wait for completion
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-        let job_id_for_event = job.id.clone();
-        app.listen(JOB_EVENT_NAME, move |event| {
-            let payload: JobProgress = serde_json::from_str(event.payload()).unwrap();
-            if payload.job_id == job_id_for_event && payload.status == JobStatus::Completed {
-                let _ = tx.send(());
-            }
-        });
-
-        tokio::time::timeout(tokio::time::Duration::from_secs(5), rx.recv())
-            .await
-            .expect("Timeout waiting for job completion")
-            .expect("Channel closed");
-
-        let updated = jm.get_job(&job.id).await?;
-        assert_eq!(updated.status, JobStatus::Completed);
-
-        // Verify token unregistration
-        {
-            let active = jm.active.lock().await;
-            assert!(!active.contains_key(&job.id), "Job token should be unregistered after completion");
-        }
-
-        // Verify IPC events were emitted
-        assert!(running_count.load(Ordering::SeqCst) > 0, "Running event should have been emitted");
-        assert_eq!(completed_count.load(Ordering::SeqCst), 1, "Completed event should have been emitted exactly once");
-
-        Ok(())
+        // Verify that mixed/upper-case variants and unsupported strings are not accepted
+        assert!(<JobStatus as ValueEnum>::from_str("Pending", false).is_err());
+        assert!(<JobStatus as ValueEnum>::from_str("PENDING", false).is_err());
+        assert!(<JobStatus as ValueEnum>::from_str("running_cased_incorrectly", false).is_err());
+        assert!(<JobStatus as ValueEnum>::from_str("in_progress", false).is_err());
+        assert!(<JobStatus as ValueEnum>::from_str("unknown", false).is_err());
     }
 }

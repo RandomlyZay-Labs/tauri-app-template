@@ -41,7 +41,6 @@ describe('HomePage', () => {
 		expect(screen.getByText('home.title')).toBeTruthy();
 
 		// Verify child components (Feature Cards) are rendered by checking their translated titles
-		expect(screen.getByText('downloadCard.title')).toBeTruthy();
 		expect(screen.getByText('debugSettings.secureStorage')).toBeTruthy();
 		expect(screen.getByText('debugSettings.fileWatcher')).toBeTruthy();
 	});

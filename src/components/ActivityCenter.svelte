@@ -24,7 +24,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { flip } from 'svelte/animate';
 import { quintOut } from 'svelte/easing';
-import { fade, fly, scale } from 'svelte/transition';
+import { fade, fly } from 'svelte/transition';
 
 
 const STATUS_CONFIG: Record<

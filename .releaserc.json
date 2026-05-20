@@ -62,6 +62,26 @@
 					{
 						"path": "artifacts/linux-bundle-arm64/**/*.AppImage",
 						"label": "Linux AppImage (arm64)"
+					},
+					{
+						"path": "artifacts/cli-windows-x64/tauri-app-template-cli.exe",
+						"name": "tauri-app-template-cli-windows-x64.exe",
+						"label": "Windows CLI (x64)"
+					},
+					{
+						"path": "artifacts/cli-windows-arm64/tauri-app-template-cli.exe",
+						"name": "tauri-app-template-cli-windows-arm64.exe",
+						"label": "Windows CLI (ARM64)"
+					},
+					{
+						"path": "artifacts/cli-linux-amd64/tauri-app-template-cli",
+						"name": "tauri-app-template-cli-linux-amd64",
+						"label": "Linux CLI (amd64)"
+					},
+					{
+						"path": "artifacts/cli-linux-arm64/tauri-app-template-cli",
+						"name": "tauri-app-template-cli-linux-arm64",
+						"label": "Linux CLI (arm64)"
 					}
 				]
 			}

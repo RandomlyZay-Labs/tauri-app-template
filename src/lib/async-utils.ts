@@ -11,6 +11,10 @@ interface SafeActionOptions {
 	onSuccess?: () => void;
 	/** Callback to run on error. */
 	onError?: (error: unknown) => void;
+	/** If true, error toasts will not be shown. */
+	silent?: boolean;
+	/** If true, error toasts will not be shown. Alternative name for silent. */
+	hideErrorToast?: boolean;
 }
 
 /**
@@ -21,25 +25,28 @@ interface SafeActionOptions {
  *   await apiCall();
  * }, { successMessage: 'Done!', errorMessage: 'Failed' });
  */
-export async function executeSafeAction(
-	action: () => Promise<unknown>,
+export async function executeSafeAction<T>(
+	action: () => Promise<T>,
 	options: SafeActionOptions = {},
-) {
+): Promise<T | undefined> {
 	const {
 		errorMessage = t('errors.unexpectedError'),
 		successMessage,
 		onSuccess,
 		onError,
+		silent = false,
+		hideErrorToast = false,
 	} = options;
 
 	try {
 		void logger.debug('[executeSafeAction] Starting action');
-		await action();
+		const result = await action();
 		void logger.debug('[executeSafeAction] Action succeeded');
 		if (successMessage) {
 			toast.success(successMessage);
 		}
 		onSuccess?.();
+		return result;
 	} catch (error) {
 		let message: string;
 
@@ -57,7 +64,10 @@ export async function executeSafeAction(
 		}
 
 		void logger.error(errorMessage, error);
-		toast.error(`${errorMessage}: ${message}`);
+		if (!silent && !hideErrorToast) {
+			toast.error(`${errorMessage}: ${message}`);
+		}
 		onError?.(error);
+		return undefined;
 	}
 }

@@ -6,7 +6,7 @@ import { t } from '@/lib/i18n';
 import { commands } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
-import { KeyRound, Save, Eye, Trash2 } from '@lucide/svelte';
+import { Eye, KeyRound, Save, Trash2 } from '@lucide/svelte';
 
 import * as Card from '@/components/ui/card';
 

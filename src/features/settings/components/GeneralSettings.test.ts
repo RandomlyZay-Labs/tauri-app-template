@@ -32,7 +32,6 @@ describe('GeneralSettings', () => {
 			if (cmd === 'open_log_dir') return null;
 			if (cmd === 'open_data_dir') return null;
 			if (cmd === 'reset_application') return null;
-			if (cmd === 'is_appimage') return false;
 		});
 	});
 

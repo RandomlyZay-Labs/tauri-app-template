@@ -78,7 +78,7 @@
 * **Target:** Global Svelte stores (`src/stores/*.svelte.ts`) and complex utility functions (`src/lib/*.ts`).
 * **Mocking**: 
   * **Tauri IPC**: You MUST use the official `mockIPC` from `@tauri-apps/api/mocks`. NEVER use `vi.mock` for `@tauri-apps/api` or `@tauri-apps/plugin-*` imports as manual mocks fail to preserve the full API surface and cause non-deterministic behavior.
-  * **External Libs**: Use Vitest's `vi.mock()` to stub out non-Tauri dependencies (e.g., `posthog-js`) so tests run seamlessly in Node/Happy-DOM.
+  * **External Libs**: Use Vitest's `vi.mock()` to stub out non-Tauri dependencies so tests run seamlessly in Node/Happy-DOM.
 * **Command**: Run tests via `pnpm test:frontend`.
 
 #### 3. Backend Unit Tests (Rust)
@@ -131,10 +131,6 @@ Never specify version numbers in your commands to make sure `pnpm` and `cargo` g
 ### Global Vitest Teardown & Svelte 5 Lifecycle
 *   **Issue**: `AbortError` or `DOMException` occurs during component unmount in Vitest + Happy DOM when using fake timers and bits-ui components.
 *   **Fix**: In the global `afterEach` hook, always call `cleanup()` (from `@testing-library/svelte`) **BEFORE** flushing fake timers (e.g., `vi.runAllTimers()`). This allows Svelte's asynchronous transition microtasks to settle before the timers are advanced, preventing crashes in the reactive environment.
-
-### Mocking PostHog in Vitest
-*   **Issue**: Tests fail with network fetch errors or script-loading failures in Happy DOM because components attempt to initialize PostHog.
-*   **Fix**: Globally mock `posthog-js` in `src/test/setup.ts`. Since PostHog often relies on a default export with a `.init()` method, use `vi.mock('posthog-js', () => ({ default: { init: vi.fn(), capture: vi.fn(), identify: vi.fn() } }))`.
 
 ### E2E State
 *   **Issue**: Never expose internal stores to the `window` object for testing. Use native DOM events or Playwright's `context` APIs to trigger state changes, ensuring the test mimics real user/browser behavior.
