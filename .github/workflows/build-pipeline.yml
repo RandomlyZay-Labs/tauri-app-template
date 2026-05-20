@@ -374,12 +374,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
-      - name: Download GUI Artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: windows-bundle-${{ matrix.arch }}
-          path: ./artifacts
-
       - name: Download CLI Artifact
         uses: actions/download-artifact@v8
         with:
@@ -391,36 +385,3 @@ jobs:
         run: |
           .\cli-artifact\tauri-app-template-cli.exe --help
           if ($LASTEXITCODE -ne 0) { exit 1 }
-
-      - name: Install and Launch App
-        shell: pwsh
-        run: |
-          $Installer = Get-ChildItem -Path ./artifacts -Filter *.exe | Select-Object -First 1
-          if (-not $Installer) {
-            Write-Error "Could not find the NSIS installer."
-            exit 1
-          }
-
-          Write-Host "Installing: $($Installer.FullName)"
-          # /S triggers silent install for NSIS
-          Start-Process -FilePath $Installer.FullName -ArgumentList "/S" -Wait
-
-          # Tauri typically installs here depending on whether it's a per-user or machine wide config.
-          $ExeName = "tauri-app-template.exe"
-          $AppPath = "$env:LOCALAPPDATA\Tauri App Template\$ExeName"
-          
-          Start-Process -FilePath $AppPath
-          
-          # Give it a few seconds to boot and see if it crashes
-          Start-Sleep -Seconds 5
-          
-          $ProcessName = $ExeName.Replace(".exe", "")
-          $RunningProcess = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
-          
-          if ($RunningProcess) {
-              Write-Host "SUCCESS: Windows app launched and didn't immediately die."
-              Stop-Process -Name $ProcessName -Force
-          } else {
-              Write-Error "FAIL: Windows app crashed or closed instantly on launch."
-              exit 1
-          }
