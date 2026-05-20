@@ -52,7 +52,7 @@ jobs:
         include:
           - target: x86_64-pc-windows-msvc
             arch: x64
-            runner: blacksmith-2vcpu-windows-2025
+            runner: blacksmith-4vcpu-windows-2025
           - target: aarch64-pc-windows-msvc
             arch: arm64
             runner: windows-11-arm
@@ -145,7 +145,7 @@ jobs:
         include:
           - runner: blacksmith-4vcpu-ubuntu-2204
             arch: amd64
-          - runner: blacksmith-4vcpu-ubuntu-2204-arm
+          - runner: blacksmith-8vcpu-ubuntu-2204-arm
             arch: arm64
             
     runs-on: ${{ matrix.runner }}
@@ -228,9 +228,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-2vcpu-ubuntu-2204
+          - runner: blacksmith-4vcpu-ubuntu-2204
             arch: amd64
-          - runner: blacksmith-2vcpu-ubuntu-2204-arm
+          - runner: blacksmith-8vcpu-ubuntu-2204-arm
             arch: arm64
             
     runs-on: ${{ matrix.runner }}
@@ -306,9 +306,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-2vcpu-ubuntu-2204
+          - runner: blacksmith-4vcpu-ubuntu-2204
             arch: amd64
-          - runner: blacksmith-2vcpu-ubuntu-2204-arm
+          - runner: blacksmith-8vcpu-ubuntu-2204-arm
             arch: arm64
             
     runs-on: ${{ matrix.runner }}
