@@ -471,8 +471,8 @@ jobs:
               # -o: debug child processes
               # -g: ignore initial breakpoint
               # -G: ignore final exit breakpoint
-              # -c "g; !analyze -v; k; q": run 'go', and on exception print analysis, stack trace, then quit
-              $Proc = Start-Process -FilePath $Cdb.FullName -ArgumentList "-o -g -G -c `"g; !analyze -v; k; q`" `"$AppPath`"" -PassThru -NoNewWindow -RedirectStandardOutput $OutLog -RedirectStandardError $ErrLog
+              # -c "!analyze -v; k; q": run analysis and stack trace on exception, then quit
+              $Proc = Start-Process -FilePath $Cdb.FullName -ArgumentList "-o -g -G -c `"!analyze -v; k; q`" `"$AppPath`"" -PassThru -NoNewWindow -RedirectStandardOutput $OutLog -RedirectStandardError $ErrLog
               
               Start-Sleep -Seconds 5
               
