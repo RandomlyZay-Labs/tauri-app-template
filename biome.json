@@ -10,7 +10,8 @@
 			"**",
 			"!!src/bindings.ts",
 			"!!src/components/ui/**/*",
-			"!!**/*.svelte"
+			"!!**/*.svelte",
+			"!!.pnpm-store"
 		]
 	},
 	"css": {
