@@ -20,8 +20,6 @@
 
 - Template Finalization
   - Update README template
-  - Uncomment `save-if` lines in build.yml
-  - Bump up runner cores
   - Implement final tests
   - Update dependencies one last time
   - AI codebase audit
