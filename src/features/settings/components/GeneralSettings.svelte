@@ -16,12 +16,19 @@ import { getSystemAnimationPreference } from '@/lib/utils';
 import { animationStore } from '@/stores/animationStore.svelte';
 import { themeStore } from '@/stores/themeStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
+import { updateStore } from '@/stores/updateStore.svelte';
+import { networkStore } from '@/stores/networkStore.svelte';
 import {
     Database,
     FolderOpen,
     Rocket,
     RotateCcw,
-    Trash2
+    Trash2,
+    RefreshCw,
+    Download,
+    CheckCircle2,
+    AlertCircle,
+    Info
 } from '@lucide/svelte';
 import { onMount } from 'svelte';
 import { push } from 'svelte-spa-router';
@@ -36,7 +43,16 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 let showResetDialog = $state(false);
 let showPrefResetDialog = $state(false);
 let deleteConfirmation = $state('');
+let relaunchDialogOpen = $state(false);
 let copied = $state(false);
+
+const defaultAutoCheck = true;
+
+$effect(() => {
+	if (updateStore.status === 'downloaded') {
+		relaunchDialogOpen = true;
+	}
+});
 
 onMount(() => {
 });
@@ -104,6 +120,177 @@ async function copyCommand() {
 </script>
 
 <div class="space-y-6">
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>{t('updateSettings.title')}</Card.Title>
+			<Card.Description>{t('updateSettings.description')}</Card.Description>
+		</Card.Header>
+		<Card.Content class="space-y-6">
+			<!-- Auto check updates toggle -->
+			<Tooltip.Root>
+				<Tooltip.Trigger class="w-full text-left">
+					<div class="flex items-center justify-between">
+						<div class="space-y-0.5">
+							<label for="auto-check-switch" class="text-sm font-medium leading-none">{t('updateSettings.autoCheck')}</label>
+							<p class="text-muted-foreground text-xs">{t('updateSettings.autoCheckDescription')}</p>
+						</div>
+						<div class="flex items-center gap-2">
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-8 text-muted-foreground {uiStore.autoCheckUpdates === defaultAutoCheck ? 'invisible' : ''}"
+								onclick={() => {
+									uiStore.setAutoCheckUpdates(defaultAutoCheck);
+									toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
+								}}
+								aria-label={t('updateSettings.resetAutoCheck')}
+								aria-hidden={uiStore.autoCheckUpdates === defaultAutoCheck}
+								tabindex={uiStore.autoCheckUpdates === defaultAutoCheck ? -1 : 0}
+							>
+								<RotateCcw class="size-4" />
+							</Button>
+							<Switch
+								id="auto-check-switch"
+								checked={uiStore.autoCheckUpdates}
+								onCheckedChange={(enabled) => {
+									uiStore.setAutoCheckUpdates(enabled);
+									toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
+								}}
+							/>
+						</div>
+					</div>
+				</Tooltip.Trigger>
+				<Tooltip.Content side="top" align="center">
+					<p>{t('updateSettings.autoCheckDescription')}</p>
+				</Tooltip.Content>
+			</Tooltip.Root>
+
+			<div class="h-px bg-border"></div>
+
+			<!-- Manual check and status -->
+			<div class="space-y-4">
+				<div class="flex items-center justify-between">
+					<div class="space-y-1">
+						<span class="text-sm font-medium leading-none">{t('updateSettings.status')}</span>
+						<div class="flex items-center gap-2 mt-1">
+							{#if networkStore.isOffline}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+									<AlertCircle class="size-3 mr-1" />
+									{t('updateSettings.statusOffline')}
+								</span>
+							{:else if updateStore.status === 'idle'}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+									{t('updateSettings.statusIdle')}
+								</span>
+							{:else if updateStore.status === 'checking'}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+									<RefreshCw class="animate-spin size-3 mr-1" />
+									{t('updateSettings.statusChecking')}
+								</span>
+							{:else if updateStore.status === 'available'}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+									<Info class="size-3 mr-1" />
+									{t('updateSettings.statusAvailable', { version: updateStore.version })}
+								</span>
+							{:else if updateStore.status === 'no-update'}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+									<CheckCircle2 class="size-3 mr-1" />
+									{t('updateSettings.statusNoUpdate')}
+								</span>
+							{:else if updateStore.status === 'downloading'}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+									<RefreshCw class="animate-spin size-3 mr-1" />
+									{t('updateSettings.statusDownloading', { progress: updateStore.percentage })}
+								</span>
+							{:else if updateStore.status === 'downloaded'}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+									<CheckCircle2 class="size-3 mr-1" />
+									{t('updateSettings.statusDownloaded')}
+								</span>
+							{:else if updateStore.status === 'error'}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+									<AlertCircle class="size-3 mr-1" />
+									{t('updateSettings.statusError')}
+								</span>
+							{/if}
+						</div>
+					</div>
+					<Button
+						variant="outline"
+						onclick={() => updateStore.checkForUpdates(true)}
+						disabled={networkStore.isOffline || updateStore.status === 'checking' || updateStore.status === 'downloading'}
+					>
+						<RefreshCw class="mr-2 size-4 {updateStore.status === 'checking' ? 'animate-spin' : ''}" />
+						{t('updateSettings.checkUpdates')}
+					</Button>
+				</div>
+
+				<!-- Update detailed info & Actions -->
+				{#if updateStore.status === 'available' || updateStore.status === 'downloading' || updateStore.status === 'downloaded' || (updateStore.status === 'error' && updateStore.activeUpdate)}
+					<div class="mt-4 p-4 rounded-lg border bg-card text-card-foreground space-y-4">
+						<div class="space-y-1">
+							<h4 class="text-sm font-semibold">{t('updateSettings.updateAvailableTitle')}</h4>
+							<p class="text-xs text-muted-foreground">Version: {updateStore.version} {#if updateStore.date}({updateStore.date}){/if}</p>
+						</div>
+
+						{#if updateStore.body}
+							<div class="text-xs max-h-32 overflow-y-auto p-2 bg-secondary/30 rounded border">
+								<p class="font-mono whitespace-pre-wrap">{updateStore.body}</p>
+							</div>
+						{/if}
+
+						{#if updateStore.status === 'downloading'}
+							<div class="space-y-2">
+								<div class="flex items-center justify-between text-xs">
+									<span>{t('updateSettings.downloading', { progress: updateStore.percentage })}</span>
+									{#if updateStore.contentLength}
+										<span>{Math.round(updateStore.downloadedBytes / 1024 / 1024 * 100) / 100}MB / {Math.round(updateStore.contentLength / 1024 / 1024 * 100) / 100}MB</span>
+									{/if}
+								</div>
+								<div class="w-full bg-secondary dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
+									<div class="bg-primary h-full rounded-full transition-all duration-300" style="width: {updateStore.percentage}%"></div>
+								</div>
+							</div>
+						{/if}
+
+						{#if updateStore.status === 'error' && updateStore.error}
+							<div class="p-3 bg-destructive/10 text-destructive text-xs rounded border border-destructive/20 flex items-start gap-2">
+								<AlertCircle class="size-4 shrink-0 mt-0.5" />
+								<span>{updateStore.error}</span>
+							</div>
+						{/if}
+
+						<div class="flex justify-end gap-2">
+							{#if updateStore.status === 'available' || updateStore.status === 'error'}
+								<Button size="sm" onclick={() => updateStore.downloadAndInstallUpdate()}>
+									<Download class="mr-2 size-4" />
+									{t('updateSettings.downloadAndInstall')}
+								</Button>
+							{:else if updateStore.status === 'downloaded'}
+								<Button size="sm" onclick={() => updateStore.applyUpdate()}>
+									<RefreshCw class="mr-2 size-4" />
+									{t('updateSettings.relaunchToApply')}
+								</Button>
+							{/if}
+						</div>
+					</div>
+				{/if}
+
+				{#if updateStore.status === 'error' && !updateStore.activeUpdate && updateStore.error}
+					<div class="mt-4 p-4 rounded-lg border border-destructive/20 bg-destructive/5 dark:bg-destructive/10 text-card-foreground space-y-2">
+						<div class="flex items-start gap-2 text-destructive">
+							<AlertCircle class="size-4 shrink-0 mt-0.5" />
+							<div class="space-y-1">
+								<h4 class="text-sm font-semibold">{t('updateSettings.checkFailed')}</h4>
+								<p class="text-xs text-muted-foreground">{updateStore.error}</p>
+							</div>
+						</div>
+					</div>
+				{/if}
+			</div>
+		</Card.Content>
+	</Card.Root>
+
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{t('generalSettings.storageLogs')}</Card.Title>
@@ -268,6 +455,22 @@ async function copyCommand() {
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (showResetDialog = false)}>{t('common.cancel')}</Button>
 			<Button variant="destructive" onclick={confirmResetApp} disabled={deleteConfirmation !== confirmPhrase}>{t('generalSettings.deleteEverything')}</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Relaunch Dialog -->
+<Dialog.Root bind:open={relaunchDialogOpen}>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>{t('updateSettings.relaunchToApply')}</Dialog.Title>
+			<Dialog.Description>
+				{t('updateSettings.relaunchDescription')}
+			</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (relaunchDialogOpen = false)}>{t('appearanceSettings.later')}</Button>
+			<Button onclick={() => updateStore.applyUpdate()}>{t('appearanceSettings.restartNow')}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

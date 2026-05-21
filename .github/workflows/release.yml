@@ -87,6 +87,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate latest.json
+        env:
+          VERSION: ${{ needs.determine-version.outputs.version }}
+        run: node scripts/generate-latest-json.js
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}

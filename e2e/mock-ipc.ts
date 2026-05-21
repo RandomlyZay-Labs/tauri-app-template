@@ -266,6 +266,12 @@ export async function injectMockIpc(
 				}
 			}
 
+			// Handle Updater Plugin (Tauri v2 protocol)
+			if (cmd.startsWith('plugin:updater|')) {
+				console.log(`[MOCK_IPC] Handling updater: ${cmd}`, args);
+				return null;
+			}
+
 			// Handle Notifications
 			if (cmd.includes('notification')) {
 				console.log(`[MOCK_IPC] Handling notification: ${cmd}`, args);

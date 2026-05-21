@@ -6,6 +6,7 @@ import {
 import { networkStore } from '@/stores/networkStore.svelte';
 import { notificationStore } from '@/stores/notificationStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
+import { updateStore } from '@/stores/updateStore.svelte';
 import { watcherStore } from '@/stores/watcherStore.svelte';
 import { JOB_EVENT_NAME, type JobProgress } from '@/types/job';
 import { t } from './i18n';
@@ -20,6 +21,7 @@ class LifecycleManager {
 	private handleOffline: (() => void) | undefined;
 	private handleContextMenu: ((e: MouseEvent) => void) | undefined;
 	private handleKeyDown: ((e: KeyboardEvent) => void) | undefined;
+	private autoCheckTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	async init() {
 		// Sync network events
@@ -54,6 +56,13 @@ class LifecycleManager {
 
 		// Telemetry: Track app startup
 		captureEvent('app_start');
+
+		// Auto check for updates on startup if enabled
+		if (uiStore.autoCheckUpdates) {
+			this.autoCheckTimeout = setTimeout(() => {
+				void updateStore.checkForUpdates(false);
+			}, 3000);
+		}
 
 		// Activity sync: bridge Tauri job events to activity store
 		this.unlistenJob = await listen<JobProgress>(JOB_EVENT_NAME, (event) => {
@@ -111,6 +120,9 @@ class LifecycleManager {
 	}
 
 	destroy() {
+		if (this.autoCheckTimeout) {
+			clearTimeout(this.autoCheckTimeout);
+		}
 		if (this.handleOnline)
 			window.removeEventListener('online', this.handleOnline);
 		if (this.handleOffline)
