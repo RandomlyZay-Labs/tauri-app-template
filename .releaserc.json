@@ -15,6 +15,12 @@
 		],
 		"@semantic-release/changelog",
 		[
+			"@semantic-release/npm",
+			{
+				"npmPublish": false
+			}
+		],
+		[
 			"@semantic-release/exec",
 			{
 				"prepareCmd": "node -e \"const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = p.version; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\\n'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\\\\s*=\\\\s*\\\"[^\\\"]+\\\"/m, 'version = \\\"' + p.version + '\\\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);\""
@@ -37,56 +43,44 @@
 			{
 				"assets": [
 					{
-						"path": "artifacts/windows-bundle-x64/*.exe",
-						"label": "Windows (x64)"
+						"path": "artifacts/windows-bundle-x64/*.exe"
 					},
 					{
-						"path": "artifacts/windows-bundle-arm64/*.exe",
-						"label": "Windows (ARM64)"
+						"path": "artifacts/windows-bundle-arm64/*.exe"
 					},
 					{
-						"path": "artifacts/linux-bundle-amd64/**/*.deb",
-						"label": "Linux Debian (amd64)"
+						"path": "artifacts/linux-bundle-amd64/**/*.deb"
 					},
 					{
-						"path": "artifacts/linux-bundle-arm64/**/*.deb",
-						"label": "Linux Debian (arm64)"
+						"path": "artifacts/linux-bundle-arm64/**/*.deb"
 					},
 					{
-						"path": "artifacts/linux-bundle-amd64/**/*.rpm",
-						"label": "Linux RPM (amd64)"
+						"path": "artifacts/linux-bundle-amd64/**/*.rpm"
 					},
 					{
-						"path": "artifacts/linux-bundle-arm64/**/*.rpm",
-						"label": "Linux RPM (arm64)"
+						"path": "artifacts/linux-bundle-arm64/**/*.rpm"
 					},
 					{
-						"path": "artifacts/linux-bundle-amd64/**/*.AppImage",
-						"label": "Linux AppImage (amd64)"
+						"path": "artifacts/linux-bundle-amd64/**/*.AppImage"
 					},
 					{
-						"path": "artifacts/linux-bundle-arm64/**/*.AppImage",
-						"label": "Linux AppImage (arm64)"
+						"path": "artifacts/linux-bundle-arm64/**/*.AppImage"
 					},
 					{
 						"path": "artifacts/cli-windows-x64/tauri-app-template-cli.exe",
-						"name": "tauri-app-template-cli-windows-x64.exe",
-						"label": "Windows CLI (x64)"
+						"name": "tauri-app-template-cli-windows-x64.exe"
 					},
 					{
 						"path": "artifacts/cli-windows-arm64/tauri-app-template-cli.exe",
-						"name": "tauri-app-template-cli-windows-arm64.exe",
-						"label": "Windows CLI (ARM64)"
+						"name": "tauri-app-template-cli-windows-arm64.exe"
 					},
 					{
 						"path": "artifacts/cli-linux-amd64/tauri-app-template-cli",
-						"name": "tauri-app-template-cli-linux-amd64",
-						"label": "Linux CLI (amd64)"
+						"name": "tauri-app-template-cli-linux-amd64"
 					},
 					{
 						"path": "artifacts/cli-linux-arm64/tauri-app-template-cli",
-						"name": "tauri-app-template-cli-linux-arm64",
-						"label": "Linux CLI (arm64)"
+						"name": "tauri-app-template-cli-linux-arm64"
 					}
 				]
 			}
