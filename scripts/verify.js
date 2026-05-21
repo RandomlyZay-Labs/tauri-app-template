@@ -18,9 +18,7 @@ function runGitCommand(cmd) {
 // 0. Check if we should force-run verification (e.g., in CI or explicitly requested)
 const runAll = process.argv.includes('--force');
 if (runAll) {
-	console.log(
-		'Force running the full verification suite...',
-	);
+	console.log('Force running the full verification suite...');
 	try {
 		execSync('pnpm verify:backend && pnpm verify:frontend', {
 			stdio: 'inherit',
