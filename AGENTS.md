@@ -90,7 +90,7 @@
 ### Quality Checks
 
 You cannot say you have finished until you have run `pnpm verify` and it passes with **an exit code of 0**.
-Do NOT run `pnpm verify` if you only edited `.json`, `.yaml`, `.md`, or any other configuration files. In that case, you do not need to run verification.
+Do NOT run `pnpm verify` if your changes are strictly limited to purely documentation (`.md`) or configuration files that are not validated by `scripts/verify.js` (such as workflow files or locale files). However, you MUST run `pnpm verify` if you modified any code files or key configuration files checked by `scripts/verify.js` (e.g., `package.json`, `tsconfig*`, `vite.config.ts`, `cargo.toml`, etc.).
 
 * **Verify**: `pnpm verify` (Automatically runs the appropriate checks and tests based on modified files)
 
