@@ -13,6 +13,8 @@ jobs:
   determine-version:
     name: Determine Next Version
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.version.outputs.version }}
       has_release: ${{ steps.version.outputs.has_release }}
@@ -45,6 +47,8 @@ jobs:
     name: Build
     needs: determine-version
     if: needs.determine-version.outputs.has_release == 'true'
+    permissions:
+      contents: read
     uses: ./.github/workflows/build-pipeline.yml
     with:
       platform: 'all'

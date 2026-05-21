@@ -79,12 +79,13 @@ jobs:
       - name: Update Version
         if: ${{ inputs.version != '' }}
         shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${{ inputs.version }}"
           echo "Updating version in files to $VERSION"
-          node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = '$VERSION'; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
-          node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = '$VERSION'; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
-          node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"$VERSION\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
+          node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = process.env.VERSION; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"' + process.env.VERSION + '\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -184,12 +185,13 @@ jobs:
       - name: Update Version
         if: ${{ inputs.version != '' }}
         shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${{ inputs.version }}"
           echo "Updating version in files to $VERSION"
-          node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = '$VERSION'; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
-          node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = '$VERSION'; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
-          node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"$VERSION\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
+          node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = process.env.VERSION; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"' + process.env.VERSION + '\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
