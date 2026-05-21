@@ -82,7 +82,7 @@ importers:
         specifier: ^2.4.3
         version: 2.4.3
       '@tauri-apps/plugin-updater':
-        specifier: ^2.0.0
+        specifier: ^2.10.1
         version: 2.10.1
       '@testing-library/svelte':
         specifier: ^5.3.1
