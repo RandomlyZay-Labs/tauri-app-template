@@ -8,6 +8,7 @@
 * **Tauri Plugins**: clipboard-manager, dialog, log, notification, opener, process, single-instance, store, window-state
 
 ### Structure
+* `.github/` - GitHub Actions workflows
 * `src/components/` - Shared UI components
 * `src/features/` - Feature modules (components, hooks, store)
 * `src/lib/` - Utilities, config, constants
@@ -88,11 +89,10 @@
 
 ### Quality Checks
 
-You cannot say that have finished until you have ran one of these verification commands (which run both checks and tests) and it passes with **an exit code of 0**. If you have made changes to the frontend, run `pnpm verify:frontend`. If you have made changes to the backend, run `pnpm verify:backend`. If you have made changes to both, run `pnpm verify`.
+You cannot say you have finished until you have run `pnpm verify` and it passes with **an exit code of 0**.
+Do NOT run `pnpm verify` if your changes are strictly limited to purely documentation (`.md`) or configuration files that are not validated by `scripts/verify.js` (such as workflow files or locale files). However, you MUST run `pnpm verify` if you modified any code files or key configuration files checked by `scripts/verify.js` (e.g., `package.json`, `tsconfig*`, `vite.config.ts`, `cargo.toml`, etc.).
 
-* **Full Verify**: `pnpm verify` (Runs both `pnpm check` and `pnpm test`)
-* **Frontend Verify**: `pnpm verify:frontend` (TS, Biome, Knip, Vitest; auto-generates bindings)
-* **Backend Verify**: `pnpm verify:backend` (Cargo Clippy & Cargo Test)
+* **Verify**: `pnpm verify` (Automatically runs the appropriate checks and tests based on modified files)
 
 ### 📦 Dependency Management
 

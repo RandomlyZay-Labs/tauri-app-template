@@ -8,6 +8,11 @@ on:
         required: true
         type: string
         default: 'all'
+      version:
+        description: 'Target release version to inject'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   # -----------------------------------------------------------------------
@@ -52,7 +57,7 @@ jobs:
         include:
           - target: x86_64-pc-windows-msvc
             arch: x64
-            runner: blacksmith-4vcpu-windows-2025
+            runner: windows-latest
           - target: aarch64-pc-windows-msvc
             arch: arm64
             runner: windows-11-arm
@@ -70,6 +75,17 @@ jobs:
         with:
           node-version: 24
           cache: 'pnpm'
+
+      - name: Update Version
+        if: ${{ inputs.version != '' }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          echo "Updating version in files to $VERSION"
+          node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = process.env.VERSION; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"' + process.env.VERSION + '\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -143,9 +159,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-4vcpu-ubuntu-2204
+          - runner: ubuntu-22.04
             arch: amd64
-          - runner: blacksmith-8vcpu-ubuntu-2204-arm
+          - runner: ubuntu-22.04-arm
             arch: arm64
             
     runs-on: ${{ matrix.runner }}
@@ -165,6 +181,17 @@ jobs:
         with:
           node-version: 24
           cache: 'pnpm'
+
+      - name: Update Version
+        if: ${{ inputs.version != '' }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          echo "Updating version in files to $VERSION"
+          node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = process.env.VERSION; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
+          node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"' + process.env.VERSION + '\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -228,9 +255,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-4vcpu-ubuntu-2204
+          - runner: ubuntu-22.04
             arch: amd64
-          - runner: blacksmith-8vcpu-ubuntu-2204-arm
+          - runner: ubuntu-22.04-arm
             arch: arm64
             
     runs-on: ${{ matrix.runner }}
@@ -306,9 +333,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-4vcpu-ubuntu-2204
+          - runner: ubuntu-22.04
             arch: amd64
-          - runner: blacksmith-8vcpu-ubuntu-2204-arm
+          - runner: ubuntu-22.04-arm
             arch: arm64
             
     runs-on: ${{ matrix.runner }}
@@ -366,7 +393,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-2vcpu-windows-2025
+          - runner: windows-latest
             arch: x64
           - runner: windows-11-arm
             arch: arm64

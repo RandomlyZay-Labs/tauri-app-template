@@ -10,14 +10,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  determine-version:
+    name: Determine Next Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      has_release: ${{ steps.version.outputs.has_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Next Version
+        id: version
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: node scripts/get-next-version.js
+
   build:
+    name: Build
+    needs: determine-version
+    if: needs.determine-version.outputs.has_release == 'true'
+    permissions:
+      contents: read
     uses: ./.github/workflows/build-pipeline.yml
     with:
       platform: 'all'
+      version: ${{ needs.determine-version.outputs.version }}
 
   release:
     name: Release
-    needs: build
+    needs: [determine-version, build]
+    if: needs.determine-version.outputs.has_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
