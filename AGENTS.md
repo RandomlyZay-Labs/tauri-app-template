@@ -8,6 +8,7 @@
 * **Tauri Plugins**: clipboard-manager, dialog, log, notification, opener, process, single-instance, store, window-state
 
 ### Structure
+* `.github/` - GitHub Actions workflows
 * `src/components/` - Shared UI components
 * `src/features/` - Feature modules (components, hooks, store)
 * `src/lib/` - Utilities, config, constants
