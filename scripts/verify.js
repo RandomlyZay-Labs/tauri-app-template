@@ -15,6 +15,22 @@ function runGitCommand(cmd) {
 	}
 }
 
+// 0. Check if we should force-run verification (e.g., in CI or explicitly requested)
+const runAll = process.argv.includes('--force');
+if (runAll) {
+	console.log(
+		'Force running the full verification suite...',
+	);
+	try {
+		execSync('pnpm verify:backend && pnpm verify:frontend', {
+			stdio: 'inherit',
+		});
+		process.exit(0);
+	} catch {
+		process.exit(1);
+	}
+}
+
 // 1. Collect all edited, staged, and untracked files
 const unstaged = runGitCommand('git diff --name-only')
 	.split('\n')
@@ -26,10 +42,11 @@ const untracked = runGitCommand('git ls-files --others --exclude-standard')
 	.split('\n')
 	.filter(Boolean);
 
-// Unique list of all modified or new files
+// Unique list of all modified or new files, ignoring the scripts directory
 const changedFiles = Array.from(new Set([...unstaged, ...staged, ...untracked]))
 	.map((f) => f.trim())
-	.filter(Boolean);
+	.filter(Boolean)
+	.filter((f) => !f.startsWith('scripts/'));
 
 // 2. Classify changed files
 const backendConfigs = [
