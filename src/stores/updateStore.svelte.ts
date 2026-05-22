@@ -4,6 +4,7 @@ import {
 	type DownloadEvent,
 	type Update,
 } from '@tauri-apps/plugin-updater';
+import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
 import { toast } from '@/lib/toast';
 import { networkStore } from '@/stores/networkStore.svelte';
@@ -49,45 +50,54 @@ class UpdateStore {
 		this.status = 'checking';
 		this.error = null;
 
-		try {
-			const update = await check();
-			if (update) {
-				this.activeUpdate = update;
-				this.version = update.version;
-				this.date = update.date;
-				this.body = update.body;
-				this.status = 'available';
+		await executeSafeAction(
+			async () => {
+				const update = await check();
+				if (update) {
+					this.activeUpdate = update;
+					this.version = update.version;
+					this.date = update.date;
+					this.body = update.body;
+					this.status = 'available';
 
-				if (!isManual) {
-					toast.message(t('updateSettings.updateAvailableTitle'), {
-						description: t('updateSettings.updateAvailableDesc', {
-							version: update.version,
-						}),
-					});
+					if (!isManual) {
+						toast.message(t('updateSettings.updateAvailableTitle'), {
+							description: t('updateSettings.updateAvailableDesc', {
+								version: update.version,
+							}),
+						});
+					}
+				} else {
+					this.status = 'no-update';
+					this.activeUpdate = null;
+					this.version = '';
+					this.date = undefined;
+					this.body = undefined;
+					if (isManual) {
+						toast.success(t('updateSettings.noUpdateTitle'), {
+							description: t('updateSettings.noUpdateDesc'),
+						});
+					}
 				}
-			} else {
-				this.status = 'no-update';
-				this.activeUpdate = null;
-				if (isManual) {
-					toast.success(t('updateSettings.noUpdateTitle'), {
-						description: t('updateSettings.noUpdateDesc'),
-					});
-				}
-			}
-		} catch (err: unknown) {
-			this.status = 'error';
-			this.error = err instanceof Error ? err.message : String(err);
-			this.activeUpdate = null;
-			if (isManual) {
-				toast.error(t('updateSettings.checkFailed'), {
-					description: this.error ?? undefined,
-				});
-			}
-		}
+			},
+			{
+				silent: !isManual,
+				errorMessage: t('updateSettings.checkFailed'),
+				onError: (err: unknown) => {
+					this.status = 'error';
+					this.error = err instanceof Error ? err.message : String(err);
+					this.activeUpdate = null;
+					this.version = '';
+					this.date = undefined;
+					this.body = undefined;
+				},
+			},
+		);
 	}
 
 	async downloadAndInstallUpdate() {
-		if (!this.activeUpdate) {
+		const update = this.activeUpdate;
+		if (!update) {
 			toast.error(t('updateSettings.noActiveUpdate'));
 			return;
 		}
@@ -97,42 +107,46 @@ class UpdateStore {
 		this.contentLength = undefined;
 		this.error = null;
 
-		try {
-			await this.activeUpdate.downloadAndInstall((progress: DownloadEvent) => {
-				switch (progress.event) {
-					case 'Started':
-						this.contentLength = progress.data.contentLength;
-						this.downloadedBytes = 0;
-						break;
-					case 'Progress':
-						this.downloadedBytes += progress.data.chunkLength;
-						break;
-					case 'Finished':
-						break;
-				}
-			});
+		await executeSafeAction(
+			async () => {
+				await update.downloadAndInstall((progress: DownloadEvent) => {
+					switch (progress.event) {
+						case 'Started':
+							this.contentLength = progress.data.contentLength;
+							this.downloadedBytes = 0;
+							break;
+						case 'Progress':
+							this.downloadedBytes += progress.data.chunkLength;
+							break;
+						case 'Finished':
+							break;
+					}
+				});
 
-			this.status = 'downloaded';
-			toast.success(t('updateSettings.downloadSuccessTitle'), {
-				description: t('updateSettings.downloadSuccessDesc'),
-			});
-		} catch (err: unknown) {
-			this.status = 'error';
-			this.error = err instanceof Error ? err.message : String(err);
-			toast.error(t('updateSettings.downloadFailed'), {
-				description: this.error ?? undefined,
-			});
-		}
+				this.status = 'downloaded';
+				toast.success(t('updateSettings.downloadSuccessTitle'), {
+					description: t('updateSettings.downloadSuccessDesc'),
+				});
+			},
+			{
+				errorMessage: t('updateSettings.downloadFailed'),
+				onError: (err: unknown) => {
+					this.status = 'error';
+					this.error = err instanceof Error ? err.message : String(err);
+				},
+			},
+		);
 	}
 
 	async applyUpdate() {
-		try {
-			await relaunch();
-		} catch (err: unknown) {
-			toast.error(t('debugSettings.failedToRelaunch'), {
-				description: err instanceof Error ? err.message : String(err),
-			});
-		}
+		await executeSafeAction(
+			async () => {
+				await relaunch();
+			},
+			{
+				errorMessage: t('debugSettings.failedToRelaunch'),
+			},
+		);
 	}
 }
 

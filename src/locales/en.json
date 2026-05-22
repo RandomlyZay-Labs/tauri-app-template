@@ -64,7 +64,9 @@
 		"appearance": "Appearance",
 		"backups": "Backups",
 		"cli": "CLI",
-		"debug": "Debug"
+		"debug": "Debug",
+		"version": "Version",
+		"sizeUnit": "MB"
 	},
 	"generalSettings": {
 		"storageLogs": "Storage & Logs",

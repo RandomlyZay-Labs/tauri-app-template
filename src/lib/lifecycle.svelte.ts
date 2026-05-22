@@ -22,6 +22,7 @@ class LifecycleManager {
 	private handleContextMenu: ((e: MouseEvent) => void) | undefined;
 	private handleKeyDown: ((e: KeyboardEvent) => void) | undefined;
 	private autoCheckTimeout: ReturnType<typeof setTimeout> | undefined;
+	private autoCheckInterval: ReturnType<typeof setInterval> | undefined;
 
 	async init() {
 		// Sync network events
@@ -57,12 +58,20 @@ class LifecycleManager {
 		// Telemetry: Track app startup
 		captureEvent('app_start');
 
-		// Auto check for updates on startup if enabled
-		if (uiStore.autoCheckUpdates) {
-			this.autoCheckTimeout = setTimeout(() => {
-				void updateStore.checkForUpdates(false);
-			}, 3000);
-		}
+		// Auto check for updates on startup if enabled after hydration completes
+		this.autoCheckInterval = setInterval(() => {
+			if (uiStore._hasHydrated) {
+				if (this.autoCheckInterval) {
+					clearInterval(this.autoCheckInterval);
+					this.autoCheckInterval = undefined;
+				}
+				if (uiStore.autoCheckUpdates) {
+					this.autoCheckTimeout = setTimeout(() => {
+						void updateStore.checkForUpdates(false);
+					}, 3000);
+				}
+			}
+		}, 50);
 
 		// Activity sync: bridge Tauri job events to activity store
 		this.unlistenJob = await listen<JobProgress>(JOB_EVENT_NAME, (event) => {
@@ -120,6 +129,9 @@ class LifecycleManager {
 	}
 
 	destroy() {
+		if (this.autoCheckInterval) {
+			clearInterval(this.autoCheckInterval);
+		}
 		if (this.autoCheckTimeout) {
 			clearTimeout(this.autoCheckTimeout);
 		}

@@ -64,7 +64,9 @@
 		"appearance": "Apariencia",
 		"backups": "Copias de seguridad",
 		"cli": "CLI",
-		"debug": "Depuración"
+		"debug": "Depuración",
+		"version": "Versión",
+		"sizeUnit": "MB"
 	},
 	"generalSettings": {
 		"storageLogs": "Almacenamiento y registros",
@@ -329,7 +331,7 @@
 		"checkFailed": "Error al buscar actualizaciones",
 		"noActiveUpdate": "No hay una actualización activa para descargar",
 		"downloadSuccessTitle": "Descarga completa",
-		"downloadSuccessDesc": "La actualización se ha descargado e instalado correctamente. Por favor, reinicia para aplicar los cambios.",
+		"downloadSuccessDesc": "La actualización se ha descargado correctamente. Reinicia la aplicación para completar la instalación.",
 		"downloadFailed": "Error al descargar e instalar la actualización",
 		"statusIdle": "No verificado",
 		"statusChecking": "Buscando...",

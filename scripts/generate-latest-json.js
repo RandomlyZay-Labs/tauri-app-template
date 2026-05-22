@@ -78,10 +78,11 @@ for (const [platform, data] of Object.entries(platforms)) {
 			signature: data.signature,
 		};
 	} else {
-		console.warn(
-			`Warning: Platform ${platform} missing url or signature:`,
+		console.error(
+			`Error: Platform ${platform} is missing url or signature:`,
 			data,
 		);
+		process.exit(1);
 	}
 }
 

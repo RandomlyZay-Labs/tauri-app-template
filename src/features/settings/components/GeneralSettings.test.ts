@@ -186,7 +186,9 @@ describe('GeneralSettings', () => {
 		expect(
 			screen.getByText('updateSettings.updateAvailableTitle'),
 		).toBeTruthy();
-		expect(screen.getByText('Version: 2.0.0 (2026-05-21)')).toBeTruthy();
+		expect(
+			screen.getByText('settings.version: 2.0.0 (2026-05-21)'),
+		).toBeTruthy();
 		expect(screen.getByText('Release notes')).toBeTruthy();
 
 		const downloadBtn = screen.getByText('updateSettings.downloadAndInstall');

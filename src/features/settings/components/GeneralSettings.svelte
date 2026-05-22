@@ -12,7 +12,7 @@ import {
 import { clearPersistentStore } from '@/lib/tauri-storage';
 import { updateTelemetryConsent } from '@/lib/telemetry';
 import { toast } from '@/lib/toast';
-import { getSystemAnimationPreference } from '@/lib/utils';
+import { cn, getSystemAnimationPreference } from '@/lib/utils';
 import { animationStore } from '@/stores/animationStore.svelte';
 import { themeStore } from '@/stores/themeStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
@@ -138,7 +138,7 @@ async function copyCommand() {
 							<Button
 								variant="ghost"
 								size="icon"
-								class="size-8 text-muted-foreground {uiStore.autoCheckUpdates === defaultAutoCheck ? 'invisible' : ''}"
+								class={cn("size-8 text-muted-foreground", { 'invisible': uiStore.autoCheckUpdates === defaultAutoCheck })}
 								onclick={() => {
 									uiStore.setAutoCheckUpdates(defaultAutoCheck);
 									toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
@@ -217,10 +217,10 @@ async function copyCommand() {
 					</div>
 					<Button
 						variant="outline"
-						onclick={() => updateStore.checkForUpdates(true)}
+						onclick={() => executeSafeAction(() => updateStore.checkForUpdates(true))}
 						disabled={networkStore.isOffline || updateStore.status === 'checking' || updateStore.status === 'downloading'}
 					>
-						<RefreshCw class="mr-2 size-4 {updateStore.status === 'checking' ? 'animate-spin' : ''}" />
+						<RefreshCw class={cn("mr-2 size-4", { 'animate-spin': updateStore.status === 'checking' })} />
 						{t('updateSettings.checkUpdates')}
 					</Button>
 				</div>
@@ -230,7 +230,7 @@ async function copyCommand() {
 					<div class="mt-4 p-4 rounded-lg border bg-card text-card-foreground space-y-4">
 						<div class="space-y-1">
 							<h4 class="text-sm font-semibold">{t('updateSettings.updateAvailableTitle')}</h4>
-							<p class="text-xs text-muted-foreground">Version: {updateStore.version} {#if updateStore.date}({updateStore.date}){/if}</p>
+							<p class="text-xs text-muted-foreground">{t('settings.version')}: {updateStore.version} {#if updateStore.date}({updateStore.date}){/if}</p>
 						</div>
 
 						{#if updateStore.body}
@@ -244,11 +244,11 @@ async function copyCommand() {
 								<div class="flex items-center justify-between text-xs">
 									<span>{t('updateSettings.downloading', { progress: updateStore.percentage })}</span>
 									{#if updateStore.contentLength}
-										<span>{Math.round(updateStore.downloadedBytes / 1024 / 1024 * 100) / 100}MB / {Math.round(updateStore.contentLength / 1024 / 1024 * 100) / 100}MB</span>
+										<span>{Math.round(updateStore.downloadedBytes / 1024 / 1024 * 100) / 100}{t('settings.sizeUnit')} / {Math.round(updateStore.contentLength / 1024 / 1024 * 100) / 100}{t('settings.sizeUnit')}</span>
 									{/if}
 								</div>
 								<div class="w-full bg-secondary dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
-									<div class="bg-primary h-full rounded-full transition-all duration-300" style="width: {updateStore.percentage}%"></div>
+									<div class="bg-primary h-full rounded-full transition-all duration-200" style="width: {updateStore.percentage}%"></div>
 								</div>
 							</div>
 						{/if}
@@ -262,12 +262,12 @@ async function copyCommand() {
 
 						<div class="flex justify-end gap-2">
 							{#if updateStore.status === 'available' || updateStore.status === 'error'}
-								<Button size="sm" onclick={() => updateStore.downloadAndInstallUpdate()}>
+								<Button size="sm" onclick={() => executeSafeAction(() => updateStore.downloadAndInstallUpdate())}>
 									<Download class="mr-2 size-4" />
 									{t('updateSettings.downloadAndInstall')}
 								</Button>
 							{:else if updateStore.status === 'downloaded'}
-								<Button size="sm" onclick={() => updateStore.applyUpdate()}>
+								<Button size="sm" onclick={() => executeSafeAction(() => updateStore.applyUpdate())}>
 									<RefreshCw class="mr-2 size-4" />
 									{t('updateSettings.relaunchToApply')}
 								</Button>
@@ -470,7 +470,7 @@ async function copyCommand() {
 		</Dialog.Header>
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (relaunchDialogOpen = false)}>{t('appearanceSettings.later')}</Button>
-			<Button onclick={() => updateStore.applyUpdate()}>{t('appearanceSettings.restartNow')}</Button>
+			<Button onclick={() => executeSafeAction(() => updateStore.applyUpdate())}>{t('appearanceSettings.restartNow')}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

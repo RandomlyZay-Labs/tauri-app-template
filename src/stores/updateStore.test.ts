@@ -1,3 +1,4 @@
+import { mockIPC } from '@tauri-apps/api/mocks';
 import type { Update } from '@tauri-apps/plugin-updater';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { networkStore } from '@/stores/networkStore.svelte';
@@ -6,14 +7,6 @@ import type { UpdateStatus } from './updateStore.svelte';
 // Mock Tauri plugin-updater and plugin-process
 const mockCheck = vi.fn();
 const mockRelaunch = vi.fn();
-
-vi.mock('@tauri-apps/plugin-updater', () => ({
-	check: () => mockCheck(),
-}));
-
-vi.mock('@tauri-apps/plugin-process', () => ({
-	relaunch: () => mockRelaunch(),
-}));
 
 // Mock i18n
 vi.mock('@/lib/i18n', () => ({
@@ -41,6 +34,18 @@ describe('updateStore', () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		networkStore.isOffline = false;
+
+		mockIPC((cmd) => {
+			if (cmd === 'plugin:updater|check') {
+				return mockCheck();
+			}
+			if (
+				cmd === 'plugin:process|relaunch' ||
+				cmd === 'plugin:process|restart'
+			) {
+				return mockRelaunch();
+			}
+		});
 
 		// Reset updater status to idle/defaults
 		const { updateStore } = await import('./updateStore.svelte');
@@ -112,21 +117,22 @@ describe('updateStore', () => {
 
 	it('sets available status and values when update is found', async () => {
 		const store = await getStore();
-		const mockUpdate = {
+		const mockMetadata = {
+			rid: 1,
+			currentVersion: '1.0.0',
 			version: '2.0.0',
 			date: '2026-05-21',
 			body: 'New cool features',
-			downloadAndInstall: vi.fn(),
 		};
-		mockCheck.mockResolvedValue(mockUpdate as unknown as Update);
+		mockCheck.mockResolvedValue(mockMetadata);
 
 		await store.checkForUpdates(false);
 
 		expect(store.status).toBe('available');
-		expect(store.activeUpdate).toEqual(mockUpdate);
-		expect(store.version).toBe('2.0.0');
-		expect(store.date).toBe('2026-05-21');
-		expect(store.body).toBe('New cool features');
+		expect(store.activeUpdate).toBeDefined();
+		expect(store.activeUpdate?.version).toBe('2.0.0');
+		expect(store.activeUpdate?.date).toBe('2026-05-21');
+		expect(store.activeUpdate?.body).toBe('New cool features');
 		expect(mockToastMessage).toHaveBeenCalledWith(
 			'updateSettings.updateAvailableTitle',
 			{
@@ -145,9 +151,9 @@ describe('updateStore', () => {
 		expect(store.status).toBe('error');
 		expect(store.error).toBe('Connection refused');
 		expect(store.activeUpdate).toBeNull();
-		expect(mockToastError).toHaveBeenCalledWith('updateSettings.checkFailed', {
-			description: 'Connection refused',
-		});
+		expect(mockToastError).toHaveBeenCalledWith(
+			'updateSettings.checkFailed: Connection refused',
+		);
 	});
 
 	it('fails downloadAndInstallUpdate if no active update exists', async () => {
@@ -199,10 +205,7 @@ describe('updateStore', () => {
 		expect(store.status).toBe('error');
 		expect(store.error).toBe('Disk full');
 		expect(mockToastError).toHaveBeenCalledWith(
-			'updateSettings.downloadFailed',
-			{
-				description: 'Disk full',
-			},
+			'updateSettings.downloadFailed: Disk full',
 		);
 	});
 
@@ -219,10 +222,7 @@ describe('updateStore', () => {
 		await store.applyUpdate();
 
 		expect(mockToastError).toHaveBeenCalledWith(
-			'debugSettings.failedToRelaunch',
-			{
-				description: 'Permission denied',
-			},
+			'debugSettings.failedToRelaunch: Permission denied',
 		);
 	});
 });
