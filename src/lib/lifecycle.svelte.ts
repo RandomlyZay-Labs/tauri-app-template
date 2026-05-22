@@ -6,8 +6,10 @@ import {
 import { networkStore } from '@/stores/networkStore.svelte';
 import { notificationStore } from '@/stores/notificationStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
+import { updateStore } from '@/stores/updateStore.svelte';
 import { watcherStore } from '@/stores/watcherStore.svelte';
 import { JOB_EVENT_NAME, type JobProgress } from '@/types/job';
+import { executeSafeAction } from './async-utils';
 import { t } from './i18n';
 import { commands } from './ipc';
 import { captureEvent } from './telemetry';
@@ -20,6 +22,8 @@ class LifecycleManager {
 	private handleOffline: (() => void) | undefined;
 	private handleContextMenu: ((e: MouseEvent) => void) | undefined;
 	private handleKeyDown: ((e: KeyboardEvent) => void) | undefined;
+	private autoCheckTimeout: ReturnType<typeof setTimeout> | undefined;
+	private autoCheckInterval: ReturnType<typeof setInterval> | undefined;
 
 	async init() {
 		// Sync network events
@@ -54,6 +58,21 @@ class LifecycleManager {
 
 		// Telemetry: Track app startup
 		captureEvent('app_start');
+
+		// Auto check for updates on startup if enabled after hydration completes
+		this.autoCheckInterval = setInterval(() => {
+			if (uiStore._hasHydrated) {
+				if (this.autoCheckInterval) {
+					clearInterval(this.autoCheckInterval);
+					this.autoCheckInterval = undefined;
+				}
+				if (uiStore.autoCheckUpdates) {
+					this.autoCheckTimeout = setTimeout(() => {
+						void executeSafeAction(() => updateStore.checkForUpdates(false));
+					}, 3000);
+				}
+			}
+		}, 50);
 
 		// Activity sync: bridge Tauri job events to activity store
 		this.unlistenJob = await listen<JobProgress>(JOB_EVENT_NAME, (event) => {
@@ -111,6 +130,12 @@ class LifecycleManager {
 	}
 
 	destroy() {
+		if (this.autoCheckInterval) {
+			clearInterval(this.autoCheckInterval);
+		}
+		if (this.autoCheckTimeout) {
+			clearTimeout(this.autoCheckTimeout);
+		}
 		if (this.handleOnline)
 			window.removeEventListener('online', this.handleOnline);
 		if (this.handleOffline)
