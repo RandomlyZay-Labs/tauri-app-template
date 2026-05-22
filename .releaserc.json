@@ -35,7 +35,7 @@
 					"src-tauri/Cargo.toml",
 					"CHANGELOG.md"
 				],
-				"message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+				"message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
 			}
 		],
 		[
@@ -46,25 +46,49 @@
 						"path": "artifacts/windows-bundle-x64/*.exe"
 					},
 					{
+						"path": "artifacts/windows-bundle-x64/*.zip"
+					},
+					{
+						"path": "artifacts/windows-bundle-x64/*.zip.sig"
+					},
+					{
 						"path": "artifacts/windows-bundle-arm64/*.exe"
+					},
+					{
+						"path": "artifacts/windows-bundle-arm64/*.zip"
+					},
+					{
+						"path": "artifacts/windows-bundle-arm64/*.zip.sig"
 					},
 					{
 						"path": "artifacts/linux-bundle-amd64/**/*.deb"
 					},
 					{
-						"path": "artifacts/linux-bundle-arm64/**/*.deb"
-					},
-					{
 						"path": "artifacts/linux-bundle-amd64/**/*.rpm"
-					},
-					{
-						"path": "artifacts/linux-bundle-arm64/**/*.rpm"
 					},
 					{
 						"path": "artifacts/linux-bundle-amd64/**/*.AppImage"
 					},
 					{
+						"path": "artifacts/linux-bundle-amd64/**/*.tar.gz"
+					},
+					{
+						"path": "artifacts/linux-bundle-amd64/**/*.tar.gz.sig"
+					},
+					{
+						"path": "artifacts/linux-bundle-arm64/**/*.deb"
+					},
+					{
+						"path": "artifacts/linux-bundle-arm64/**/*.rpm"
+					},
+					{
 						"path": "artifacts/linux-bundle-arm64/**/*.AppImage"
+					},
+					{
+						"path": "artifacts/linux-bundle-arm64/**/*.tar.gz"
+					},
+					{
+						"path": "artifacts/linux-bundle-arm64/**/*.tar.gz.sig"
 					},
 					{
 						"path": "artifacts/cli-windows-x64/tauri-app-template-cli.exe",
@@ -81,6 +105,9 @@
 					{
 						"path": "artifacts/cli-linux-arm64/tauri-app-template-cli",
 						"name": "tauri-app-template-cli-linux-arm64"
+					},
+					{
+						"path": "artifacts/latest.json"
 					}
 				]
 			}

@@ -37,6 +37,15 @@ mockIPC((cmd) => {
 	if (cmd === 'plugin:log|log') {
 		return Promise.resolve();
 	}
+	if (cmd.startsWith('plugin:updater|')) {
+		return Promise.resolve(null);
+	}
+	if (cmd === 'plugin:process|restart' || cmd === 'plugin:process|relaunch') {
+		return Promise.resolve();
+	}
+	if (cmd === 'plugin:process|exit') {
+		return Promise.resolve();
+	}
 });
 
 vi.mock('@tauri-apps/plugin-clipboard-manager', () => ({

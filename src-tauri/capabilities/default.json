@@ -28,6 +28,7 @@
 		"notification:allow-notify",
 		"process:default",
 		"store:default",
-		"better-posthog:default"
+		"better-posthog:default",
+		"updater:default"
 	]
 }

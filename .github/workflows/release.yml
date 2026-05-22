@@ -87,7 +87,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate latest.json
+        env:
+          VERSION: ${{ needs.determine-version.outputs.version }}
+        run: node scripts/generate-latest-json.js
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: pnpm release
+
+      - name: Merge main back into dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main dev
+          git checkout dev
+          if ! git merge origin/main -m "chore: merge main back into dev"; then
+            printf "%s\n" "ERROR: Merge conflict encountered when merging main back into dev."
+            printf "%s\n" "Aborting the merge to restore the repository to a clean state."
+            git merge --abort
+            exit 1
+          fi
+          git push origin dev
