@@ -85,10 +85,7 @@ const hasTsChanges = changedFiles.some(
 );
 
 if (changedFiles.length > 0) {
-	console.log('Detected changed files:');
-	changedFiles.forEach((f) => {
-		console.log(`  - ${f}`);
-	});
+	console.log(`Detected ${changedFiles.length} changed files.`);
 } else {
 	console.log('No changed files detected in the working tree.');
 }
@@ -96,22 +93,22 @@ if (changedFiles.length > 0) {
 // 3. Check if the AI was dumb (no Rust or TS/Svelte/frontend changes)
 if (!hasRustChanges && !hasTsChanges) {
 	console.error(`
-################################################################################
 🚨 DUMB AI DETECTED! 🚨
 
 You invoked 'pnpm verify', but NEITHER Rust (.rs) nor TypeScript/Svelte (.ts, .svelte)
 files were edited in this workspace!
 
-Please do NOT run verification if you are only modifying config files (.json, .yaml,
-.md, etc.) or if you haven't made any edits at all. Stop wasting CPU cycles!
-################################################################################
+Please do NOT run verification if you are only modifying documentation (.md),
+workflows (.yaml), or if you haven't made any edits at all.
 `);
 	process.exit(1);
 }
 
 // 4. Implement decision tree based on changes
-if (hasRustChanges) {
-	console.log('Rust files were edited. Checking if bindings.ts changes...');
+if (hasRustChanges && !hasTsChanges) {
+	console.log(
+		'Only Rust files were edited. Checking if bindings.ts changes...',
+	);
 
 	const bindingsPath = path.join(process.cwd(), 'src', 'bindings.ts');
 	let initialHash = null;
@@ -141,25 +138,15 @@ if (hasRustChanges) {
 
 	const bindingsChanged = initialHash !== finalHash;
 
-	if (!bindingsChanged && !hasTsChanges) {
-		console.log(
-			'bindings.ts is unchanged and no frontend files were edited. Running pnpm verify:backend...',
-		);
+	if (!bindingsChanged) {
+		console.log('bindings.ts is unchanged. Running pnpm verify:backend...');
 		try {
 			execSync('pnpm verify:backend', { stdio: 'inherit' });
 		} catch {
 			process.exit(1);
 		}
 	} else {
-		if (bindingsChanged) {
-			console.log(
-				'bindings.ts changed! Running the full verification suite...',
-			);
-		} else {
-			console.log(
-				'Other frontend files changed! Running the full verification suite...',
-			);
-		}
+		console.log('bindings.ts changed! Running the full verification suite...');
 		try {
 			execSync('pnpm verify:backend && pnpm verify:frontend', {
 				stdio: 'inherit',
@@ -167,6 +154,17 @@ if (hasRustChanges) {
 		} catch {
 			process.exit(1);
 		}
+	}
+} else if (hasRustChanges && hasTsChanges) {
+	console.log(
+		'Both Rust and frontend files were edited. Running the full verification suite...',
+	);
+	try {
+		execSync('pnpm verify:backend && pnpm verify:frontend', {
+			stdio: 'inherit',
+		});
+	} catch {
+		process.exit(1);
 	}
 } else {
 	// Only frontend files changed (since hasRustChanges is false, but hasTsChanges is true)

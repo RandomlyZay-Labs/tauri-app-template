@@ -59,6 +59,7 @@ describe('uiStore', () => {
 		expect(store.telemetryEnabled).toBe(false);
 		expect(store.commandPaletteOpen).toBe(false);
 		expect(store.logLevel).toBe('error');
+		expect(store.autoCheckUpdates).toBe(true);
 	});
 
 	it('toggleSidebar flips the sidebar state', async () => {
@@ -161,6 +162,19 @@ describe('uiStore', () => {
 		expect(mockSetLogLevel).toHaveBeenCalledWith('debug');
 	});
 
+	it('setAutoCheckUpdates updates state and persists', async () => {
+		const store = await freshStore();
+		mockSavePersistedState.mockClear();
+
+		store.setAutoCheckUpdates(false);
+
+		expect(store.autoCheckUpdates).toBe(false);
+		expect(mockSavePersistedState).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'ui-storage' }),
+			expect.objectContaining({ autoCheckUpdates: false }),
+		);
+	});
+
 	it('hydrates from persisted state', async () => {
 		mockLoadPersistedState.mockResolvedValue({
 			sidebarOpen: false,
@@ -168,6 +182,7 @@ describe('uiStore', () => {
 			contextMenuEnabled: true,
 			telemetryEnabled: true,
 			logLevel: 'trace',
+			autoCheckUpdates: false,
 		});
 		const store = await freshStore();
 
@@ -176,6 +191,7 @@ describe('uiStore', () => {
 		expect(store.contextMenuEnabled).toBe(true);
 		expect(store.telemetryEnabled).toBe(true);
 		expect(store.logLevel).toBe('trace');
+		expect(store.autoCheckUpdates).toBe(false);
 		expect(store._hasHydrated).toBe(true);
 	});
 

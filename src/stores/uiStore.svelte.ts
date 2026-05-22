@@ -12,6 +12,7 @@ interface UIPersistedState {
 	contextMenuEnabled: boolean;
 	telemetryEnabled: boolean;
 	logLevel: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+	autoCheckUpdates: boolean;
 }
 
 const persistConfig: PersistConfig<UIPersistedState> = {
@@ -25,6 +26,7 @@ class UIStore {
 	telemetryEnabled = $state(false);
 	commandPaletteOpen = $state(false);
 	logLevel = $state<'trace' | 'debug' | 'info' | 'warn' | 'error'>('error');
+	autoCheckUpdates = $state(true);
 	_hasHydrated = $state(false);
 
 	constructor() {
@@ -41,6 +43,8 @@ class UIStore {
 		if (saved.telemetryEnabled !== undefined)
 			this.telemetryEnabled = saved.telemetryEnabled;
 		if (saved.logLevel !== undefined) this.logLevel = saved.logLevel;
+		if (saved.autoCheckUpdates !== undefined)
+			this.autoCheckUpdates = saved.autoCheckUpdates;
 		this._hasHydrated = true;
 	}
 
@@ -51,6 +55,7 @@ class UIStore {
 			contextMenuEnabled: this.contextMenuEnabled,
 			telemetryEnabled: this.telemetryEnabled,
 			logLevel: this.logLevel,
+			autoCheckUpdates: this.autoCheckUpdates,
 		});
 	}
 
@@ -87,6 +92,11 @@ class UIStore {
 		this.logLevel = level;
 		this.persist();
 		void executeSafeAction(() => commands.setLogLevel(level));
+	}
+
+	setAutoCheckUpdates(enabled: boolean) {
+		this.autoCheckUpdates = enabled;
+		this.persist();
 	}
 }
 

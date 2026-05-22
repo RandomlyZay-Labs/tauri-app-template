@@ -48,6 +48,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app| {
             // 1. Resolve Data Directory

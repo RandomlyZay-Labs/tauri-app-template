@@ -65,6 +65,7 @@
 		"@tauri-apps/plugin-opener": "^2.5.4",
 		"@tauri-apps/plugin-process": "^2.3.1",
 		"@tauri-apps/plugin-store": "^2.4.3",
+		"@tauri-apps/plugin-updater": "^2.10.1",
 		"@testing-library/svelte": "^5.3.1",
 		"@types/node": "^25.8.0",
 		"bits-ui": "^2.18.1",

@@ -19,6 +19,7 @@
 	"bundle": {
 		"active": true,
 		"targets": ["rpm", "deb", "appimage", "nsis", "app"],
+		"createUpdaterArtifacts": true,
 		"icon": [
 			"icons/32x32.png",
 			"icons/128x128.png",
@@ -28,6 +29,14 @@
 		],
 		"windows": {
 			"nsis": {}
+		}
+	},
+	"plugins": {
+		"updater": {
+			"endpoints": [
+				"https://github.com/RandomlyZay-Labs/tauri-app-template/releases/latest/download/latest.json"
+			],
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUxRjU2NUE2OTkxRTNFMzQKUlRWSlEzOW9PZkM0TXlJUGVleXFkc2dCV1EwZXUyc3hRNkR5eFoybTV4a0c5SWl0RWc2eE94bzgK"
 		}
 	}
 }
