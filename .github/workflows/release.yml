@@ -50,6 +50,7 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/build-pipeline.yml
+    secrets: inherit
     with:
       platform: 'all'
       version: ${{ needs.determine-version.outputs.version }}
