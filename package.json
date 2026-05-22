@@ -1,7 +1,7 @@
 {
 	"name": "tauri-app-template",
 	"private": true,
-	"version": "0.0.9",
+	"version": "0.1.0",
 	"type": "module",
 	"license": "AGPL-3.0-or-later",
 	"repository": {
@@ -10,7 +10,7 @@
 	},
 	"scripts": {
 		"bootstrap": "pnpm dlx shx mkdir -p dev_data && cd src-tauri && pnpm dlx shx cp -n .env.example .env && (sqlx database create || true) && sqlx migrate run && cd ..",
-		"verify": "run-s verify:backend verify:frontend",
+		"verify": "node scripts/verify.js",
 		"verify:frontend": "run-s check:frontend test:frontend",
 		"verify:backend": "run-s check:backend test:backend",
 		"check": "run-s check:backend check:frontend",
