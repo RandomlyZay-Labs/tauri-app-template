@@ -9,6 +9,7 @@ import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
 import { watcherStore } from '@/stores/watcherStore.svelte';
 import { JOB_EVENT_NAME, type JobProgress } from '@/types/job';
+import { executeSafeAction } from './async-utils';
 import { t } from './i18n';
 import { commands } from './ipc';
 import { captureEvent } from './telemetry';
@@ -67,7 +68,7 @@ class LifecycleManager {
 				}
 				if (uiStore.autoCheckUpdates) {
 					this.autoCheckTimeout = setTimeout(() => {
-						void updateStore.checkForUpdates(false);
+						void executeSafeAction(() => updateStore.checkForUpdates(false));
 					}, 3000);
 				}
 			}
