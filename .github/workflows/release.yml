@@ -105,5 +105,10 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin main dev
           git checkout dev
-          git merge origin/main -m "chore: merge main back into dev [skip ci]"
+          if ! git merge origin/main -m "chore: merge main back into dev"; then
+            printf "%s\n" "ERROR: Merge conflict encountered when merging main back into dev."
+            printf "%s\n" "Aborting the merge to restore the repository to a clean state."
+            git merge --abort
+            exit 1
+          fi
           git push origin dev
