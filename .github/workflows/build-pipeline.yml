@@ -144,15 +144,6 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.zip
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.zip.sig
           retention-days: 1
-          overwrite: true
-
-      - name: Upload CLI Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: cli-windows-${{ matrix.arch }}
-          path: src-tauri/target/${{ matrix.target }}/release/tauri-app-template-cli.exe
-          retention-days: 1
-          overwrite: true
 
       - name: Upload CLI Artifact
         uses: actions/upload-artifact@v7
@@ -252,15 +243,6 @@ jobs:
             src-tauri/target/release/bundle/appimage/*.tar.gz
             src-tauri/target/release/bundle/appimage/*.tar.gz.sig
           retention-days: 1
-          overwrite: true
-
-      - name: Upload CLI Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: cli-linux-${{ matrix.arch }}
-          path: src-tauri/target/release/tauri-app-template-cli
-          retention-days: 1
-          overwrite: true
 
       - name: Upload CLI Artifact
         uses: actions/upload-artifact@v7
