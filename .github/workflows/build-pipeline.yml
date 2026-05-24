@@ -154,6 +154,13 @@ jobs:
           retention-days: 1
           overwrite: true
 
+      - name: Upload CLI Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cli-windows-${{ matrix.arch }}
+          path: src-tauri/target/${{ matrix.target }}/release/tauri-app-template-cli.exe
+          retention-days: 1
+
   # -----------------------------------------------------------------------
   # JOB 2: Linux Build (x64 & ARM64 Dockerized)
   # -----------------------------------------------------------------------
@@ -254,6 +261,13 @@ jobs:
           path: src-tauri/target/release/tauri-app-template-cli
           retention-days: 1
           overwrite: true
+
+      - name: Upload CLI Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cli-linux-${{ matrix.arch }}
+          path: src-tauri/target/release/tauri-app-template-cli
+          retention-days: 1
 
   # -----------------------------------------------------------------------
   # JOB 3: Test Linux Deb & AppImage (Ubuntu)
