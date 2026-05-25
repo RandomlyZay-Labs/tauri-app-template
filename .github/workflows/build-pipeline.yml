@@ -152,13 +152,6 @@ jobs:
           path: src-tauri/target/${{ matrix.target }}/release/tauri-app-template-cli.exe
           retention-days: 1
 
-      - name: Upload CLI Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: cli-windows-${{ matrix.arch }}
-          path: src-tauri/target/${{ matrix.target }}/release/tauri-app-template-cli.exe
-          retention-days: 1
-
   # -----------------------------------------------------------------------
   # JOB 2: Linux Build (x64 & ARM64 Dockerized)
   # -----------------------------------------------------------------------
@@ -249,13 +242,6 @@ jobs:
             src-tauri/target/release/bundle/appimage/*.AppImage
             src-tauri/target/release/bundle/appimage/*.tar.gz
             src-tauri/target/release/bundle/appimage/*.tar.gz.sig
-          retention-days: 1
-
-      - name: Upload CLI Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: cli-linux-${{ matrix.arch }}
-          path: src-tauri/target/release/tauri-app-template-cli
           retention-days: 1
 
       - name: Upload CLI Artifact
