@@ -1,3 +1,9 @@
+## [0.5.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.5.0...v0.5.1) (2026-05-26)
+
+### Bug Fixes
+
+* improve merge back to dev process ([#34](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/34)) ([e8a7458](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/e8a7458cae75b988e0dbcb3ae68d0d7385f27056))
+
 ## [0.5.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.4.0...v0.5.0) (2026-05-26)
 
 ### Features
