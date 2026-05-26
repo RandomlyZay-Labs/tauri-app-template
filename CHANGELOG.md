@@ -1,3 +1,9 @@
+## [0.4.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.3.0...v0.4.0) (2026-05-26)
+
+### Features
+
+* resolve artifact upload conflicts and migrate to ES module syntax ([#29](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/29)) ([1143d81](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/1143d81705d5c2a1a993abff76ed152257f1bdd6))
+
 ## [0.3.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.2.0...v0.3.0) (2026-05-26)
 
 ### Features
