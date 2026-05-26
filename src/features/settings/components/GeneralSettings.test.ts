@@ -38,6 +38,8 @@ describe('GeneralSettings', () => {
 		updateStore.body = undefined;
 		updateStore.error = null;
 		updateStore.activeUpdate = null;
+		updateStore.installType = 'unknown';
+		updateStore.installTypeInitialized = false;
 
 		mockIPC((cmd) => {
 			if (cmd === 'open_log_dir') return null;

@@ -30,6 +30,7 @@ class UpdateStore {
 
 	activeUpdate = $state<Update | null>(null);
 	installType = $state<string>('unknown');
+	installTypeInitialized = $state<boolean>(false);
 
 	isPackageManaged = $derived(
 		this.installType === 'deb' || this.installType === 'rpm',
@@ -48,6 +49,7 @@ class UpdateStore {
 				silent: true,
 			},
 		);
+		this.installTypeInitialized = true;
 	}
 
 	// Derived progress percentage

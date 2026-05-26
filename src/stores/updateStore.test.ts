@@ -61,6 +61,7 @@ describe('updateStore', () => {
 		updateStore.error = null;
 		updateStore.activeUpdate = null;
 		updateStore.installType = 'unknown';
+		updateStore.installTypeInitialized = false;
 	});
 
 	async function getStore() {

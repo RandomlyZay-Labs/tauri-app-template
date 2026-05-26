@@ -49,7 +49,11 @@ let copied = $state(false);
 const defaultAutoCheck = true;
 
 $effect(() => {
-	if (updateStore.status === 'downloaded' && !updateStore.isPackageManaged) {
+	if (
+		updateStore.status === 'downloaded' &&
+		updateStore.installTypeInitialized &&
+		!updateStore.isPackageManaged
+	) {
 		relaunchDialogOpen = true;
 	}
 });
