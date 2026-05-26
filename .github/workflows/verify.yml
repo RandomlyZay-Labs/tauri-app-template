@@ -12,7 +12,7 @@ jobs:
   verify:
     name: Lint & Test
     runs-on: blacksmith-8vcpu-ubuntu-2404-arm
-    if: ${{ !startsWith(github.head_ref, 'sync/main-to-dev-') }}
+    if: ${{ !(startsWith(github.head_ref, 'sync/main-to-dev-') && github.event.pull_request.head.repo.full_name == github.repository && (github.actor == 'github-actions[bot]' || github.actor == github.repository_owner)) }}
     steps:
       - uses: actions/checkout@v6
 
