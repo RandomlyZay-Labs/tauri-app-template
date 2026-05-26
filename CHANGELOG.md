@@ -1,3 +1,9 @@
+## [0.5.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.4.0...v0.5.0) (2026-05-26)
+
+### Features
+
+* **ci:** add skip ci option to release commit message ([#32](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/32)) ([c9fb808](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/c9fb8088c744cc8a46c49fce9fe2fc7bea6b9562))
+
 ## [0.4.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.3.0...v0.4.0) (2026-05-26)
 
 ### Features
