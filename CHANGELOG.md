@@ -1,3 +1,62 @@
+## [0.5.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.5.0...v0.5.1) (2026-05-26)
+
+### Bug Fixes
+
+* improve merge back to dev process ([#34](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/34)) ([e8a7458](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/e8a7458cae75b988e0dbcb3ae68d0d7385f27056))
+
+## [0.5.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.4.0...v0.5.0) (2026-05-26)
+
+### Features
+
+* **ci:** add skip ci option to release commit message ([#32](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/32)) ([c9fb808](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/c9fb8088c744cc8a46c49fce9fe2fc7bea6b9562))
+
+## [0.4.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.3.0...v0.4.0) (2026-05-26)
+
+### Features
+
+* resolve artifact upload conflicts and migrate to ES module syntax ([#29](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/29)) ([1143d81](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/1143d81705d5c2a1a993abff76ed152257f1bdd6))
+
+## [0.3.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.2.0...v0.3.0) (2026-05-26)
+
+### Features
+
+* add Windows console attachment to enable CLI output ([b57b633](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/b57b6334aa7f3f57ab87d0e3293eecc7bc325c88))
+* enable localStorage persistence for posthog telemetry client ([226dee8](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/226dee8209b32c8a39c88e11d7384e4ba67be12a))
+* fix artifact upload conflicts and enable overwrite option ([#25](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/25)) ([2a2297a](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/2a2297a4f1d3ec5160f3946b950c0677951a0db0))
+* fix artifact upload conflicts and enable overwrite option ([#27](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/27)) ([d6b31da](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/d6b31dac28cbbf8a3a50fbbf6afd83cef209e4db))
+* implement automatic system theme synchronization ([eda7df1](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/eda7df1bc0c10a981e2950ac4c10f3567c0f8bb9))
+* implement dynamic system tray visibility based on application window state ([90cc96e](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/90cc96e7fe4560ee8964132f80457cbb2889629b))
+* implement Linux system theme detection using Freedesktop portal and add backend event listener ([ebf6e11](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/ebf6e118b28a24135f7d14717553caaa909012f7))
+* implement success dialog for AppImage PATH integration ([9eef61f](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/9eef61f9376ebfef180d9684968138dc491b7ab5))
+* implement system theme change event listener for Windows in handle_window_event ([de7cba2](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/de7cba2f8530481fb3b98ca7efa89142707f63ab))
+* implement tauri app updater and general settings improvement ([#16](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/16)) ([b4bd025](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/b4bd025630a07ec406e0c5a7f696eed1aef61eaf))
+* implement theme synchronization with system and application window settings via new setTheme command ([8e13047](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/8e1304781bb4bdee3e14d728c9c937421d0939e1))
+* inject PostHog environment variables into build pipeline ([1b2bd82](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/1b2bd8219fb532310ecfe87d0702cbd7572f3124))
+* migrate PostHog telemetry from frontend SDK to Tauri plugin ([72bcc1e](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/72bcc1e890c812e5f21d6ea8af5492c8cf9cd642))
+* sync dev with main ([#18](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/18)) ([28d0a9e](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/28d0a9e2da95ac948ea8039c5ab49dc6657b45ab))
+
+### Bug Fixes
+
+* add conditional path resolution for bundling CLI wrapper in NSIS installer ([8b64045](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/8b64045c49cab0ed4f96c53d5b576a79baf5ce0b))
+* adjust theme synchronization logic to explicitly set theme on non-Windows platforms ([8d7453b](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/8d7453b0637b9d8bd14ba3b62e0083bd9db9bcb9))
+* allow unsafe code in windows console attachment function ([7147b8e](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/7147b8ea96948dcb43d779a2c53966d6549a0ee2))
+* **ci:** update runner specifications for build and verify jobs ([#9](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/9)) ([eed2236](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/eed2236250ab885d51c5c06fa1b15b54b813386c))
+* correctly attach console stdout and stderr handles on Windows to enable terminal output ([a4ad232](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/a4ad23273f88edf31cc4d7b9774289929d4edb25))
+* disable pull request workflow trigger ([1003673](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/1003673e74382ffd9df8c8528261bf974d869d99))
+* enable static C runtime linking in build pipeline RUSTFLAGS ([67d6677](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/67d667727cf2457c52d148ab6772ce53646f09d6))
+* ensure CLI output is visible on Windows by flushing stdout and attaching to parent console ([ddb6c65](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/ddb6c65d296ee504b7e5e8198d8ab37ffc95993b))
+* implement proper key-up and key-down simulation for return key using Win32 API ([4968677](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/4968677a697f83ced8b7f135652972d9a2eb2c1b))
+* implement Windows console enter key simulation to restore prompt on CLI exit ([5fb0ac5](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/5fb0ac5c990d1033cd65a0fd06448984fec3b3c5))
+* **keyring:** make initialization resilient to failures ([#6](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/6)) ([0ace4b7](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/0ace4b74656ab5a14d7cb08f58ad0cd1e09c8892))
+* pass null to backend when system theme is active to enable native OS theme tracking ([82dd70c](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/82dd70c3e3022b9609d329e078b3afad6405f9d2))
+* resolve cli timeout, overwrite on install, theme race conditions, and notification fallback ([#5](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/5)) ([33598ef](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/33598ef7b5c4434c555540475dc6e91bc00a6810))
+* restrict pull request workflow trigger to main branch ([7cc03cf](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/7cc03cfe0a139ff95f67463f8f6409eccbd9f5d5))
+* streamline Windows CI path resolution and update production issue tracking in documentation ([9cc849d](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/9cc849d452fe0ecfb407232da018be197690ae89))
+* update CSP to allow posthog.com scripts and connections ([87a08cb](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/87a08cb6e1f799554ecc358f9d361292a976425a))
+* update executable path ([df0f623](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/df0f62322f4b4d64ae89af4e00148af75bb8aa24))
+* update pubkey in tauri configuration ([60d0a5a](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/60d0a5ace0ee303a94aebe10b266ab68ff8a3493))
+* wrap HANDLE with Some to match CreateFileW signature in windows setup ([9e5319a](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/9e5319a7a6f518a84da6ea68a4cf7b0c4a7a16ce))
+
 ## [0.2.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.1.0...v0.2.0) (2026-05-22)
 
 ### Features
