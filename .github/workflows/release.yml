@@ -101,6 +101,7 @@ jobs:
       - name: Merge main back into dev
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -112,4 +113,18 @@ jobs:
             git merge --abort
             exit 1
           fi
-          git push origin dev
+          
+          # Create a sync branch and push it, then open a PR
+          SYNC_BRANCH="sync/main-to-dev-${{ github.run_id }}"
+          git checkout -b "$SYNC_BRANCH"
+          git push origin "$SYNC_BRANCH"
+          
+          # Create pull request from the sync branch to dev
+          gh pr create \
+            --base dev \
+            --head "$SYNC_BRANCH" \
+            --title "chore: merge main back into dev" \
+            --body "Automated PR to sync dev with main after release. Code scanning and status checks must pass before merging. @coderabbitai ignore"
+
+          # Enable auto-merge if supported/allowed by the repository
+          gh pr merge --auto --merge --delete-branch || true

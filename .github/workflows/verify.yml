@@ -11,7 +11,8 @@ concurrency:
 jobs:
   verify:
     name: Lint & Test
-    runs-on: ubuntu-22.04
+    runs-on: blacksmith-8vcpu-ubuntu-2404-arm
+    if: ${{ !startsWith(github.head_ref, 'sync/main-to-dev-') }}
     steps:
       - uses: actions/checkout@v6
 
