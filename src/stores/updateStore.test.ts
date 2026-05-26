@@ -45,6 +45,9 @@ describe('updateStore', () => {
 			) {
 				return mockRelaunch();
 			}
+			if (cmd === 'get_install_type') {
+				return 'nsis';
+			}
 		});
 
 		// Reset updater status to idle/defaults
@@ -57,6 +60,7 @@ describe('updateStore', () => {
 		updateStore.downloadedBytes = 0;
 		updateStore.error = null;
 		updateStore.activeUpdate = null;
+		updateStore.installType = 'unknown';
 	});
 
 	async function getStore() {

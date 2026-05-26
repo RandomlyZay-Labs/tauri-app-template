@@ -7,3 +7,4 @@ pub mod system;
 pub mod theme;
 pub mod tray;
 pub mod watcher;
+pub mod install_type;

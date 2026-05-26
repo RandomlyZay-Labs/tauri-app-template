@@ -106,6 +106,9 @@ export const MOCK_IPC_DEFAULTS: Partial<Commands> = {
 	async setTheme(_theme) {
 		return null;
 	},
+	async getInstallType() {
+		return 'nsis';
+	},
 };
 
 /**
@@ -202,6 +205,7 @@ export async function injectMockIpc(
 			getVersion: () => '0.1.0',
 			getSystemTheme: () => null,
 			setTheme: () => null,
+			getInstallType: () => 'nsis',
 		};
 
 		// Expose for runtime overrides by tests via standard DOM events

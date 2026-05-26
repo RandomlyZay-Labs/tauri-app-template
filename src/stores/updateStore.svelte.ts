@@ -6,6 +6,7 @@ import {
 } from '@tauri-apps/plugin-updater';
 import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
+import { commands } from '@/lib/ipc';
 import { toast } from '@/lib/toast';
 import { networkStore } from '@/stores/networkStore.svelte';
 
@@ -28,6 +29,26 @@ class UpdateStore {
 	error = $state<string | null>(null);
 
 	activeUpdate = $state<Update | null>(null);
+	installType = $state<string>('unknown');
+
+	isPackageManaged = $derived(
+		this.installType === 'deb' || this.installType === 'rpm',
+	);
+
+	constructor() {
+		this.initInstallType();
+	}
+
+	private async initInstallType() {
+		await executeSafeAction(
+			async () => {
+				this.installType = await commands.getInstallType();
+			},
+			{
+				silent: true,
+			},
+		);
+	}
 
 	// Derived progress percentage
 	percentage = $derived.by(() => {
