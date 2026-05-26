@@ -1,3 +1,18 @@
+## [0.6.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.5.1...v0.6.0) (2026-05-26)
+
+### Features
+
+* enable artifact overwrite to resolve upload conflict ([#20](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/20)) ([881cbac](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/881cbac56e9cd977acfe386e6d03fdc7c8e0dc75))
+* fix artifact upload conflict ([#22](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/22)) ([dfe0098](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/dfe00987b3d13bc6edd032a6c214b54cd4b8e388))
+* migrate to ES module syntax in generate-latest-json.js ([#26](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/26)) ([5346216](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/53462166c2a2ac01e39c3f2469d415b8f4e64024))
+
+### Bug Fixes
+
+* duplicate upload artifact ([#23](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/23)) ([b401788](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/b401788dd41a60f3e601ee8ce95e2d250071a57a))
+* improve merge process by resetting and force-checking out dev branch ([#33](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/33)) ([c7f0cc8](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/c7f0cc89da0a8aa3d6a68044d79277f4035d0182))
+* sync main to dev ([#24](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/24)) ([9710796](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/9710796ef1534899c8b1eccd0a92efc430507c76))
+* update GitHub token usage in release workflow for merging main back into dev ([#35](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/35)) ([4bf1371](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/4bf13713ca3eea11eaca56bf7dda0a1cb4196427))
+
 ## [0.5.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.5.0...v0.5.1) (2026-05-26)
 
 ### Bug Fixes
