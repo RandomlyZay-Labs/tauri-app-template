@@ -1,3 +1,9 @@
+## [0.6.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.6.0...v0.6.1) (2026-05-26)
+
+### Bug Fixes
+
+* **ci:** update release sync workflow for dev Ruleset ([#38](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/38)) ([#39](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/39)) ([05853c3](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/05853c3419e9b400036992a3ed9fa0fb0c4a2582))
+
 ## [0.6.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.5.1...v0.6.0) (2026-05-26)
 
 ### Features
