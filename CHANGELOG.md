@@ -1,3 +1,9 @@
+## [0.6.2](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.6.1...v0.6.2) (2026-05-27)
+
+### Bug Fixes
+
+* resolve release file naming, updaters, and package manager update flow ([#41](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/41)) ([50df21a](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/50df21a48229ceb045ed543dd7d74e5c5ea3c615))
+
 ## [0.6.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.6.0...v0.6.1) (2026-05-26)
 
 ### Bug Fixes

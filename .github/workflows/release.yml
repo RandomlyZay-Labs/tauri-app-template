@@ -150,4 +150,4 @@ jobs:
             --body "Automated PR to sync dev with main after release. Code scanning and status checks must pass before merging. @coderabbitai ignore"
 
           # Enable auto-merge if supported/allowed by the repository
-          gh pr merge --auto --squash --delete-branch
+          gh pr merge --auto --merge --delete-branch
