@@ -1,3 +1,10 @@
+## [0.6.3](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.6.2...v0.6.3) (2026-05-27)
+
+### Bug Fixes
+
+* **ci:** merge main into dev and update CI for Tauri v2 support ([#48](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/48)) ([8c054eb](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/8c054ebc6c18b6f667e71b7199d0d2640c0635a9))
+* **ci:** support tauri v2 updater packages and signatures ([#47](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/47)) ([4cc4aaf](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/4cc4aaf39f4bcac7458de225af9105fe902670ba))
+
 ## [0.6.2](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.6.1...v0.6.2) (2026-05-27)
 
 ### Bug Fixes
