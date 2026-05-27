@@ -7,6 +7,8 @@ import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
 import GeneralSettings from './GeneralSettings.svelte';
 
+vi.unmock('@tauri-apps/plugin-clipboard-manager');
+
 // Mock i18n
 vi.mock('@/lib/i18n', () => ({
 	t: vi.fn((key: string, _params?: unknown) => key),
@@ -316,7 +318,14 @@ describe('GeneralSettings', () => {
 	it('exercises the package-manager branch for deb installs', {
 		timeout: 10000,
 	}, async () => {
-		const { writeText } = await import('@tauri-apps/plugin-clipboard-manager');
+		let capturedText: string | null = null;
+		mockIPC((cmd, args) => {
+			if (cmd === 'plugin:clipboard-manager|write_text') {
+				capturedText = (args as { text: string }).text;
+				return null;
+			}
+		});
+
 		updateStore.status = 'available';
 		updateStore.version = '2.0.0';
 		updateStore.installType = 'deb';
@@ -335,13 +344,20 @@ describe('GeneralSettings', () => {
 		// Copy command works
 		const copyBtn = screen.getByText('updateSettings.copyCommand');
 		await fireEvent.click(copyBtn);
-		expect(writeText).toHaveBeenCalledWith('updateSettings.debCommand');
+		expect(capturedText).toBe('updateSettings.debCommand');
 	});
 
 	it('exercises the package-manager branch for rpm installs', {
 		timeout: 10000,
 	}, async () => {
-		const { writeText } = await import('@tauri-apps/plugin-clipboard-manager');
+		let capturedText: string | null = null;
+		mockIPC((cmd, args) => {
+			if (cmd === 'plugin:clipboard-manager|write_text') {
+				capturedText = (args as { text: string }).text;
+				return null;
+			}
+		});
+
 		updateStore.status = 'available';
 		updateStore.version = '2.0.0';
 		updateStore.installType = 'rpm';
@@ -360,6 +376,6 @@ describe('GeneralSettings', () => {
 		// Copy command works
 		const copyBtn = screen.getByText('updateSettings.copyCommand');
 		await fireEvent.click(copyBtn);
-		expect(writeText).toHaveBeenCalledWith('updateSettings.rpmCommand');
+		expect(capturedText).toBe('updateSettings.rpmCommand');
 	});
 });
