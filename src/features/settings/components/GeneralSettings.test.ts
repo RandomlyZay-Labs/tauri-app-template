@@ -312,4 +312,54 @@ describe('GeneralSettings', () => {
 			screen.getByText('Could not fetch a valid release JSON from the remote'),
 		).toBeTruthy();
 	});
+
+	it('exercises the package-manager branch for deb installs', {
+		timeout: 10000,
+	}, async () => {
+		const { writeText } = await import('@tauri-apps/plugin-clipboard-manager');
+		updateStore.status = 'available';
+		updateStore.version = '2.0.0';
+		updateStore.installType = 'deb';
+		updateStore.installTypeInitialized = true;
+
+		render(GeneralSettings);
+
+		// Assert package manager notice text appears
+		expect(screen.getByText('updateSettings.packageManagedTitle')).toBeTruthy();
+		expect(screen.getByText('updateSettings.packageManagedDesc')).toBeTruthy();
+
+		// Relaunch or download actions should not be shown
+		expect(screen.queryByText('updateSettings.relaunchToApply')).toBeNull();
+		expect(screen.queryByText('updateSettings.downloadAndInstall')).toBeNull();
+
+		// Copy command works
+		const copyBtn = screen.getByText('updateSettings.copyCommand');
+		await fireEvent.click(copyBtn);
+		expect(writeText).toHaveBeenCalledWith('updateSettings.debCommand');
+	});
+
+	it('exercises the package-manager branch for rpm installs', {
+		timeout: 10000,
+	}, async () => {
+		const { writeText } = await import('@tauri-apps/plugin-clipboard-manager');
+		updateStore.status = 'available';
+		updateStore.version = '2.0.0';
+		updateStore.installType = 'rpm';
+		updateStore.installTypeInitialized = true;
+
+		render(GeneralSettings);
+
+		// Assert package manager notice text appears
+		expect(screen.getByText('updateSettings.packageManagedTitle')).toBeTruthy();
+		expect(screen.getByText('updateSettings.packageManagedDesc')).toBeTruthy();
+
+		// Relaunch or download actions should not be shown
+		expect(screen.queryByText('updateSettings.relaunchToApply')).toBeNull();
+		expect(screen.queryByText('updateSettings.downloadAndInstall')).toBeNull();
+
+		// Copy command works
+		const copyBtn = screen.getByText('updateSettings.copyCommand');
+		await fireEvent.click(copyBtn);
+		expect(writeText).toHaveBeenCalledWith('updateSettings.rpmCommand');
+	});
 });
