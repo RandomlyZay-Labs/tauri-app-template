@@ -47,19 +47,13 @@
 						"path": "artifacts/windows-bundle-x64/*.exe"
 					},
 					{
-						"path": "artifacts/windows-bundle-x64/*.zip"
-					},
-					{
-						"path": "artifacts/windows-bundle-x64/*.zip.sig"
+						"path": "artifacts/windows-bundle-x64/*.exe.sig"
 					},
 					{
 						"path": "artifacts/windows-bundle-arm64/*.exe"
 					},
 					{
-						"path": "artifacts/windows-bundle-arm64/*.zip"
-					},
-					{
-						"path": "artifacts/windows-bundle-arm64/*.zip.sig"
+						"path": "artifacts/windows-bundle-arm64/*.exe.sig"
 					},
 					{
 						"path": "artifacts/linux-bundle-amd64/**/*.deb"
@@ -71,10 +65,7 @@
 						"path": "artifacts/linux-bundle-amd64/**/*.AppImage"
 					},
 					{
-						"path": "artifacts/linux-bundle-amd64/**/*.tar.gz"
-					},
-					{
-						"path": "artifacts/linux-bundle-amd64/**/*.tar.gz.sig"
+						"path": "artifacts/linux-bundle-amd64/**/*.AppImage.sig"
 					},
 					{
 						"path": "artifacts/linux-bundle-arm64/**/*.deb"
@@ -86,10 +77,7 @@
 						"path": "artifacts/linux-bundle-arm64/**/*.AppImage"
 					},
 					{
-						"path": "artifacts/linux-bundle-arm64/**/*.tar.gz"
-					},
-					{
-						"path": "artifacts/linux-bundle-arm64/**/*.tar.gz.sig"
+						"path": "artifacts/linux-bundle-arm64/**/*.AppImage.sig"
 					},
 					{
 						"path": "artifacts/cli-windows-x64/tauri-app-template-cli.exe",
