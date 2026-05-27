@@ -28,6 +28,7 @@ class UIStore {
 	logLevel = $state<'trace' | 'debug' | 'info' | 'warn' | 'error'>('error');
 	autoCheckUpdates = $state(true);
 	_hasHydrated = $state(false);
+	activeSettingsTab = $state('general');
 
 	constructor() {
 		this.hydrate();
@@ -97,6 +98,10 @@ class UIStore {
 	setAutoCheckUpdates(enabled: boolean) {
 		this.autoCheckUpdates = enabled;
 		this.persist();
+	}
+
+	setActiveSettingsTab(tab: string) {
+		this.activeSettingsTab = tab;
 	}
 }
 

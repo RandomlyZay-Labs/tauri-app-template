@@ -9,6 +9,7 @@ import { t } from '@/lib/i18n';
 import { commands } from '@/lib/ipc';
 import { toast } from '@/lib/toast';
 import { networkStore } from '@/stores/networkStore.svelte';
+import { uiStore } from '@/stores/uiStore.svelte';
 
 export type UpdateStatus =
 	| 'idle'
@@ -31,6 +32,9 @@ class UpdateStore {
 	activeUpdate = $state<Update | null>(null);
 	installType = $state<string>('unknown');
 	installTypeInitialized = $state<boolean>(false);
+
+	hasUnseenUpdate = $state<boolean>(false);
+	cliUpdateStatus = $state<'idle' | 'updating' | 'done' | 'error'>('idle');
 
 	isPackageManaged = $derived(
 		this.installType === 'deb' || this.installType === 'rpm',
@@ -84,11 +88,9 @@ class UpdateStore {
 					this.status = 'available';
 
 					if (!isManual) {
-						toast.message(t('updateSettings.updateAvailableTitle'), {
-							description: t('updateSettings.updateAvailableDesc', {
-								version: update.version,
-							}),
-						});
+						if (uiStore.onboardingCompleted) {
+							this.hasUnseenUpdate = true;
+						}
 					}
 				} else {
 					this.status = 'no-update';
@@ -129,6 +131,7 @@ class UpdateStore {
 		this.downloadedBytes = 0;
 		this.contentLength = undefined;
 		this.error = null;
+		this.cliUpdateStatus = 'idle';
 
 		await executeSafeAction(
 			async () => {
@@ -150,12 +153,34 @@ class UpdateStore {
 				toast.success(t('updateSettings.downloadSuccessTitle'), {
 					description: t('updateSettings.downloadSuccessDesc'),
 				});
+
+				// Bundled installs auto-update the CLI afterwards
+				if (!this.isPackageManaged) {
+					await this.updateCliAfterAppUpdate();
+				}
 			},
 			{
 				errorMessage: t('updateSettings.downloadFailed'),
 				onError: (err: unknown) => {
 					this.status = 'error';
 					this.error = err instanceof Error ? err.message : String(err);
+				},
+			},
+		);
+	}
+
+	async updateCliAfterAppUpdate() {
+		this.cliUpdateStatus = 'updating';
+		await executeSafeAction(
+			async () => {
+				await commands.installCli();
+				this.cliUpdateStatus = 'done';
+			},
+			{
+				silent: true,
+				onError: (err: unknown) => {
+					this.cliUpdateStatus = 'error';
+					console.error('Failed to update CLI after app update:', err);
 				},
 			},
 		);

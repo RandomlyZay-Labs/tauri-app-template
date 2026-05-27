@@ -61,9 +61,9 @@
 		"title": "Configuración",
 		"description": "Administra las preferencias de tu aplicación y la configuración del sistema.",
 		"general": "General",
+		"updates": "Actualizaciones",
 		"appearance": "Apariencia",
 		"backups": "Copias de seguridad",
-		"cli": "CLI",
 		"debug": "Depuración",
 		"version": "Versión",
 		"sizeUnit": "MB"
@@ -104,7 +104,6 @@
 		"telemetryStatus": "Participa para ayudarnos a mejorar la aplicación con datos anónimos."
 	},
 	"cliSettings": {
-		"title": "Integración de CLI",
 		"description": "Gestionar la interfaz de línea de comandos para tauri-app-template.",
 		"status": "Estado de CLI",
 		"notInstalled": "No instalado",
@@ -323,7 +322,6 @@
 		"noUpdateTitle": "Aplicación al día",
 		"noUpdateDesc": "Estás ejecutando la última versión de la aplicación.",
 		"updateAvailableTitle": "Actualización disponible",
-		"updateAvailableDesc": "La nueva versión {{version}} está disponible. ¿Te gustaría actualizar ahora?",
 		"downloadAndInstall": "Descargar e instalar",
 		"downloading": "Descargando actualización... {{progress}}%",
 		"relaunchToApply": "Reiniciar para aplicar",
@@ -345,6 +343,13 @@
 		"packageManagedDesc": "Esta instalación es gestionada por el gestor de paquetes de su sistema. Utilice el siguiente comando para actualizar:",
 		"debCommand": "sudo apt update && sudo apt upgrade tauri-app-template",
 		"rpmCommand": "sudo dnf upgrade tauri-app-template",
-		"copyCommand": "Copiar Comando"
+		"copyCommand": "Copiar Comando",
+		"cliUpdating": "Actualizando CLI...",
+		"bannerTitle": "Actualización v{{version}} disponible",
+		"bannerAction": "Ver Detalles",
+		"bannerDismiss": "Descartar notificación de actualización",
+		"cliSection": "Integración de CLI",
+		"cliManagedByApp": "La CLI se actualiza automáticamente con la aplicación.",
+		"cliCurrentVersion": "Versión Actual"
 	}
 }

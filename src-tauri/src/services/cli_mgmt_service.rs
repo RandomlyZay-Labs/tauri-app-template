@@ -118,22 +118,8 @@ impl CliMgmtService {
         let target_dir = target_path.parent().ok_or_else(|| Error::Unknown("Invalid CLI path".into()))?;
 
         // 1. Determine download URL
-        let os = std::env::consts::OS;
-        let arch = std::env::consts::ARCH;
+        let (binary_name, url) = super::cli_update_service::get_binary_details(&version)?;
 
-        let (os_name, arch_name, ext) = match (os, arch) {
-            ("windows", "x86_64") => ("windows", "x64", ".exe"),
-            ("windows", "aarch64") => ("windows", "arm64", ".exe"),
-            ("linux", "x86_64") => ("linux", "amd64", ""),
-            ("linux", "aarch64") => ("linux", "arm64", ""),
-            _ => return Err(Error::Unknown(format!("Unsupported platform: {}-{}", os, arch))),
-        };
-
-        let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
-        let url = format!(
-            "https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v{}/{}",
-            version, binary_name
-        );
 
         // Ensure target directory exists
         std::fs::create_dir_all(target_dir).map_err(|e| Error::Io(e.to_string()))?;
@@ -213,34 +199,6 @@ impl CliMgmtService {
         match download_result {
             Ok(_) => {
                 log::info!("[CliMgmtService] Download completed. Verifying checksum...");
-                let file_bytes = match std::fs::read(&tmp_path) {
-                    Ok(bytes) => bytes,
-                    Err(e) => {
-                        let _ = std::fs::remove_file(&tmp_path);
-                        let msg = format!("Failed to read temporary download file: {}", e);
-                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                        emit_job_progress(
-                            &*emitter,
-                            EmitJobProgressArgs {
-                                job_id: &job_id,
-                                kind: &JobKind::Download,
-                                status: JobStatus::Failed,
-                                percent: None,
-                                speed_bps: None,
-                                eta_secs: None,
-                                message: Some(&msg),
-                            },
-                        );
-                        return Err(Error::Io(e.to_string()));
-                    }
-                };
-
-                use sha2::{Sha256, Digest};
-                let mut hasher = Sha256::new();
-                hasher.update(&file_bytes);
-                let hash_result = hasher.finalize();
-                let computed_sha = hash_result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-
                 let api_url = format!(
                     "https://api.github.com/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v{}",
                     version
@@ -302,9 +260,12 @@ impl CliMgmtService {
                     }
                 };
 
-                if computed_sha != expected_sha {
+                if let Err(e) = super::cli_update_service::verify_checksum(&tmp_path, &expected_sha) {
                     let _ = std::fs::remove_file(&tmp_path);
-                    let msg = "Integrity check failed: checksum mismatch".to_string();
+                    let msg = match e {
+                        Error::Io(ref io_err) => format!("Failed to read temporary download file: {}", io_err),
+                        _ => format!("Integrity check failed: {}", e),
+                    };
                     job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
                     emit_job_progress(
                         &*emitter,
@@ -318,95 +279,27 @@ impl CliMgmtService {
                             message: Some(&msg),
                         },
                     );
-                    return Err(Error::Unknown(format!(
-                        "Integrity check failed: checksum mismatch. Expected: {}, Computed: {}",
-                        expected_sha, computed_sha
-                    )));
+                    return Err(e);
                 }
 
-                // 5. Write/Rename to target path
-                if let Err(e) = std::fs::rename(&tmp_path, &target_path) {
-                    let is_already_exists = e.kind() == std::io::ErrorKind::AlreadyExists;
-                    let mut retry_success = false;
-                    let mut secondary_error = None;
-
-                    if is_already_exists {
-                        if let Err(rm_err) = std::fs::remove_file(&target_path) {
-                            secondary_error = Some(format!("Failed to remove existing target file: {}", rm_err));
-                        } else if let Err(rename_err) = std::fs::rename(&tmp_path, &target_path) {
-                            secondary_error = Some(format!("Failed to rename binary on retry: {}", rename_err));
-                        } else {
-                            retry_success = true;
-                        }
-                    }
-
-                    if !retry_success {
-                        let _ = std::fs::remove_file(&tmp_path);
-                        let msg = if let Some(sec_err) = secondary_error {
-                            format!("Failed to rename binary: {}. Secondary error: {}", e, sec_err)
-                        } else {
-                            format!("Failed to rename binary: {}", e)
-                        };
-                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                        emit_job_progress(
-                            &*emitter,
-                            EmitJobProgressArgs {
-                                job_id: &job_id,
-                                kind: &JobKind::Download,
-                                status: JobStatus::Failed,
-                                percent: None,
-                                speed_bps: None,
-                                eta_secs: None,
-                                message: Some(&msg),
-                            },
-                        );
-                        return Err(Error::Io(msg));
-                    }
-                }
-
-                // 5b. Set executable permissions on Unix
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let metadata = match std::fs::metadata(&target_path) {
-                        Ok(m) => m,
-                        Err(e) => {
-                            let msg = format!("Failed to read metadata: {}", e);
-                            job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                            emit_job_progress(
-                                &*emitter,
-                                EmitJobProgressArgs {
-                                    job_id: &job_id,
-                                    kind: &JobKind::Download,
-                                    status: JobStatus::Failed,
-                                    percent: None,
-                                    speed_bps: None,
-                                    eta_secs: None,
-                                    message: Some(&msg),
-                                },
-                            );
-                            return Err(Error::Io(e.to_string()));
-                        }
-                    };
-                    let mut perms = metadata.permissions();
-                    perms.set_mode(0o755);
-                    if let Err(e) = std::fs::set_permissions(&target_path, perms) {
-                        let msg = format!("Failed to set permissions: {}", e);
-                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                        emit_job_progress(
-                            &*emitter,
-                            EmitJobProgressArgs {
-                                job_id: &job_id,
-                                kind: &JobKind::Download,
-                                status: JobStatus::Failed,
-                                percent: None,
-                                speed_bps: None,
-                                eta_secs: None,
-                                message: Some(&msg),
-                            },
-                        );
-                        return Err(Error::Io(e.to_string()));
-                    }
+                log::info!("[CliMgmtService] Checksum verified. Installing CLI binary...");
+                if let Err(e) = super::cli_update_service::install_binary_file(&tmp_path, &target_path) {
+                    let _ = std::fs::remove_file(&tmp_path);
+                    let msg = format!("Installation failed: {}", e);
+                    job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
+                    emit_job_progress(
+                        &*emitter,
+                        EmitJobProgressArgs {
+                            job_id: &job_id,
+                            kind: &JobKind::Download,
+                            status: JobStatus::Failed,
+                            percent: None,
+                            speed_bps: None,
+                            eta_secs: None,
+                            message: Some(&msg),
+                        },
+                    );
+                    return Err(e);
                 }
 
                 // 6. Update PATH
@@ -427,6 +320,7 @@ impl CliMgmtService {
                     );
                     return Err(e);
                 }
+
 
                 log::info!("[CliMgmtService] CLI installed successfully to {}", target_path.display());
                 job_manager.update_status(

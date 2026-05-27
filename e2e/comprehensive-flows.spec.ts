@@ -123,7 +123,7 @@ test.describe('Comprehensive User Flows', () => {
 			get_cli_status: { installed: false, version: null },
 		});
 		await page.reload();
-		await page.getByTestId('tab-trigger-cli').click();
+		await page.getByTestId('tab-trigger-updates').click();
 
 		await expect(page.getByText(/CLI Integration/i)).toBeVisible();
 		await expect(page.getByText(/Not Installed/i)).toBeVisible();

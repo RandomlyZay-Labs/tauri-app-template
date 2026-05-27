@@ -4,28 +4,41 @@ import * as Tabs from '@/components/ui/tabs';
 import * as Tooltip from '@/components/ui/tooltip';
 import { t } from '@/lib/i18n';
 import { animationStore } from '@/stores/animationStore.svelte';
+import { uiStore } from '@/stores/uiStore.svelte';
 import { quintOut } from 'svelte/easing';
 import { crossfade } from 'svelte/transition';
 import AppearanceSettings from './components/AppearanceSettings.svelte';
 import BackupSettings from './components/BackupSettings.svelte';
-import CliSettings from './components/CliSettings.svelte';
+import UpdateSettings from './components/UpdateSettings.svelte';
 import DebugSettings from './components/DebugSettings.svelte';
 import GeneralSettings from './components/GeneralSettings.svelte';
 
-import { Bug, HardDrive, Palette, Settings2, Terminal } from '@lucide/svelte';
+import { Bug, HardDrive, Palette, Settings2, Download } from '@lucide/svelte';
 
-
-let activeTab = $state('general');
 const tabs = [
 	{ id: 'general', labelKey: 'settings.general', icon: Settings2 },
 	{ id: 'appearance', labelKey: 'settings.appearance', icon: Palette },
 	{ id: 'backups', labelKey: 'settings.backups', icon: HardDrive },
-	{ id: 'cli', labelKey: 'settings.cli', icon: Terminal },
 	{ id: 'debug', labelKey: 'settings.debug', icon: Bug },
+	{ id: 'updates', labelKey: 'settings.updates', icon: Download },
 ];
 
 const [send, receive] = crossfade({
 	easing: quintOut,
+});
+
+let activeTab = $state(uiStore?.activeSettingsTab || 'general');
+
+$effect(() => {
+	if (uiStore?.activeSettingsTab) {
+		activeTab = uiStore.activeSettingsTab;
+	}
+});
+
+$effect(() => {
+	if (uiStore) {
+		uiStore.activeSettingsTab = activeTab;
+	}
 });
 </script>
 
@@ -63,14 +76,14 @@ const [send, receive] = crossfade({
 				<Tabs.Content value="general" class="mt-6">
 					<GeneralSettings />
 				</Tabs.Content>
+				<Tabs.Content value="updates" class="mt-6">
+					<UpdateSettings />
+				</Tabs.Content>
 				<Tabs.Content value="appearance" class="mt-6">
 					<AppearanceSettings />
 				</Tabs.Content>
 				<Tabs.Content value="backups" class="mt-6">
 					<BackupSettings />
-				</Tabs.Content>
-				<Tabs.Content value="cli" class="mt-6">
-					<CliSettings />
 				</Tabs.Content>
 				<Tabs.Content value="debug" class="mt-6">
 					<DebugSettings />

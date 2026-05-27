@@ -10,3 +10,5 @@ pub mod theme_service;
 pub mod watcher_service;
 pub mod scheduler;
 pub mod network;
+pub mod cli_update_service;
+
