@@ -22,7 +22,8 @@ function getPlatformKey(filename, filePath) {
 		fileLower.includes('windows') ||
 		fileLower.includes('nsis') ||
 		pathLower.includes('windows') ||
-		fileLower.includes('.zip');
+		fileLower.includes('.zip') ||
+		fileLower.includes('.exe');
 	const isLinux =
 		fileLower.includes('linux') ||
 		fileLower.includes('appimage') ||
@@ -51,7 +52,19 @@ function scanDir(dir) {
 		if (stat.isDirectory()) {
 			scanDir(fullPath);
 		} else {
-			if (file.endsWith('.zip') || file.endsWith('.tar.gz')) {
+			const isUpdaterBundle =
+				file.endsWith('.zip') ||
+				file.endsWith('.tar.gz') ||
+				file.endsWith('-setup.exe') ||
+				file.endsWith('.AppImage');
+
+			const isUpdaterSignature =
+				file.endsWith('.zip.sig') ||
+				file.endsWith('.tar.gz.sig') ||
+				file.endsWith('-setup.exe.sig') ||
+				file.endsWith('.AppImage.sig');
+
+			if (isUpdaterBundle) {
 				const platform = getPlatformKey(file, fullPath);
 				if (platform) {
 					if (!platforms[platform]) platforms[platform] = {};
@@ -59,7 +72,7 @@ function scanDir(dir) {
 						`https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v${version}/${file}`;
 					platforms[platform].filename = file;
 				}
-			} else if (file.endsWith('.zip.sig') || file.endsWith('.tar.gz.sig')) {
+			} else if (isUpdaterSignature) {
 				const baseFile = file.slice(0, -4);
 				const platform = getPlatformKey(baseFile, fullPath);
 				if (platform) {
