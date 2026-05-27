@@ -45,6 +45,9 @@ describe('updateStore', () => {
 			) {
 				return mockRelaunch();
 			}
+			if (cmd === 'get_install_type') {
+				return 'nsis';
+			}
 		});
 
 		// Reset updater status to idle/defaults
@@ -57,6 +60,8 @@ describe('updateStore', () => {
 		updateStore.downloadedBytes = 0;
 		updateStore.error = null;
 		updateStore.activeUpdate = null;
+		updateStore.installType = 'unknown';
+		updateStore.installTypeInitialized = false;
 	});
 
 	async function getStore() {
@@ -76,6 +81,81 @@ describe('updateStore', () => {
 		expect(store.error).toBeNull();
 		expect(store.activeUpdate).toBeNull();
 		expect(store.percentage).toBe(0);
+	});
+
+	it('asserts install-type state transitions and derivations - deb success path', async () => {
+		const store = await getStore();
+
+		// Reset/Set initial states
+		store.installTypeInitialized = false;
+		store.installType = 'unknown';
+
+		// Mock detection to return 'deb'
+		mockIPC((cmd) => {
+			if (cmd === 'get_install_type') {
+				return 'deb';
+			}
+		});
+
+		// Invoke the detection logic
+		await (
+			store as unknown as { initInstallType: () => Promise<void> }
+		).initInstallType();
+
+		// Assert transitions
+		expect(store.installTypeInitialized).toBe(true);
+		expect(store.installType).toBe('deb');
+		expect(store.isPackageManaged).toBe(true);
+	});
+
+	it('asserts install-type state transitions and derivations - rpm success path', async () => {
+		const store = await getStore();
+
+		// Reset/Set initial states
+		store.installTypeInitialized = false;
+		store.installType = 'unknown';
+
+		// Mock detection to return 'rpm'
+		mockIPC((cmd) => {
+			if (cmd === 'get_install_type') {
+				return 'rpm';
+			}
+		});
+
+		// Invoke the detection logic
+		await (
+			store as unknown as { initInstallType: () => Promise<void> }
+		).initInstallType();
+
+		// Assert transitions
+		expect(store.installTypeInitialized).toBe(true);
+		expect(store.installType).toBe('rpm');
+		expect(store.isPackageManaged).toBe(true);
+	});
+
+	it('asserts install-type state transitions and derivations - fallback path', async () => {
+		const store = await getStore();
+
+		// Reset/Set initial states
+		store.installTypeInitialized = false;
+		store.installType = 'nsis'; // starts as non-unknown to verify it resets or fails
+
+		// Mock detection to return 'unknown'
+		mockIPC((cmd) => {
+			if (cmd === 'get_install_type') {
+				return 'unknown';
+			}
+		});
+
+		// Invoke the detection logic
+		await (
+			store as unknown as { initInstallType: () => Promise<void> }
+		).initInstallType();
+
+		// Assert fallback behavior
+		expect(store.installTypeInitialized).toBe(true);
+		expect(store.installType).toBe('unknown');
+		expect(store.isPackageManaged).toBe(false);
 	});
 
 	it('does not check for updates if network is offline', async () => {

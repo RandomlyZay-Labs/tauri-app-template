@@ -340,6 +340,11 @@
 		"statusDownloading": "Descargando... {{progress}}%",
 		"statusDownloaded": "Lista para instalar",
 		"statusError": "Error de actualización",
-		"statusOffline": "Sin conexión"
+		"statusOffline": "Sin conexión",
+		"packageManagedTitle": "Actualizar a través del Gestor de Paquetes",
+		"packageManagedDesc": "Esta instalación es gestionada por el gestor de paquetes de su sistema. Utilice el siguiente comando para actualizar:",
+		"debCommand": "sudo apt update && sudo apt upgrade tauri-app-template",
+		"rpmCommand": "sudo dnf upgrade tauri-app-template",
+		"copyCommand": "Copiar Comando"
 	}
 }

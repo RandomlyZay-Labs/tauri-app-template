@@ -7,6 +7,8 @@ import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
 import GeneralSettings from './GeneralSettings.svelte';
 
+vi.unmock('@tauri-apps/plugin-clipboard-manager');
+
 // Mock i18n
 vi.mock('@/lib/i18n', () => ({
 	t: vi.fn((key: string, _params?: unknown) => key),
@@ -38,11 +40,14 @@ describe('GeneralSettings', () => {
 		updateStore.body = undefined;
 		updateStore.error = null;
 		updateStore.activeUpdate = null;
+		updateStore.installType = 'unknown';
+		updateStore.installTypeInitialized = false;
 
 		mockIPC((cmd) => {
 			if (cmd === 'open_log_dir') return null;
 			if (cmd === 'open_data_dir') return null;
 			if (cmd === 'reset_application') return null;
+			if (cmd === 'get_install_type') return 'nsis';
 		});
 	});
 
@@ -308,5 +313,69 @@ describe('GeneralSettings', () => {
 		expect(
 			screen.getByText('Could not fetch a valid release JSON from the remote'),
 		).toBeTruthy();
+	});
+
+	it('exercises the package-manager branch for deb installs', {
+		timeout: 10000,
+	}, async () => {
+		let capturedText: string | null = null;
+		mockIPC((cmd, args) => {
+			if (cmd === 'plugin:clipboard-manager|write_text') {
+				capturedText = (args as { text: string }).text;
+				return null;
+			}
+		});
+
+		updateStore.status = 'available';
+		updateStore.version = '2.0.0';
+		updateStore.installType = 'deb';
+		updateStore.installTypeInitialized = true;
+
+		render(GeneralSettings);
+
+		// Assert package manager notice text appears
+		expect(screen.getByText('updateSettings.packageManagedTitle')).toBeTruthy();
+		expect(screen.getByText('updateSettings.packageManagedDesc')).toBeTruthy();
+
+		// Relaunch or download actions should not be shown
+		expect(screen.queryByText('updateSettings.relaunchToApply')).toBeNull();
+		expect(screen.queryByText('updateSettings.downloadAndInstall')).toBeNull();
+
+		// Copy command works
+		const copyBtn = screen.getByText('updateSettings.copyCommand');
+		await fireEvent.click(copyBtn);
+		expect(capturedText).toBe('updateSettings.debCommand');
+	});
+
+	it('exercises the package-manager branch for rpm installs', {
+		timeout: 10000,
+	}, async () => {
+		let capturedText: string | null = null;
+		mockIPC((cmd, args) => {
+			if (cmd === 'plugin:clipboard-manager|write_text') {
+				capturedText = (args as { text: string }).text;
+				return null;
+			}
+		});
+
+		updateStore.status = 'available';
+		updateStore.version = '2.0.0';
+		updateStore.installType = 'rpm';
+		updateStore.installTypeInitialized = true;
+
+		render(GeneralSettings);
+
+		// Assert package manager notice text appears
+		expect(screen.getByText('updateSettings.packageManagedTitle')).toBeTruthy();
+		expect(screen.getByText('updateSettings.packageManagedDesc')).toBeTruthy();
+
+		// Relaunch or download actions should not be shown
+		expect(screen.queryByText('updateSettings.relaunchToApply')).toBeNull();
+		expect(screen.queryByText('updateSettings.downloadAndInstall')).toBeNull();
+
+		// Copy command works
+		const copyBtn = screen.getByText('updateSettings.copyCommand');
+		await fireEvent.click(copyBtn);
+		expect(capturedText).toBe('updateSettings.rpmCommand');
 	});
 });

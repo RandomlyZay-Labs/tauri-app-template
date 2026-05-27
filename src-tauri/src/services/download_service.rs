@@ -85,6 +85,7 @@ pub struct DownloadManager {
 impl DownloadManager {
     pub fn new(max_concurrent: usize) -> Self {
         let client = reqwest::Client::builder()
+            .user_agent("tauri-app-template")
             .connect_timeout(std::time::Duration::from_secs(30))
             .read_timeout(std::time::Duration::from_secs(30))
             .build()
@@ -95,6 +96,10 @@ impl DownloadManager {
             network: Arc::new(RealNetworkClient::new(client)),
             fs: Arc::new(RealFileSystem),
         }
+    }
+
+    pub fn network_client(&self) -> Arc<dyn NetworkClient> {
+        Arc::clone(&self.network)
     }
 
     #[cfg(test)]

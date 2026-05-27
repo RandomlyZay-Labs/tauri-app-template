@@ -44,6 +44,8 @@ pub fn collect() -> Builder {
             // Theme commands
             commands::theme::get_system_theme,
             commands::theme::set_theme,
+            // Install type commands
+            commands::install_type::get_install_type,
         ])
         .typ::<BackupMetadata>()
         .typ::<DownloadProgress>()

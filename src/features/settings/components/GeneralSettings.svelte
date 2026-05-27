@@ -49,7 +49,11 @@ let copied = $state(false);
 const defaultAutoCheck = true;
 
 $effect(() => {
-	if (updateStore.status === 'downloaded') {
+	if (
+		updateStore.status === 'downloaded' &&
+		updateStore.installTypeInitialized &&
+		!updateStore.isPackageManaged
+	) {
 		relaunchDialogOpen = true;
 	}
 });
@@ -107,8 +111,11 @@ function handleTelemetryToggle(enabled: boolean) {
 }
 
 async function copyCommand() {
+	const cmd = updateStore.installType === 'deb'
+		? t('updateSettings.debCommand')
+		: t('updateSettings.rpmCommand');
 	await executeSafeAction(
-		() => writeText('tauri-app-template'),
+		() => writeText(cmd),
 		{
 			onSuccess: () => {
 				copied = true;
@@ -260,19 +267,43 @@ async function copyCommand() {
 							</div>
 						{/if}
 
-						<div class="flex justify-end gap-2">
-							{#if updateStore.status === 'available' || updateStore.status === 'error'}
-								<Button size="sm" onclick={() => executeSafeAction(() => updateStore.downloadAndInstallUpdate())}>
-									<Download class="mr-2 size-4" />
-									{t('updateSettings.downloadAndInstall')}
-								</Button>
-							{:else if updateStore.status === 'downloaded'}
-								<Button size="sm" onclick={() => executeSafeAction(() => updateStore.applyUpdate())}>
-									<RefreshCw class="mr-2 size-4" />
-									{t('updateSettings.relaunchToApply')}
-								</Button>
-							{/if}
-						</div>
+						{#if updateStore.isPackageManaged}
+							<div class="p-4 rounded-lg bg-secondary/30 border space-y-3">
+								<div class="flex items-start gap-2">
+									<Info class="size-4 shrink-0 mt-0.5 text-primary" />
+									<div class="space-y-1">
+										<h4 class="text-xs font-semibold">{t('updateSettings.packageManagedTitle')}</h4>
+										<p class="text-xs text-muted-foreground">{t('updateSettings.packageManagedDesc')}</p>
+									</div>
+								</div>
+								<div class="flex items-center gap-2 p-2 rounded bg-zinc-950 text-zinc-50 border border-zinc-800 font-mono text-xs">
+									<span class="flex-1 select-all">
+										{updateStore.installType === 'deb' ? t('updateSettings.debCommand') : t('updateSettings.rpmCommand')}
+									</span>
+									<Button size="sm" variant="ghost" class="h-8 hover:bg-zinc-800 hover:text-zinc-50" onclick={copyCommand}>
+										{#if copied}
+											{t('common.copied')}
+										{:else}
+											{t('updateSettings.copyCommand')}
+										{/if}
+									</Button>
+								</div>
+							</div>
+						{:else}
+							<div class="flex justify-end gap-2">
+								{#if updateStore.status === 'available' || updateStore.status === 'error'}
+									<Button size="sm" onclick={() => executeSafeAction(() => updateStore.downloadAndInstallUpdate())}>
+										<Download class="mr-2 size-4" />
+										{t('updateSettings.downloadAndInstall')}
+									</Button>
+								{:else if updateStore.status === 'downloaded'}
+									<Button size="sm" onclick={() => executeSafeAction(() => updateStore.applyUpdate())}>
+										<RefreshCw class="mr-2 size-4" />
+										{t('updateSettings.relaunchToApply')}
+									</Button>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				{/if}
 

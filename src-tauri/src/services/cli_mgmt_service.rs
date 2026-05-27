@@ -138,22 +138,7 @@ impl CliMgmtService {
         // Ensure target directory exists
         std::fs::create_dir_all(target_dir).map_err(|e| Error::Io(e.to_string()))?;
 
-        // 2. Download the checksum using DownloadManager (runs instantly, so no need for database job tracking)
-        let sha256_url = format!("{}.sha256", url);
-        log::info!("[CliMgmtService] Downloading SHA-256 checksum from {}", sha256_url);
-        let sha256_filename = format!("{}.sha256.download", binary_name);
-        
-        let sha_request = DownloadRequest {
-            url: sha256_url,
-            dest_dir: target_dir.to_string_lossy().to_string(),
-            filename: Some(sha256_filename.clone()),
-        };
         let emitter = Arc::new(app_handle.clone()) as Arc<dyn AppEmitter>;
-        let sha_download_res = download_manager.start_download(Arc::clone(&emitter), sha_request).await?;
-        let sha_path = std::path::Path::new(&sha_download_res.file_path);
-        let sha_text = std::fs::read_to_string(sha_path).map_err(|e| Error::Io(e.to_string()))?;
-        let _ = std::fs::remove_file(sha_path); // clean up checksum temp file
-        let expected_sha = sha_text.split_whitespace().next().ok_or_else(|| Error::Unknown("Empty checksum file".into()))?.to_lowercase();
 
         // 3. Register the CLI Binary Download Job in the JobManager database
         let temp_filename = format!("{}.download", binary_name);
@@ -255,6 +240,67 @@ impl CliMgmtService {
                 hasher.update(&file_bytes);
                 let hash_result = hasher.finalize();
                 let computed_sha = hash_result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+
+                let api_url = format!(
+                    "https://api.github.com/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v{}",
+                    version
+                );
+                log::info!("[CliMgmtService] Fetching release metadata from {}", api_url);
+                
+                let expected_sha = match async {
+                    use futures_util::StreamExt;
+                    let api_res = download_manager.network_client().send_request(&api_url, None).await?;
+                    
+                    // Collect stream into bytes
+                    let mut api_stream = api_res.bytes_stream;
+                    let mut api_bytes = bytes::BytesMut::new();
+                    while let Some(chunk_result) = api_stream.next().await {
+                        let chunk = chunk_result?;
+                        api_bytes.extend_from_slice(&chunk);
+                    }
+                    
+                    let release_info: serde_json::Value = serde_json::from_slice(&api_bytes)
+                        .map_err(|e| Error::Unknown(format!("Failed to parse release JSON: {}", e)))?;
+                    
+                    let assets = release_info.get("assets")
+                        .and_then(|a| a.as_array())
+                        .ok_or_else(|| Error::Unknown("Release JSON missing assets array".into()))?;
+                        
+                    let mut sha_opt = None;
+                    for asset in assets {
+                        let name = asset.get("name").and_then(|n| n.as_str());
+                        let digest = asset.get("digest").and_then(|d| d.as_str());
+                        let sha_val = digest.and_then(|d| d.strip_prefix("sha256:"));
+                        if name == Some(binary_name.as_str()) && sha_val.is_some() {
+                            sha_opt = sha_val.map(|sha| sha.to_lowercase());
+                            break;
+                        }
+                    }
+                    
+                    sha_opt.ok_or_else(|| {
+                        Error::Unknown(format!("Could not find SHA-256 digest for asset {} in release assets metadata", binary_name))
+                    })
+                }.await {
+                    Ok(sha) => sha,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = format!("Failed to fetch expected checksum: {}", e);
+                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(e);
+                    }
+                };
 
                 if computed_sha != expected_sha {
                     let _ = std::fs::remove_file(&tmp_path);
@@ -485,15 +531,15 @@ mod tests {
     use tauri::Manager;
 
     struct MockCliNetwork {
-        checksum: String,
+        api_response: String,
         binary: Vec<u8>,
     }
 
     #[async_trait::async_trait]
     impl crate::services::network::NetworkClient for MockCliNetwork {
         async fn send_request(&self, url: &str, _range: Option<String>) -> crate::error::CResult<crate::services::network::NetworkResponse> {
-            if url.ends_with(".sha256") {
-                let bytes = bytes::Bytes::from(self.checksum.clone());
+            if url.contains("/releases/tags/") {
+                let bytes = bytes::Bytes::from(self.api_response.clone());
                 Ok(crate::services::network::NetworkResponse {
                     status: reqwest::StatusCode::OK,
                     content_length: Some(bytes.len() as u64),
@@ -538,7 +584,23 @@ mod tests {
         let mut hasher = Sha256::new();
         hasher.update(&mock_binary);
         let computed_sha = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>();
-        let mock_checksum = format!("{}  tauri-app-template-cli\n", computed_sha);
+
+        let os = std::env::consts::OS;
+        let arch = std::env::consts::ARCH;
+        let (os_name, arch_name, ext) = match (os, arch) {
+            ("windows", "x86_64") => ("windows", "x64", ".exe"),
+            ("windows", "aarch64") => ("windows", "arm64", ".exe"),
+            ("linux", "x86_64") => ("linux", "amd64", ""),
+            ("linux", "aarch64") => ("linux", "arm64", ""),
+            _ => panic!("Unsupported platform: {}-{}", os, arch),
+        };
+        let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
+        
+        let mock_api_response = format!(
+            r#"{{"assets": [{{"name": "{}", "digest": "sha256:{}"}}]}}"#,
+            binary_name,
+            computed_sha
+        );
 
         // Setup mock tauri app and AppState
         let app = tauri::test::mock_app();
@@ -552,7 +614,7 @@ mod tests {
             .await?;
 
         let mock_network = Arc::new(MockCliNetwork {
-            checksum: mock_checksum,
+            api_response: mock_api_response,
             binary: mock_binary,
         });
 
@@ -595,7 +657,22 @@ mod tests {
         });
 
         let mock_binary = b"mock CLI binary content".to_vec();
-        let mock_checksum = "incorrect_sha256_hash  tauri-app-template-cli\n".to_string();
+
+        let os = std::env::consts::OS;
+        let arch = std::env::consts::ARCH;
+        let (os_name, arch_name, ext) = match (os, arch) {
+            ("windows", "x86_64") => ("windows", "x64", ".exe"),
+            ("windows", "aarch64") => ("windows", "arm64", ".exe"),
+            ("linux", "x86_64") => ("linux", "amd64", ""),
+            ("linux", "aarch64") => ("linux", "arm64", ""),
+            _ => panic!("Unsupported platform: {}-{}", os, arch),
+        };
+        let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
+        
+        let mock_api_response = format!(
+            r#"{{"assets": [{{"name": "{}", "digest": "sha256:incorrect_sha256_hash"}}]}}"#,
+            binary_name
+        );
 
         let app = tauri::test::mock_app();
         let handle = app.handle();
@@ -606,7 +683,7 @@ mod tests {
             .await?;
 
         let mock_network = Arc::new(MockCliNetwork {
-            checksum: mock_checksum,
+            api_response: mock_api_response,
             binary: mock_binary,
         });
 
@@ -657,19 +734,11 @@ mod tests {
         async fn copy(&self, from: &std::path::Path, to: &std::path::Path) -> std::io::Result<u64> {
             RealFileSystem.copy(from, to).await
         }
-        async fn create(&self, path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
-            if path.to_string_lossy().contains("sha256") {
-                RealFileSystem.create(path).await
-            } else {
-                Ok(Box::new(tokio::io::sink()))
-            }
+        async fn create(&self, _path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            Ok(Box::new(tokio::io::sink()))
         }
-        async fn open_append(&self, path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
-            if path.to_string_lossy().contains("sha256") {
-                RealFileSystem.open_append(path).await
-            } else {
-                Ok(Box::new(tokio::io::sink()))
-            }
+        async fn open_append(&self, _path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            Ok(Box::new(tokio::io::sink()))
         }
     }
 
@@ -687,7 +756,23 @@ mod tests {
         let mut hasher = Sha256::new();
         hasher.update(&mock_binary);
         let computed_sha = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>();
-        let mock_checksum = format!("{}  tauri-app-template-cli\n", computed_sha);
+
+        let os = std::env::consts::OS;
+        let arch = std::env::consts::ARCH;
+        let (os_name, arch_name, ext) = match (os, arch) {
+            ("windows", "x86_64") => ("windows", "x64", ".exe"),
+            ("windows", "aarch64") => ("windows", "arm64", ".exe"),
+            ("linux", "x86_64") => ("linux", "amd64", ""),
+            ("linux", "aarch64") => ("linux", "arm64", ""),
+            _ => panic!("Unsupported platform: {}-{}", os, arch),
+        };
+        let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
+        
+        let mock_api_response = format!(
+            r#"{{"assets": [{{"name": "{}", "digest": "sha256:{}"}}]}}"#,
+            binary_name,
+            computed_sha
+        );
 
         // Setup mock tauri app and AppState
         let app = tauri::test::mock_app();
@@ -701,7 +786,7 @@ mod tests {
             .await?;
 
         let mock_network = Arc::new(MockCliNetwork {
-            checksum: mock_checksum,
+            api_response: mock_api_response,
             binary: mock_binary,
         });
 
@@ -799,7 +884,23 @@ mod tests {
         let mut hasher = Sha256::new();
         hasher.update(&mock_binary);
         let computed_sha = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>();
-        let mock_checksum = format!("{}  tauri-app-template-cli\n", computed_sha);
+
+        let os = std::env::consts::OS;
+        let arch = std::env::consts::ARCH;
+        let (os_name, arch_name, ext) = match (os, arch) {
+            ("windows", "x86_64") => ("windows", "x64", ".exe"),
+            ("windows", "aarch64") => ("windows", "arm64", ".exe"),
+            ("linux", "x86_64") => ("linux", "amd64", ""),
+            ("linux", "aarch64") => ("linux", "arm64", ""),
+            _ => panic!("Unsupported platform: {}-{}", os, arch),
+        };
+        let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
+        
+        let mock_api_response = format!(
+            r#"{{"assets": [{{"name": "{}", "digest": "sha256:{}"}}]}}"#,
+            binary_name,
+            computed_sha
+        );
 
         // Setup mock tauri app and AppState
         let app = tauri::test::mock_app();
@@ -813,7 +914,7 @@ mod tests {
             .await?;
 
         let mock_network = Arc::new(MockCliNetwork {
-            checksum: mock_checksum,
+            api_response: mock_api_response,
             binary: mock_binary,
         });
 
