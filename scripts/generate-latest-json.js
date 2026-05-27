@@ -22,7 +22,7 @@ function getPlatformKey(filename, filePath) {
 		fileLower.includes('windows') ||
 		fileLower.includes('nsis') ||
 		pathLower.includes('windows') ||
-		fileLower.includes('.exe');
+		fileLower.endsWith('.exe');
 	const isLinux =
 		fileLower.includes('linux') ||
 		fileLower.includes('appimage') ||
