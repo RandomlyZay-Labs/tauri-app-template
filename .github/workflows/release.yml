@@ -88,6 +88,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Rename release artifacts
+        run: |
+          find artifacts -type f | while read -r file; do
+            dir=$(dirname "$file")
+            base=$(basename "$file")
+            
+            # 1. Strip the "-1" release number from RPM filenames
+            # e.g., "Tauri App Template-0.5.1-1.x86_64.rpm" -> "Tauri App Template-0.5.1-x86_64.rpm"
+            new_base="$base"
+            if [[ "$base" == *".rpm" ]]; then
+              new_base=$(echo "$base" | sed -E 's/-([0-9]+\.[0-9]+\.[0-9]+)-1\.([a-zA-Z0-9_]+)\.rpm$/-\1-\2.rpm/')
+            fi
+            
+            # 2. Replace spaces with hyphens in all filenames
+            new_base=$(echo "$new_base" | tr ' ' '-')
+            
+            if [ "$base" != "$new_base" ]; then
+              mv "$file" "$dir/$new_base"
+              echo "Renamed: $file -> $dir/$new_base"
+            fi
+          done
+
       - name: Generate latest.json
         env:
           VERSION: ${{ needs.determine-version.outputs.version }}
@@ -128,4 +150,4 @@ jobs:
             --body "Automated PR to sync dev with main after release. Code scanning and status checks must pass before merging. @coderabbitai ignore"
 
           # Enable auto-merge if supported/allowed by the repository
-          gh pr merge --auto --squash --delete-branch
+          gh pr merge --auto --merge --delete-branch

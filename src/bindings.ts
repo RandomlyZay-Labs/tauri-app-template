@@ -93,6 +93,9 @@ async getSystemTheme() : Promise<string | null> {
  */
 async setTheme(theme: string | null) : Promise<null> {
     return await TAURI_INVOKE("set_theme", { theme });
+},
+async getInstallType() : Promise<string> {
+    return await TAURI_INVOKE("get_install_type");
 }
 }
 
