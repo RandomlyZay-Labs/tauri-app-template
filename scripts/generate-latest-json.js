@@ -22,13 +22,11 @@ function getPlatformKey(filename, filePath) {
 		fileLower.includes('windows') ||
 		fileLower.includes('nsis') ||
 		pathLower.includes('windows') ||
-		fileLower.includes('.zip') ||
 		fileLower.includes('.exe');
 	const isLinux =
 		fileLower.includes('linux') ||
 		fileLower.includes('appimage') ||
-		pathLower.includes('linux') ||
-		fileLower.includes('.tar.gz');
+		pathLower.includes('linux');
 	const isArm64 =
 		fileLower.includes('arm64') ||
 		fileLower.includes('aarch64') ||
@@ -52,16 +50,18 @@ function scanDir(dir) {
 		if (stat.isDirectory()) {
 			scanDir(fullPath);
 		} else {
+			const pathLower = fullPath.toLowerCase();
+			const isWindowsBundle =
+				pathLower.includes('windows-bundle-') ||
+				pathLower.includes('/bundle/nsis/') ||
+				pathLower.includes('\\bundle\\nsis\\');
+
 			const isUpdaterBundle =
-				file.endsWith('.zip') ||
-				file.endsWith('.tar.gz') ||
-				file.endsWith('-setup.exe') ||
+				(file.endsWith('.exe') && isWindowsBundle) ||
 				file.endsWith('.AppImage');
 
 			const isUpdaterSignature =
-				file.endsWith('.zip.sig') ||
-				file.endsWith('.tar.gz.sig') ||
-				file.endsWith('-setup.exe.sig') ||
+				(file.endsWith('.exe.sig') && isWindowsBundle) ||
 				file.endsWith('.AppImage.sig');
 
 			if (isUpdaterBundle) {
