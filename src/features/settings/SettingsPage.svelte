@@ -4,7 +4,7 @@ import * as Tabs from '@/components/ui/tabs';
 import * as Tooltip from '@/components/ui/tooltip';
 import { t } from '@/lib/i18n';
 import { animationStore } from '@/stores/animationStore.svelte';
-import { uiStore } from '@/stores/uiStore.svelte';
+import { uiStore, validateSettingsTab, type SettingsTab } from '@/stores/uiStore.svelte';
 import { quintOut } from 'svelte/easing';
 import { crossfade } from 'svelte/transition';
 import { untrack } from 'svelte';
@@ -28,17 +28,17 @@ const [send, receive] = crossfade({
 	easing: quintOut,
 });
 
-let activeTab = $state(uiStore?.activeSettingsTab || 'general');
+let activeTab = $state<SettingsTab>(validateSettingsTab(uiStore?.activeSettingsTab));
 
 $effect(() => {
 	if (uiStore?.activeSettingsTab && uiStore.activeSettingsTab !== untrack(() => activeTab)) {
-		activeTab = uiStore.activeSettingsTab;
+		activeTab = validateSettingsTab(uiStore.activeSettingsTab);
 	}
 });
 
 $effect(() => {
 	if (uiStore && untrack(() => uiStore.activeSettingsTab) !== activeTab) {
-		uiStore.activeSettingsTab = activeTab;
+		uiStore.activeSettingsTab = validateSettingsTab(activeTab);
 	}
 });
 </script>

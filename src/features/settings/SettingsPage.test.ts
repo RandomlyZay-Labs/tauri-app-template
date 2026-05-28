@@ -13,6 +13,7 @@ vi.mock('@/stores/uiStore.svelte', () => ({
 			return true;
 		},
 	},
+	validateSettingsTab: (tab: unknown) => tab || 'general',
 }));
 
 vi.mock('@/stores/backupStore.svelte', () => ({

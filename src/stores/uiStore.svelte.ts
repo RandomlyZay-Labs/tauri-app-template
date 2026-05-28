@@ -6,6 +6,25 @@ import {
 	savePersistedState,
 } from '@/lib/store-utils';
 
+const ALLOWED_SETTINGS_TABS = [
+	'general',
+	'appearance',
+	'backups',
+	'debug',
+	'updates',
+] as const;
+export type SettingsTab = (typeof ALLOWED_SETTINGS_TABS)[number];
+
+export function validateSettingsTab(tab: unknown): SettingsTab {
+	if (
+		typeof tab === 'string' &&
+		ALLOWED_SETTINGS_TABS.includes(tab as SettingsTab)
+	) {
+		return tab as SettingsTab;
+	}
+	return 'general';
+}
+
 interface UIPersistedState {
 	sidebarOpen: boolean;
 	onboardingCompleted: boolean;
@@ -13,7 +32,7 @@ interface UIPersistedState {
 	telemetryEnabled: boolean;
 	logLevel: 'trace' | 'debug' | 'info' | 'warn' | 'error';
 	autoCheckUpdates: boolean;
-	activeSettingsTab?: string;
+	activeSettingsTab?: SettingsTab;
 }
 
 const persistConfig: PersistConfig<UIPersistedState> = {
@@ -29,7 +48,7 @@ class UIStore {
 	logLevel = $state<'trace' | 'debug' | 'info' | 'warn' | 'error'>('error');
 	autoCheckUpdates = $state(true);
 	_hasHydrated = $state(false);
-	activeSettingsTab = $state('general');
+	activeSettingsTab = $state<SettingsTab>(validateSettingsTab('general'));
 
 	constructor() {
 		this.hydrate();
@@ -48,7 +67,7 @@ class UIStore {
 		if (saved.autoCheckUpdates !== undefined)
 			this.autoCheckUpdates = saved.autoCheckUpdates;
 		if (saved.activeSettingsTab !== undefined)
-			this.activeSettingsTab = saved.activeSettingsTab;
+			this.activeSettingsTab = validateSettingsTab(saved.activeSettingsTab);
 		this._hasHydrated = true;
 	}
 
@@ -104,8 +123,8 @@ class UIStore {
 		this.persist();
 	}
 
-	setActiveSettingsTab(tab: string) {
-		this.activeSettingsTab = tab;
+	setActiveSettingsTab(tab: unknown) {
+		this.activeSettingsTab = validateSettingsTab(tab);
 		this.persist();
 	}
 }
