@@ -26,9 +26,13 @@ pub fn get_binary_details(version: &str) -> CResult<(String, String)> {
 }
 
 pub async fn get_expected_sha(client: &reqwest::Client, version: &str, binary_name: &str) -> CResult<String> {
+    get_expected_sha_from_base(client, "https://api.github.com", version, binary_name).await
+}
+
+async fn get_expected_sha_from_base(client: &reqwest::Client, base_url: &str, version: &str, binary_name: &str) -> CResult<String> {
     let api_url = format!(
-        "https://api.github.com/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v{}",
-        version
+        "{}/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v{}",
+        base_url, version
     );
 
     let res = client.get(&api_url).send().await?;
@@ -193,5 +197,93 @@ mod tests {
             assert!(name.contains("tauri-app-template-cli"));
             assert!(url.contains("releases/download/v1.0.0"));
         }
+    }
+
+    #[test]
+    fn test_verify_checksum_success() -> Result<(), Box<dyn std::error::Error>> {
+        use std::io::Write;
+        let mut temp_file = tempfile::NamedTempFile::new()?;
+        let content = b"hello world";
+        temp_file.write_all(content)?;
+        
+        let expected_sha = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
+        let result = verify_checksum(temp_file.path(), expected_sha);
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_checksum_failure() -> Result<(), Box<dyn std::error::Error>> {
+        use std::io::Write;
+        let mut temp_file = tempfile::NamedTempFile::new()?;
+        let content = b"hello world";
+        temp_file.write_all(content)?;
+        
+        let expected_sha = "wrong_sha";
+        let result = verify_checksum(temp_file.path(), expected_sha);
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_expected_sha() -> Result<(), Box<dyn std::error::Error>> {
+        let mut server = mockito::Server::new_async().await;
+        let url = server.url();
+        
+        let body = serde_json::json!({
+            "assets": [
+                {
+                    "name": "tauri-app-template-cli-linux-amd64",
+                    "digest": "sha256:b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+                }
+            ]
+        });
+
+        let _mock = server.mock("GET", "/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v1.0.0")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(serde_json::to_string(&body)?)
+            .create_async()
+            .await;
+
+        let client = reqwest::Client::builder()
+            .user_agent("tauri-app-template")
+            .build()?;
+
+        let res = get_expected_sha_from_base(&client, &url, "1.0.0", "tauri-app-template-cli-linux-amd64").await?;
+        assert_eq!(res, "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+        Ok(())
+    }
+
+    #[test]
+    fn test_install_binary_file() -> Result<(), Box<dyn std::error::Error>> {
+        use std::io::Write;
+        let dir = tempfile::tempdir()?;
+        let tmp_path = dir.path().join("tmp_binary.download");
+        let target_path = dir.path().join("installed_binary");
+
+        // Create a temp file to simulate the download
+        {
+            let mut file = File::create(&tmp_path)?;
+            file.write_all(b"binary_content")?;
+        }
+
+        // Install it
+        let install_res = install_binary_file(&tmp_path, &target_path);
+        assert!(install_res.is_ok());
+
+        // Assert target file exists
+        assert!(target_path.exists());
+        assert_eq!(target_path.file_name().ok_or("No file name")?, "installed_binary");
+
+        // Assert is executable on Unix
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = std::fs::metadata(&target_path)?;
+            let mode = metadata.permissions().mode();
+            assert_eq!(mode & 0o111, 0o111); // Assert executable permissions
+        }
+        Ok(())
     }
 }

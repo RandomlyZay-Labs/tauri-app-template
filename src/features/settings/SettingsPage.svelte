@@ -7,6 +7,7 @@ import { animationStore } from '@/stores/animationStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { quintOut } from 'svelte/easing';
 import { crossfade } from 'svelte/transition';
+import { untrack } from 'svelte';
 import AppearanceSettings from './components/AppearanceSettings.svelte';
 import BackupSettings from './components/BackupSettings.svelte';
 import UpdateSettings from './components/UpdateSettings.svelte';
@@ -30,13 +31,13 @@ const [send, receive] = crossfade({
 let activeTab = $state(uiStore?.activeSettingsTab || 'general');
 
 $effect(() => {
-	if (uiStore?.activeSettingsTab) {
+	if (uiStore?.activeSettingsTab && uiStore.activeSettingsTab !== untrack(() => activeTab)) {
 		activeTab = uiStore.activeSettingsTab;
 	}
 });
 
 $effect(() => {
-	if (uiStore) {
+	if (uiStore && untrack(() => uiStore.activeSettingsTab) !== activeTab) {
 		uiStore.activeSettingsTab = activeTab;
 	}
 });

@@ -13,6 +13,7 @@ interface UIPersistedState {
 	telemetryEnabled: boolean;
 	logLevel: 'trace' | 'debug' | 'info' | 'warn' | 'error';
 	autoCheckUpdates: boolean;
+	activeSettingsTab?: string;
 }
 
 const persistConfig: PersistConfig<UIPersistedState> = {
@@ -46,6 +47,8 @@ class UIStore {
 		if (saved.logLevel !== undefined) this.logLevel = saved.logLevel;
 		if (saved.autoCheckUpdates !== undefined)
 			this.autoCheckUpdates = saved.autoCheckUpdates;
+		if (saved.activeSettingsTab !== undefined)
+			this.activeSettingsTab = saved.activeSettingsTab;
 		this._hasHydrated = true;
 	}
 
@@ -57,6 +60,7 @@ class UIStore {
 			telemetryEnabled: this.telemetryEnabled,
 			logLevel: this.logLevel,
 			autoCheckUpdates: this.autoCheckUpdates,
+			activeSettingsTab: this.activeSettingsTab,
 		});
 	}
 
@@ -102,6 +106,7 @@ class UIStore {
 
 	setActiveSettingsTab(tab: string) {
 		this.activeSettingsTab = tab;
+		this.persist();
 	}
 }
 

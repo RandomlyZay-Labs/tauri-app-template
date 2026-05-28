@@ -6,10 +6,11 @@ import { push } from 'svelte-spa-router';
 import { ArrowRight, Info, X } from '@lucide/svelte';
 import { slide } from 'svelte/transition';
 import { t } from '@/lib/i18n';
+import { executeSafeAction } from '@/lib/async-utils';
 
 function handleViewDetails() {
 	uiStore.setActiveSettingsTab('updates');
-	void push('/settings');
+	void executeSafeAction(() => push('/settings'));
 }
 
 function handleDismiss() {
