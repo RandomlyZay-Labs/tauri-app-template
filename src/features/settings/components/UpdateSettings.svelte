@@ -531,7 +531,7 @@ $effect(() => {
 							</span>
 						{/if}
 					</p>
-					{#if !updateStore.isPackageManaged && cliStatus?.installed}
+					{#if (updateStore.installType === 'appimage' || updateStore.installType === 'nsis') && cliStatus?.installed}
 						<p class="text-[10px] text-muted-foreground mt-0.5">
 							{t('updateSettings.cliManagedByApp')}
 						</p>
@@ -574,6 +574,20 @@ $effect(() => {
 							{:else}
 								<Download class="mr-2 size-4" />
 								{t('cliSettings.installCli')}
+							{/if}
+						</Button>
+					{:else if cliNeedsUpdate}
+						<Button 
+							variant="default" 
+							disabled={isCliLoading}
+							onclick={handleInstallOrUpdateCli}
+						>
+							{#if isCliLoading}
+								<RefreshCw class="mr-2 size-4 animate-spin duration-150 animate-duration-snappy" />
+								{t('common.loading')}...
+							{:else}
+								<RefreshCw class="mr-2 size-4" />
+								{t('cliSettings.updateCli')}
 							{/if}
 						</Button>
 					{:else if cliStatus?.installed}

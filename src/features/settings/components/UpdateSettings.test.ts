@@ -9,6 +9,11 @@ import UpdateSettings from './UpdateSettings.svelte';
 
 vi.unmock('@tauri-apps/plugin-clipboard-manager');
 
+// Mock app version
+vi.mock('@/lib/app-version.svelte', () => ({
+	getAppVersion: vi.fn(() => '1.0.0'),
+}));
+
 // Mock i18n
 vi.mock('@/lib/i18n', () => ({
 	t: vi.fn((key: string, _params?: unknown) => key),
@@ -268,9 +273,34 @@ describe('UpdateSettings', () => {
 		expect(capturedText).toBe('updateSettings.rpmCommand');
 	});
 
-	it('exercises CLI integration UI conditional rendering - bundled', async () => {
+	it('exercises CLI integration UI conditional rendering - appimage', async () => {
+		updateStore.installType = 'appimage';
+		updateStore.installTypeInitialized = true;
+
+		mockIPC((cmd) => {
+			if (cmd === 'get_install_type') return 'appimage';
+			if (cmd === 'get_version') return '1.0.0';
+			if (cmd === 'get_cli_status')
+				return { installed: true, version: '1.0.0' };
+		});
+
+		render(UpdateSettings);
+
+		await vi.waitFor(() => {
+			expect(screen.getByText('updateSettings.cliManagedByApp')).toBeTruthy();
+		});
+	});
+
+	it('exercises CLI integration UI conditional rendering - nsis', async () => {
 		updateStore.installType = 'nsis';
 		updateStore.installTypeInitialized = true;
+
+		mockIPC((cmd) => {
+			if (cmd === 'get_install_type') return 'nsis';
+			if (cmd === 'get_version') return '1.0.0';
+			if (cmd === 'get_cli_status')
+				return { installed: true, version: '1.0.0' };
+		});
 
 		render(UpdateSettings);
 
@@ -280,20 +310,42 @@ describe('UpdateSettings', () => {
 		expect(screen.queryByText('cliSettings.updateCli')).toBeNull();
 	});
 
-	it('exercises CLI integration UI conditional rendering - package managed', async () => {
-		updateStore.installType = 'deb';
+	it('shows update CLI button in bundled mode when there is a version mismatch', async () => {
+		updateStore.installType = 'nsis';
 		updateStore.installTypeInitialized = true;
 
 		mockIPC((cmd) => {
+			if (cmd === 'get_install_type') return 'nsis';
 			if (cmd === 'get_cli_status')
-				return { installed: true, version: '1.0.0' };
+				return { installed: true, version: '0.9.0' };
+			if (cmd === 'install_cli') return null;
 		});
 
 		render(UpdateSettings);
 
 		await vi.waitFor(() => {
-			expect(screen.queryByText('updateSettings.cliManagedByApp')).toBeNull();
+			expect(screen.getByText('cliSettings.updateCli')).toBeTruthy();
 		});
+	});
+
+	it('exercises CLI integration UI conditional rendering - other types do not show message', async () => {
+		for (const type of ['deb', 'rpm', 'unknown']) {
+			cleanup();
+			updateStore.installType = type;
+			updateStore.installTypeInitialized = true;
+
+			mockIPC((cmd) => {
+				if (cmd === 'get_install_type') return type;
+				if (cmd === 'get_cli_status')
+					return { installed: true, version: '1.0.0' };
+			});
+
+			render(UpdateSettings);
+
+			await vi.waitFor(() => {
+				expect(screen.queryByText('updateSettings.cliManagedByApp')).toBeNull();
+			});
+		}
 	});
 
 	it('intercepts markdown link clicks and opens them in default browser', async () => {
