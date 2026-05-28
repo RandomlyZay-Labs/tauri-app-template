@@ -19,6 +19,7 @@ import { uiStore } from '@/stores/uiStore.svelte';
 import {
     Database,
     FolderOpen,
+    Info,
     Rocket,
     RotateCcw,
     Trash2,
@@ -96,39 +97,57 @@ function handleTelemetryToggle(enabled: boolean) {
 			<Card.Title>{t('generalSettings.storageLogs')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-6">
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<label for="storage-data-btn" class="text-sm font-medium leading-none">{t('generalSettings.applicationData')}</label>
-						</div>
-						<Button id="storage-data-btn" variant="outline" onclick={handleOpenData}>
-							<Database class="mr-2 size-4" />
-							{t('generalSettings.openData')}
-						</Button>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('generalSettings.openDataFolder')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<label
+									{...props}
+									for="storage-data-btn"
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('generalSettings.applicationData')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</label>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('generalSettings.openDataFolder')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Button id="storage-data-btn" variant="outline" onclick={handleOpenData}>
+					<Database class="mr-2 size-4" />
+					{t('generalSettings.openData')}
+				</Button>
+			</div>
 
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<label for="storage-logs-btn" class="text-sm font-medium leading-none">{t('generalSettings.systemLogs')}</label>
-						</div>
-						<Button id="storage-logs-btn" variant="outline" onclick={handleOpenLogs}>
-							<FolderOpen class="mr-2 size-4" />
-							{t('generalSettings.openLogs')}
-						</Button>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('generalSettings.viewLogs')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<label
+									{...props}
+									for="storage-logs-btn"
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('generalSettings.systemLogs')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</label>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('generalSettings.viewLogs')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Button id="storage-logs-btn" variant="outline" onclick={handleOpenLogs}>
+					<FolderOpen class="mr-2 size-4" />
+					{t('generalSettings.openLogs')}
+				</Button>
+			</div>
 		</Card.Content>
 	</Card.Root>
 
@@ -137,20 +156,28 @@ function handleTelemetryToggle(enabled: boolean) {
 			<Card.Title>{t('generalSettings.telemetry')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<label for="telemetry-switch" class="text-sm font-medium leading-none">{t('generalSettings.enableTelemetry')}</label>
-							<p class="text-muted-foreground text-xs">{t('generalSettings.telemetryStatus')}</p>
-						</div>
-						<Switch id="telemetry-switch" checked={uiStore.telemetryEnabled} onCheckedChange={handleTelemetryToggle} />
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('generalSettings.telemetryDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<label
+									{...props}
+									for="telemetry-switch"
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('generalSettings.enableTelemetry')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</label>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('generalSettings.telemetryDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Switch id="telemetry-switch" checked={uiStore.telemetryEnabled} onCheckedChange={handleTelemetryToggle} />
+			</div>
 		</Card.Content>
 	</Card.Root>
 
@@ -159,22 +186,31 @@ function handleTelemetryToggle(enabled: boolean) {
 			<Card.Title>{t('generalSettings.onboarding')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<label for="rerun-onboarding-btn" class="text-sm font-medium leading-none">{t('generalSettings.rerunOnboarding')}</label>
-						</div>
-						<Button id="rerun-onboarding-btn" variant="outline" onclick={handleRerunOnboarding}>
-							<Rocket class="mr-2 size-4" />
-							{t('generalSettings.rerunOnboarding')}
-						</Button>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('generalSettings.onboardingDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<label
+									{...props}
+									for="rerun-onboarding-btn"
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('generalSettings.rerunOnboarding')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</label>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('generalSettings.onboardingDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Button id="rerun-onboarding-btn" variant="outline" onclick={handleRerunOnboarding}>
+					<Rocket class="mr-2 size-4" />
+					{t('generalSettings.rerunOnboarding')}
+				</Button>
+			</div>
 		</Card.Content>
 	</Card.Root>
 
@@ -183,41 +219,59 @@ function handleTelemetryToggle(enabled: boolean) {
 			<Card.Title>{t('generalSettings.resetDangerZone')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<label for="reset-prefs-btn" class="text-sm font-medium leading-none">{t('generalSettings.resetPreferences')}</label>
-						</div>
-						<Button id="reset-prefs-btn" variant="outline" onclick={() => (showPrefResetDialog = true)}>
-							<RotateCcw class="mr-2 size-4" />
-							{t('generalSettings.resetDefaults')}
-						</Button>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('generalSettings.restoreDefaultSettings')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<label
+									{...props}
+									for="reset-prefs-btn"
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('generalSettings.resetPreferences')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</label>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('generalSettings.restoreDefaultSettings')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Button id="reset-prefs-btn" variant="outline" onclick={() => (showPrefResetDialog = true)}>
+					<RotateCcw class="mr-2 size-4" />
+					{t('generalSettings.resetDefaults')}
+				</Button>
+			</div>
 
 			<div class="h-px bg-border"></div>
 
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<label for="clear-data-btn" class="text-sm font-medium leading-none text-destructive">{t('generalSettings.clearAllData')}</label>
-						</div>
-						<Button id="clear-data-btn" variant="outline" class="border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive" onclick={() => { deleteConfirmation = ''; showResetDialog = true; }}>
-							<Trash2 class="mr-2 size-4" />
-							{t('generalSettings.resetApplication')}
-						</Button>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('generalSettings.clearAllDataDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<label
+									{...props}
+									for="clear-data-btn"
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help text-destructive"
+								>
+									{t('generalSettings.clearAllData')}
+									<Info class="size-3.5 text-destructive/70" />
+								</label>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('generalSettings.clearAllDataDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Button id="clear-data-btn" variant="outline" class="border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive" onclick={() => { deleteConfirmation = ''; showResetDialog = true; }}>
+					<Trash2 class="mr-2 size-4" />
+					{t('generalSettings.resetApplication')}
+				</Button>
+			</div>
 		</Card.Content>
 	</Card.Root>
 </div>

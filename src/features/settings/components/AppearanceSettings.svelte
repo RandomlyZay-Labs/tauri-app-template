@@ -5,7 +5,7 @@ import { toast } from '@/lib/toast';
 import { getSystemAnimationPreference } from '@/lib/utils';
 import { animationStore } from '@/stores/animationStore.svelte';
 import { THEME_OPTIONS, type Theme, themeStore } from '@/stores/themeStore.svelte';
-import { RotateCcw } from '@lucide/svelte';
+import { Info, RotateCcw } from '@lucide/svelte';
 
 import { Button } from '@/components/ui/button';
 import * as Card from '@/components/ui/card';
@@ -38,80 +38,99 @@ function handleSettingChange(
 	</Card.Header>
 	<Card.Content class="space-y-6">
 		<!-- Theme Mode -->
-		<Tooltip.Root>
-			<Tooltip.Trigger class="w-full text-left">
-				<div class="flex items-center justify-between">
-					<div class="space-y-0.5">
-						<label for="theme-mode" class="text-base font-medium">{t('appearanceSettings.themeMode')}</label>
-					</div>
-					<div class="flex items-center gap-2">
-						<Button
-							variant="ghost"
-							size="icon"
-							class="size-8 text-muted-foreground {themeStore.theme === defaultTheme ? 'invisible' : ''}"
-							onclick={() => handleSettingChange(t('appearanceSettings.themeMode'), () => themeStore.setTheme(defaultTheme))}
-							aria-label={t('appearanceSettings.resetThemeMode')}
-							aria-hidden={themeStore.theme === defaultTheme}
-							tabindex={themeStore.theme === defaultTheme ? -1 : 0}
-						>
-							<RotateCcw class="size-4" />
-						</Button>
-						<Select.Root
-							type="single"
-							value={themeStore.theme}
-							onValueChange={(val) => {
-								handleSettingChange(t('appearanceSettings.themeMode'), () => themeStore.setTheme(val as Theme));
-							}}
-						>
-							<Select.Trigger id="theme-mode" class="h-9 w-40 capitalize">
-								{t(THEME_OPTIONS.find((o) => o.value === themeStore.theme)?.labelKey ?? '')}
-							</Select.Trigger>
-							<Select.Content>
-								{#each THEME_OPTIONS as opt (opt.value)}
-									<Select.Item value={opt.value} class="capitalize">{t(opt.labelKey)}</Select.Item>
-								{/each}
-							</Select.Content>
-						</Select.Root>
-					</div>
-				</div>
-			</Tooltip.Trigger>
-			<Tooltip.Content side="top" align="center">
-				<p>{t('appearanceSettings.selectTheme')}</p>
-			</Tooltip.Content>
-		</Tooltip.Root>
+		<div class="flex items-center justify-between">
+			<div class="space-y-0.5">
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<label
+								{...props}
+								for="theme-mode"
+								class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+							>
+								{t('appearanceSettings.themeMode')}
+								<Info class="size-3.5 text-muted-foreground/70" />
+							</label>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content side="top" align="center">
+						<p>{t('appearanceSettings.selectTheme')}</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</div>
+			<div class="flex items-center gap-2">
+				<Button
+					variant="ghost"
+					size="icon"
+					class="size-8 text-muted-foreground {themeStore.theme === defaultTheme ? 'invisible' : ''}"
+					onclick={() => handleSettingChange(t('appearanceSettings.themeMode'), () => themeStore.setTheme(defaultTheme))}
+					aria-label={t('appearanceSettings.resetThemeMode')}
+					aria-hidden={themeStore.theme === defaultTheme}
+					tabindex={themeStore.theme === defaultTheme ? -1 : 0}
+				>
+					<RotateCcw class="size-4" />
+				</Button>
+				<Select.Root
+					type="single"
+					value={themeStore.theme}
+					onValueChange={(val) => {
+						handleSettingChange(t('appearanceSettings.themeMode'), () => themeStore.setTheme(val as Theme));
+					}}
+				>
+					<Select.Trigger id="theme-mode" class="h-9 w-40 capitalize">
+						{t(THEME_OPTIONS.find((o) => o.value === themeStore.theme)?.labelKey ?? '')}
+					</Select.Trigger>
+					<Select.Content>
+						{#each THEME_OPTIONS as opt (opt.value)}
+							<Select.Item value={opt.value} class="capitalize">{t(opt.labelKey)}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</div>
+		</div>
 
 		<div class="h-px bg-border"></div>
 
-		<Tooltip.Root>
-			<Tooltip.Trigger class="w-full text-left">
-				<div class="flex items-center justify-between">
-					<div class="space-y-0.5">
-						<label for="animations-toggle" class="text-base font-medium block">{t('appearanceSettings.animations')}</label>
-					</div>
-					<div class="flex items-center gap-2">
-						<Button
-							variant="ghost"
-							size="icon"
-							class="size-8 text-muted-foreground {animationStore.animationsEnabled === defaultAnimation ? 'invisible' : ''}"
-							onclick={() => handleSettingChange(t('appearanceSettings.animations'), () => animationStore.setAnimationsEnabled(defaultAnimation))}
-							aria-label={t('appearanceSettings.resetAnimations')}
-							aria-hidden={animationStore.animationsEnabled === defaultAnimation}
-							tabindex={animationStore.animationsEnabled === defaultAnimation ? -1 : 0}
-						>
-							<RotateCcw class="size-4" />
-						</Button>
-						<Switch
-							id="animations-toggle"
-							checked={animationStore.animationsEnabled}
-							onCheckedChange={() => handleSettingChange(t('appearanceSettings.animations'), () => animationStore.setAnimationsEnabled(!animationStore.animationsEnabled))}
-						/>
-					</div>
-				</div>
-			</Tooltip.Trigger>
-			<Tooltip.Content side="top" align="center">
-				<p>{t('appearanceSettings.animationsDescription')}</p>
-			</Tooltip.Content>
-		</Tooltip.Root>
+		<!-- Animations -->
+		<div class="flex items-center justify-between">
+			<div class="space-y-0.5">
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<label
+								{...props}
+								for="animations-toggle"
+								class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+							>
+								{t('appearanceSettings.animations')}
+								<Info class="size-3.5 text-muted-foreground/70" />
+							</label>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content side="top" align="center">
+						<p>{t('appearanceSettings.animationsDescription')}</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</div>
+			<div class="flex items-center gap-2">
+				<Button
+					variant="ghost"
+					size="icon"
+					class="size-8 text-muted-foreground {animationStore.animationsEnabled === defaultAnimation ? 'invisible' : ''}"
+					onclick={() => handleSettingChange(t('appearanceSettings.animations'), () => animationStore.setAnimationsEnabled(defaultAnimation))}
+					aria-label={t('appearanceSettings.resetAnimations')}
+					aria-hidden={animationStore.animationsEnabled === defaultAnimation}
+					tabindex={animationStore.animationsEnabled === defaultAnimation ? -1 : 0}
+				>
+					<RotateCcw class="size-4" />
+				</Button>
+				<Switch
+					id="animations-toggle"
+					checked={animationStore.animationsEnabled}
+					onCheckedChange={() => handleSettingChange(t('appearanceSettings.animations'), () => animationStore.setAnimationsEnabled(!animationStore.animationsEnabled))}
+				/>
+			</div>
+		</div>
 	</Card.Content>
 </Card.Root>
 

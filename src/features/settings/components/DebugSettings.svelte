@@ -18,6 +18,7 @@ import { uiStore } from '@/stores/uiStore.svelte';
 import {
     Bell,
     Download,
+    Info,
     MessageSquare,
     Power,
     RefreshCw,
@@ -103,196 +104,269 @@ function handleExportLogs() {
 		<Card.Content class="space-y-6">
 			<!-- Minimize to Tray -->
 			<div class="space-y-4">
-				<Tooltip.Root>
-					<Tooltip.Trigger class="w-full text-left">
-						<div class="flex items-center justify-between">
-							<div class="space-y-0.5">
-								<span class="text-base font-medium block">{t('debugSettings.minimizeToTray')}</span>
-							</div>
-							<div class="flex items-center gap-2">
-								<Button
-									variant="ghost"
-									size="icon"
-									class="size-8 text-muted-foreground {!trayStore.minimizeToTray ? 'invisible' : ''}"
-									onclick={() => trayStore.setMinimizeToTray(false)}
-									title={t('common.reset')}
-									aria-hidden={!trayStore.minimizeToTray}
-									tabindex={!trayStore.minimizeToTray ? -1 : 0}
-								>
-									<RotateCcw class="size-4" />
-								</Button>
-								<Switch checked={trayStore.minimizeToTray} onCheckedChange={() => trayStore.setMinimizeToTray(!trayStore.minimizeToTray)} />
-							</div>
-						</div>
-					</Tooltip.Trigger>
-					<Tooltip.Content side="top" align="center">
-						<p>{t('debugSettings.minimizeToTrayDescription')}</p>
-					</Tooltip.Content>
-				</Tooltip.Root>
+				<div class="flex items-center justify-between">
+					<div class="space-y-0.5">
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								{#snippet child({ props })}
+									<span
+										{...props}
+										class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+									>
+										{t('debugSettings.minimizeToTray')}
+										<Info class="size-3.5 text-muted-foreground/70" />
+									</span>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content side="top" align="center">
+								<p>{t('debugSettings.minimizeToTrayDescription')}</p>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					</div>
+					<div class="flex items-center gap-2">
+						<Button
+							variant="ghost"
+							size="icon"
+							class="size-8 text-muted-foreground {!trayStore.minimizeToTray ? 'invisible' : ''}"
+							onclick={() => trayStore.setMinimizeToTray(false)}
+							title={t('common.reset')}
+							aria-hidden={!trayStore.minimizeToTray}
+							tabindex={!trayStore.minimizeToTray ? -1 : 0}
+						>
+							<RotateCcw class="size-4" />
+						</Button>
+						<Switch checked={trayStore.minimizeToTray} onCheckedChange={() => trayStore.setMinimizeToTray(!trayStore.minimizeToTray)} />
+					</div>
+				</div>
 
-				<Tooltip.Root>
-					<Tooltip.Trigger class="w-full text-left" disabled={!trayStore.minimizeToTray}>
-						<div class="ml-6 flex items-center justify-between border-l pl-4">
-							<div class="space-y-0.5">
-								<span class="text-base font-medium block {!trayStore.minimizeToTray ? 'text-muted-foreground' : ''}">{t('debugSettings.notifyWhenMinimized')}</span>
-							</div>
-							<div class="flex items-center gap-2">
-								<Button
-									variant="ghost"
-									size="icon"
-									class="size-8 text-muted-foreground {trayStore.notifyOnMinimize ? 'invisible' : ''}"
-									onclick={() => trayStore.setNotifyOnMinimize(true)}
-									title={t('common.reset')}
-									disabled={!trayStore.minimizeToTray}
-									aria-hidden={trayStore.notifyOnMinimize}
-									tabindex={trayStore.notifyOnMinimize ? -1 : 0}
-								>
-									<RotateCcw class="size-4" />
-								</Button>
-								<Switch checked={trayStore.notifyOnMinimize} disabled={!trayStore.minimizeToTray} onCheckedChange={() => trayStore.setNotifyOnMinimize(!trayStore.notifyOnMinimize)} />
-							</div>
-						</div>
-					</Tooltip.Trigger>
-					<Tooltip.Content side="top" align="center">
-						<p>{t('debugSettings.notifyWhenMinimizedDescription')}</p>
-					</Tooltip.Content>
-				</Tooltip.Root>
+				<div class="ml-6 flex items-center justify-between border-l pl-4">
+					<div class="space-y-0.5">
+						<Tooltip.Root>
+							<Tooltip.Trigger disabled={!trayStore.minimizeToTray}>
+								{#snippet child({ props })}
+									<span
+										{...props}
+										class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help {!trayStore.minimizeToTray ? 'text-muted-foreground' : ''}"
+									>
+										{t('debugSettings.notifyWhenMinimized')}
+										<Info class="size-3.5 text-muted-foreground/70" />
+									</span>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content side="top" align="center">
+								<p>{t('debugSettings.notifyWhenMinimizedDescription')}</p>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					</div>
+					<div class="flex items-center gap-2">
+						<Button
+							variant="ghost"
+							size="icon"
+							class="size-8 text-muted-foreground {trayStore.notifyOnMinimize ? 'invisible' : ''}"
+							onclick={() => trayStore.setNotifyOnMinimize(true)}
+							title={t('common.reset')}
+							disabled={!trayStore.minimizeToTray}
+							aria-hidden={trayStore.notifyOnMinimize}
+							tabindex={trayStore.notifyOnMinimize ? -1 : 0}
+						>
+							<RotateCcw class="size-4" />
+						</Button>
+						<Switch checked={trayStore.notifyOnMinimize} disabled={!trayStore.minimizeToTray} onCheckedChange={() => trayStore.setNotifyOnMinimize(!trayStore.notifyOnMinimize)} />
+					</div>
+				</div>
 			</div>
 
 			<div class="h-px bg-border"></div>
 
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between border-b pb-4">
-						<div class="space-y-0.5">
-							<span class="text-base font-medium block">{t('debugSettings.developerTools')}</span>
-						</div>
-						<div class="flex items-center gap-2">
-							<Button
-								variant="ghost"
-								size="icon"
-								class="size-8 text-muted-foreground {!uiStore.contextMenuEnabled ? 'invisible' : ''}"
-								onclick={() => uiStore.setContextMenuEnabled(false)}
-								title={t('common.reset')}
-								aria-hidden={!uiStore.contextMenuEnabled}
-								tabindex={!uiStore.contextMenuEnabled ? -1 : 0}
-							>
-								<RotateCcw class="size-4" />
-							</Button>
-							<Switch checked={uiStore.contextMenuEnabled} onCheckedChange={() => uiStore.setContextMenuEnabled(!uiStore.contextMenuEnabled)} />
-						</div>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('debugSettings.developerToolsDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<!-- Developer Tools -->
+			<div class="flex items-center justify-between border-b pb-4">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<span
+									{...props}
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('debugSettings.developerTools')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</span>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('debugSettings.developerToolsDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<div class="flex items-center gap-2">
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground {!uiStore.contextMenuEnabled ? 'invisible' : ''}"
+						onclick={() => uiStore.setContextMenuEnabled(false)}
+						title={t('common.reset')}
+						aria-hidden={!uiStore.contextMenuEnabled}
+						tabindex={!uiStore.contextMenuEnabled ? -1 : 0}
+					>
+						<RotateCcw class="size-4" />
+					</Button>
+					<Switch checked={uiStore.contextMenuEnabled} onCheckedChange={() => uiStore.setContextMenuEnabled(!uiStore.contextMenuEnabled)} />
+				</div>
+			</div>
 
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between border-b pb-4">
-						<div class="space-y-0.5">
-							<span class="text-base font-medium block">{t('debugSettings.debugMode')}</span>
-						</div>
-						<div class="flex items-center gap-2">
-							<Button
-								variant="ghost"
-								size="icon"
-								class="size-8 text-muted-foreground {!debugOn ? 'invisible' : ''}"
-								onclick={() => uiStore.setLogLevel('info')}
-								title={t('common.reset')}
-								aria-hidden={!debugOn}
-								tabindex={!debugOn ? -1 : 0}
-							>
-								<RotateCcw class="size-4" />
-							</Button>
-							<Switch checked={debugOn} onCheckedChange={() => uiStore.setLogLevel(debugOn ? 'info' : 'debug')} />
-						</div>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('debugSettings.debugModeDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<!-- Debug Mode -->
+			<div class="flex items-center justify-between border-b pb-4">
+				<div>
+					<div class="hidden">Debug Mode</div>
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<div
+									{...props}
+									class="space-y-0.5 cursor-help"
+								>
+									<span class="text-sm font-medium inline-flex items-center gap-1.5">
+										{t('debugSettings.debugMode')}
+										<Info class="size-3.5 text-muted-foreground/70" />
+									</span>
+								</div>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('debugSettings.debugModeDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<div class="flex items-center gap-2">
+					<Button
+						variant="ghost"
+						size="icon"
+						class="size-8 text-muted-foreground {!debugOn ? 'invisible' : ''}"
+						onclick={() => uiStore.setLogLevel('info')}
+						title={t('common.reset')}
+						aria-hidden={!debugOn}
+						tabindex={!debugOn ? -1 : 0}
+					>
+						<RotateCcw class="size-4" />
+					</Button>
+					<Switch checked={debugOn} onCheckedChange={() => uiStore.setLogLevel(debugOn ? 'info' : 'debug')} />
+				</div>
+			</div>
 
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between border-b pb-4">
-						<div class="space-y-0.5">
-							<span class="text-base font-medium block">{t('debugSettings.nativeFeatures')}</span>
-						</div>
-						<div class="flex gap-2">
-							<Button variant="outline" onclick={handleTestNotification}>
-								<Bell class="mr-2 size-4" />
-								{t('debugSettings.notification')}
-							</Button>
-							<Button variant="outline" onclick={handleTestNativeDialog}>
-								<MessageSquare class="mr-2 size-4" />
-								{t('debugSettings.nativeDialog')}
-							</Button>
-						</div>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('debugSettings.nativeFeaturesDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<!-- Native Features -->
+			<div class="flex items-center justify-between border-b pb-4">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<span
+									{...props}
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('debugSettings.nativeFeatures')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</span>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('debugSettings.nativeFeaturesDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<div class="flex gap-2">
+					<Button variant="outline" onclick={handleTestNotification}>
+						<Bell class="mr-2 size-4" />
+						{t('debugSettings.notification')}
+					</Button>
+					<Button variant="outline" onclick={handleTestNativeDialog}>
+						<MessageSquare class="mr-2 size-4" />
+						{t('debugSettings.nativeDialog')}
+					</Button>
+				</div>
+			</div>
 
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between border-b pb-4">
-						<div class="space-y-0.5">
-							<span class="text-base font-medium block">{t('debugSettings.processControl')}</span>
-						</div>
-						<div class="flex gap-2">
-							<Button variant="outline" onclick={handleRelaunch}>
-								<RefreshCw class="mr-2 size-4" />
-								{t('debugSettings.relaunch')}
-							</Button>
-							<Button variant="outline" onclick={handleExit}>
-								<Power class="mr-2 size-4" />
-								{t('debugSettings.exit')}
-							</Button>
-						</div>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('debugSettings.processControlDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<!-- Process Control -->
+			<div class="flex items-center justify-between border-b pb-4">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<span
+									{...props}
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('debugSettings.processControl')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</span>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('debugSettings.processControlDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<div class="flex gap-2">
+					<Button variant="outline" onclick={handleRelaunch}>
+						<RefreshCw class="mr-2 size-4" />
+						{t('debugSettings.relaunch')}
+					</Button>
+					<Button variant="outline" onclick={handleExit}>
+						<Power class="mr-2 size-4" />
+						{t('debugSettings.exit')}
+					</Button>
+				</div>
+			</div>
 
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between border-b pb-4">
-						<div class="space-y-0.5">
-							<span class="text-base font-medium block">{t('debugSettings.exportDiagnostics')}</span>
-						</div>
-						<Button variant="outline" onclick={handleExportLogs}>
-							<Download class="mr-2 size-4" />
-							{t('debugSettings.exportLogs')}
-						</Button>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('debugSettings.exportDiagnosticsDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<!-- Export Diagnostics -->
+			<div class="flex items-center justify-between border-b pb-4">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<span
+									{...props}
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('debugSettings.exportDiagnostics')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</span>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('debugSettings.exportDiagnosticsDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Button variant="outline" onclick={handleExportLogs}>
+					<Download class="mr-2 size-4" />
+					{t('debugSettings.exportLogs')}
+				</Button>
+			</div>
 
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<span class="text-base font-medium block">{t('debugSettings.crashTest')}</span>
-						</div>
-						<Button variant="destructive" onclick={() => (shouldCrash = true)}>
-							{t('debugSettings.triggerError')}
-						</Button>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('debugSettings.crashTestDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<!-- Crash Test -->
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<span
+									{...props}
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('debugSettings.crashTest')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</span>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('debugSettings.crashTestDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Button variant="destructive" onclick={() => (shouldCrash = true)}>
+					{t('debugSettings.triggerError')}
+				</Button>
+			</div>
 		</Card.Content>
 	</Card.Root>
 </div>

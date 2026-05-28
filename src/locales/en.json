@@ -98,12 +98,10 @@
 		"rerunOnboarding": "Re-run Onboarding",
 		"onboardingDescription": "Re-run the initial setup process again.",
 		"telemetry": "Telemetry",
-		"telemetryDescription": "Manage anonymous usage data and error reporting.",
-		"enableTelemetry": "Enable Analytics & Error Tracking",
-		"telemetryStatus": "Opt-in to help us improve the app with anonymous data."
+		"telemetryDescription": "Manage anonymous usage data and error reporting. Opt-in to help us improve the app with anonymous data.",
+		"enableTelemetry": "Enable Analytics & Error Tracking"
 	},
 	"cliSettings": {
-		"description": "Manage the command-line interface for tauri-app-template.",
 		"status": "CLI Status",
 		"notInstalled": "Not Installed",
 		"upToDate": "Up to Date",
@@ -122,10 +120,10 @@
 	"appearanceSettings": {
 		"title": "Appearance",
 		"themeMode": "Theme Mode",
-		"selectTheme": "Select your preferred color theme",
+		"selectTheme": "Select your preferred color theme.",
 		"resetThemeMode": "Reset Theme Mode to default",
 		"animations": "Animations",
-		"animationsDescription": "Enable or disable interface animations",
+		"animationsDescription": "Enable or disable interface animations.",
 		"resetAnimations": "Reset Animations to default",
 		"restartRequired": "Restart Required",
 		"restartDescription": "Some changes require a full application restart to take effect.",
@@ -312,7 +310,6 @@
 	},
 	"updateSettings": {
 		"title": "Application Updates",
-		"description": "Manage automatic and manual application updates.",
 		"status": "Update Status",
 		"resetAutoCheck": "Reset automatic update checks to default",
 		"checkUpdates": "Check for Updates",

@@ -6,7 +6,7 @@ import { createBackup, deleteBackup, listBackups, restoreBackup } from '@/lib/ba
 import { t } from '@/lib/i18n';
 import { formatSize } from '@/lib/utils';
 import { BACKUP_INTERVALS, backupStore } from '@/stores/backupStore.svelte';
-import { Archive, HardDriveDownload, Loader2, RotateCcw, Trash2 } from '@lucide/svelte';
+import { Archive, HardDriveDownload, Info, Loader2, RotateCcw, Trash2 } from '@lucide/svelte';
 import { format } from 'date-fns';
 import { onMount } from 'svelte';
 
@@ -100,22 +100,30 @@ function handleRestore() {
 			<Card.Title>{t('backupSettings.automatedBackups')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-6">
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<span class="text-base font-medium block">{t('backupSettings.enableAutoBackup')}</span>
-						</div>
-						<Switch
-							checked={backupStore.enabled}
-							onCheckedChange={() => backupStore.setEnabled(!backupStore.enabled)}
-						/>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('backupSettings.automatedBackupsDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<span
+									{...props}
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('backupSettings.enableAutoBackup')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</span>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('backupSettings.automatedBackupsDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<Switch
+					checked={backupStore.enabled}
+					onCheckedChange={() => backupStore.setEnabled(!backupStore.enabled)}
+				/>
+			</div>
 
 			{#if backupStore.enabled}
 				<div class="grid gap-6 md:grid-cols-2">

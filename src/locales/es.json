@@ -98,12 +98,10 @@
 		"rerunOnboarding": "Volver a ejecutar bienvenida",
 		"onboardingDescription": "Vuelve a ejecutar el proceso de configuración inicial.",
 		"telemetry": "Telemetría",
-		"telemetryDescription": "Gestionar datos de uso anónimos e informes de errores.",
-		"enableTelemetry": "Habilitar análisis y seguimiento de errores",
-		"telemetryStatus": "Participa para ayudarnos a mejorar la aplicación con datos anónimos."
+		"telemetryDescription": "Gestionar datos de uso anónimos e informes de errores. Participa para ayudarnos a mejorar la aplicación con datos anónimos.",
+		"enableTelemetry": "Habilitar análisis y seguimiento de errores"
 	},
 	"cliSettings": {
-		"description": "Gestionar la interfaz de línea de comandos para tauri-app-template.",
 		"status": "Estado de CLI",
 		"notInstalled": "No instalado",
 		"upToDate": "Actualizado",
@@ -122,10 +120,10 @@
 	"appearanceSettings": {
 		"title": "Apariencia",
 		"themeMode": "Modo de tema",
-		"selectTheme": "Selecciona tu tema de color preferido",
+		"selectTheme": "Selecciona tu tema de color preferido.",
 		"resetThemeMode": "Restablecer modo de tema",
 		"animations": "Animaciones",
-		"animationsDescription": "Habilitar o deshabilitar animaciones de interfaz",
+		"animationsDescription": "Habilitar o deshabilitar animaciones de interfaz.",
 		"resetAnimations": "Restablecer animaciones",
 		"restartRequired": "Reinicio necesario",
 		"restartDescription": "Algunos cambios requieren un reinicio completo de la aplicación para surtir efecto.",
@@ -312,7 +310,6 @@
 	},
 	"updateSettings": {
 		"title": "Actualizaciones de la aplicación",
-		"description": "Gestiona las actualizaciones automáticas y manuales de la aplicación.",
 		"status": "Estado de la actualización",
 		"resetAutoCheck": "Restablecer la búsqueda automática de actualizaciones al valor predeterminado",
 		"checkUpdates": "Buscar actualizaciones",

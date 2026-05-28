@@ -260,47 +260,54 @@ $effect(() => {
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{t('updateSettings.title')}</Card.Title>
-			<Card.Description>{t('updateSettings.description')}</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-6">
 			<!-- Auto check updates toggle -->
-			<Tooltip.Root>
-				<Tooltip.Trigger class="w-full text-left">
-					<div class="flex items-center justify-between">
-						<div class="space-y-0.5">
-							<label for="auto-check-switch" class="text-sm font-medium leading-none">{t('updateSettings.autoCheck')}</label>
-							<p class="text-muted-foreground text-xs">{t('updateSettings.autoCheckDescription')}</p>
-						</div>
-						<div class="flex items-center gap-2">
-							<Button
-								variant="ghost"
-								size="icon"
-								class={cn("size-8 text-muted-foreground", { 'invisible': uiStore.autoCheckUpdates === defaultAutoCheck })}
-								onclick={() => {
-									uiStore.setAutoCheckUpdates(defaultAutoCheck);
-									toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
-								}}
-								aria-label={t('updateSettings.resetAutoCheck')}
-								aria-hidden={uiStore.autoCheckUpdates === defaultAutoCheck}
-								tabindex={uiStore.autoCheckUpdates === defaultAutoCheck ? -1 : 0}
-							>
-								<RotateCcw class="size-4" />
-							</Button>
-							<Switch
-								id="auto-check-switch"
-								checked={uiStore.autoCheckUpdates}
-								onCheckedChange={(enabled) => {
-									uiStore.setAutoCheckUpdates(enabled);
-									toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
-								}}
-							/>
-						</div>
-					</div>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" align="center">
-					<p>{t('updateSettings.autoCheckDescription')}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<div class="flex items-center justify-between">
+				<div class="space-y-0.5">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<label
+									{...props}
+									for="auto-check-switch"
+									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
+								>
+									{t('updateSettings.autoCheck')}
+									<Info class="size-3.5 text-muted-foreground/70" />
+								</label>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="top" align="center">
+							<p>{t('updateSettings.autoCheckDescription')}</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
+				<div class="flex items-center gap-2">
+					<Button
+						variant="ghost"
+						size="icon"
+						class={cn("size-8 text-muted-foreground", { 'invisible': uiStore.autoCheckUpdates === defaultAutoCheck })}
+						onclick={() => {
+							uiStore.setAutoCheckUpdates(defaultAutoCheck);
+							toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
+						}}
+						aria-label={t('updateSettings.resetAutoCheck')}
+						aria-hidden={uiStore.autoCheckUpdates === defaultAutoCheck}
+						tabindex={uiStore.autoCheckUpdates === defaultAutoCheck ? -1 : 0}
+					>
+						<RotateCcw class="size-4" />
+					</Button>
+					<Switch
+						id="auto-check-switch"
+						checked={uiStore.autoCheckUpdates}
+						onCheckedChange={(enabled) => {
+							uiStore.setAutoCheckUpdates(enabled);
+							toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
+						}}
+					/>
+				</div>
+			</div>
 
 			<div class="h-px bg-border"></div>
 
@@ -500,7 +507,6 @@ $effect(() => {
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{t('updateSettings.cliSection')}</Card.Title>
-			<Card.Description>{t('cliSettings.description')}</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-6">
 			<div class="flex items-center justify-between border-b pb-4">
