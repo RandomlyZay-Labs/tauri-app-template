@@ -65,7 +65,6 @@
 		"appearance": "Apariencia",
 		"backups": "Copias de seguridad",
 		"debug": "Depuración",
-		"version": "Versión",
 		"sizeUnit": "MB"
 	},
 	"generalSettings": {
@@ -350,6 +349,11 @@
 		"bannerDismiss": "Descartar notificación de actualización",
 		"cliSection": "Integración de CLI",
 		"cliManagedByApp": "La CLI se actualiza automáticamente con la aplicación.",
-		"cliCurrentVersion": "Versión Actual"
+		"cliCurrentVersion": "Versión Actual",
+		"releasedOn": "Publicado el {{date}}",
+		"translate": "Traducir",
+		"translating": "Traduciendo...",
+		"showOriginal": "Ver original",
+		"changelog": "Historial de Cambios"
 	}
 }

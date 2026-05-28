@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Button } from '@/components/ui/button';
+import { marked } from 'marked';
 import * as Card from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import * as Tooltip from '@/components/ui/tooltip';
@@ -7,7 +8,7 @@ import * as Dialog from '@/components/ui/dialog';
 import { getAppVersion } from '@/lib/app-version.svelte';
 import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
-import { getCliStatus, installCli } from '@/lib/system-utils';
+import { getCliStatus, installCli, openExternalLink } from '@/lib/system-utils';
 import { cn } from '@/lib/utils';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
@@ -23,6 +24,8 @@ import {
 	RefreshCw,
 	RotateCcw,
 	Terminal,
+	Globe,
+	Languages,
 } from '@lucide/svelte';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { onMount } from 'svelte';
@@ -37,6 +40,140 @@ let relaunchDialogOpen = $state(false);
 const appVersion = $derived(getAppVersion());
 const commandText = 'tauri-app-template-cli --help';
 const defaultAutoCheck = true;
+
+function formatUpdateDate(dateString: string | undefined): string | null {
+	if (!dateString) return null;
+	try {
+		const date = new Date(dateString);
+		if (isNaN(date.getTime())) {
+			return dateString;
+		}
+		return date.toLocaleDateString('en-US', {
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric'
+		});
+	} catch {
+		return dateString;
+	}
+}
+
+let translatedText = $state<string | null>(null);
+let isTranslating = $state(false);
+let showTranslated = $state(false);
+let githubChangelog = $state<string | null>(null);
+let isFetchingChangelog = $state(false);
+
+const isNotEnglish = $derived(
+	typeof navigator !== 'undefined' &&
+	navigator.language?.split('-')[0] !== 'en'
+);
+
+const targetLang = $derived(
+	typeof navigator !== 'undefined'
+		? navigator.language?.split('-')[0] || 'en'
+		: 'en'
+);
+
+async function fetchGithubChangelog(version: string) {
+	isFetchingChangelog = true;
+	githubChangelog = null;
+	try {
+		const response = await fetch(
+			`https://api.github.com/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v${version}`,
+			{ headers: { Accept: 'application/vnd.github+json' } }
+		);
+		if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
+		const data = await response.json() as { body?: string };
+		githubChangelog = data.body ?? null;
+	} catch (err) {
+		console.error('Failed to fetch GitHub changelog:', err);
+	} finally {
+		isFetchingChangelog = false;
+	}
+}
+
+$effect(() => {
+	// Reset translation state and fetch the changelog whenever the available version changes
+	if (updateStore.version) {
+		translatedText = null;
+		showTranslated = false;
+		void fetchGithubChangelog(updateStore.version);
+	} else {
+		githubChangelog = null;
+	}
+});
+
+async function handleTranslateToggle() {
+	if (showTranslated) {
+		showTranslated = false;
+		return;
+	}
+
+	if (translatedText) {
+		showTranslated = true;
+		return;
+	}
+
+	if (!githubChangelog) return;
+
+	isTranslating = true;
+	try {
+		const translated = await translateText(githubChangelog, targetLang);
+		translatedText = translated;
+		showTranslated = true;
+	} catch (err) {
+		toast.error(t('errors.unexpectedError'));
+		console.error('Translation failed:', err);
+	} finally {
+		isTranslating = false;
+	}
+}
+
+async function translateText(text: string, lang: string): Promise<string> {
+	const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Translation request failed: ${response.status}`);
+	}
+	const data = await response.json();
+	if (Array.isArray(data) && Array.isArray(data[0])) {
+		return data[0].map((segment) => {
+			if (Array.isArray(segment) && typeof segment[0] === 'string') {
+				return segment[0];
+			}
+			return '';
+		}).join('');
+	}
+	throw new Error('Invalid translation response format');
+}
+
+const parsedMarkdown = $derived.by(() => {
+	const raw = showTranslated && translatedText ? translatedText : (githubChangelog || '');
+	return marked.parse(raw) as string;
+});
+
+function linkInterceptor(node: HTMLElement) {
+	const handleLinkClick = (event: MouseEvent) => {
+		const target = event.target as HTMLElement;
+		const anchor = target.closest('a');
+		if (anchor) {
+			const href = anchor.getAttribute('href');
+			if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+				event.preventDefault();
+				void openExternalLink(href);
+			}
+		}
+	};
+
+	node.addEventListener('click', handleLinkClick);
+
+	return {
+		destroy() {
+			node.removeEventListener('click', handleLinkClick);
+		}
+	};
+}
 
 async function refreshCliStatus() {
 	let status: { installed: boolean; version: string | null } | null = null;
@@ -225,12 +362,48 @@ $effect(() => {
 					<div transition:slide={{ duration: 200 }} class="mt-4 p-4 rounded-lg border bg-card text-card-foreground space-y-4">
 						<div class="space-y-1">
 							<h4 class="text-sm font-semibold">{t('updateSettings.updateAvailableTitle')}</h4>
-							<p class="text-xs text-muted-foreground">{t('settings.version')}: {updateStore.version} {#if updateStore.date}({updateStore.date}){/if}</p>
+							{#if updateStore.date}
+								<p class="text-xs text-muted-foreground">
+									{t('updateSettings.releasedOn', { date: formatUpdateDate(updateStore.date) })}
+								</p>
+							{/if}
 						</div>
 
-						{#if updateStore.body}
-							<div class="text-xs max-h-32 overflow-y-auto p-2 bg-secondary/30 rounded border">
-								<p class="font-mono whitespace-pre-wrap">{updateStore.body}</p>
+						{#if githubChangelog !== null || isFetchingChangelog}
+							<div class="space-y-2">
+								<div class="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+									<span>{t('updateSettings.changelog')}</span>
+									{#if isNotEnglish && githubChangelog}
+										<Button 
+											variant="ghost" 
+											size="xs" 
+											class="h-7 text-[10px] gap-1 hover:bg-secondary px-2" 
+											onclick={handleTranslateToggle}
+											disabled={isTranslating}
+										>
+											{#if isTranslating}
+												<RefreshCw class="size-3 animate-spin" />
+												{t('updateSettings.translating')}
+											{:else}
+												<Languages class="size-3" />
+												{showTranslated ? t('updateSettings.showOriginal') : t('updateSettings.translate')}
+											{/if}
+										</Button>
+									{/if}
+								</div>
+								{#if isFetchingChangelog}
+									<div class="flex items-center gap-2 text-xs text-muted-foreground p-3">
+										<RefreshCw class="size-3 animate-spin" />
+										<span>{t('common.loading')}...</span>
+									</div>
+								{:else}
+									<div 
+										class="text-xs p-3 bg-secondary/30 rounded-lg border changelog-content"
+										use:linkInterceptor
+									>
+										{@html parsedMarkdown}
+									</div>
+								{/if}
 							</div>
 						{/if}
 
@@ -480,3 +653,104 @@ $effect(() => {
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<style>
+.changelog-content :global(h1),
+.changelog-content :global(h2),
+.changelog-content :global(h3) {
+	font-weight: 600;
+	margin-top: 0.75rem;
+	margin-bottom: 0.5rem;
+	color: var(--color-foreground, currentColor);
+}
+.changelog-content :global(h1) { font-size: 1.125rem; }
+.changelog-content :global(h2) { font-size: 1rem; }
+.changelog-content :global(h3) { font-size: 0.875rem; }
+
+.changelog-content :global(h4),
+.changelog-content :global(h5),
+.changelog-content :global(h6) {
+	font-weight: 600;
+	margin-top: 0.5rem;
+	margin-bottom: 0.25rem;
+	color: var(--color-foreground, currentColor);
+}
+.changelog-content :global(h4) { font-size: 0.825rem; }
+.changelog-content :global(h5) { font-size: 0.775rem; }
+.changelog-content :global(h6) { font-size: 0.75rem; }
+
+.changelog-content :global(p) {
+	margin-bottom: 0.5rem;
+	line-height: 1.5;
+}
+
+.changelog-content :global(strong),
+.changelog-content :global(b) {
+	font-weight: 700;
+}
+
+.changelog-content :global(em),
+.changelog-content :global(i) {
+	font-style: italic;
+}
+
+.changelog-content :global(blockquote) {
+	border-left: 3px solid var(--color-border, currentColor);
+	padding-left: 0.75rem;
+	color: var(--color-muted-foreground, currentColor);
+	font-style: italic;
+	margin-top: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.changelog-content :global(ul) {
+	list-style-type: disc;
+	padding-left: 1.25rem;
+	margin-bottom: 0.5rem;
+}
+
+.changelog-content :global(ol) {
+	list-style-type: decimal;
+	padding-left: 1.25rem;
+	margin-bottom: 0.5rem;
+}
+
+.changelog-content :global(li) {
+	margin-bottom: 0.25rem;
+}
+
+.changelog-content :global(pre) {
+	background-color: var(--color-muted, rgba(120, 120, 120, 0.1));
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	overflow-x: auto;
+	margin-top: 0.5rem;
+	margin-bottom: 0.5rem;
+	border: 1px solid var(--color-border, rgba(120, 120, 120, 0.2));
+}
+
+.changelog-content :global(pre code) {
+	background-color: transparent;
+	padding: 0;
+	font-size: 0.85em;
+	border-radius: 0;
+	border: none;
+}
+
+.changelog-content :global(code) {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	font-size: 0.85em;
+	background-color: var(--color-muted, rgba(120, 120, 120, 0.15));
+	padding: 0.125rem 0.25rem;
+	border-radius: 0.25rem;
+}
+
+.changelog-content :global(a) {
+	color: var(--color-primary, #3b82f6);
+	text-decoration: underline;
+}
+
+.changelog-content :global(a:hover) {
+	opacity: 0.8;
+}
+</style>

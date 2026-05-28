@@ -65,7 +65,6 @@
 		"appearance": "Appearance",
 		"backups": "Backups",
 		"debug": "Debug",
-		"version": "Version",
 		"sizeUnit": "MB"
 	},
 	"generalSettings": {
@@ -350,6 +349,11 @@
 		"bannerDismiss": "Dismiss update notification",
 		"cliSection": "CLI Integration",
 		"cliManagedByApp": "CLI updates automatically with the application.",
-		"cliCurrentVersion": "Current Version"
+		"cliCurrentVersion": "Current Version",
+		"releasedOn": "Released on {{date}}",
+		"translate": "Translate",
+		"translating": "Translating...",
+		"showOriginal": "Show Original",
+		"changelog": "Release Changelog"
 	}
 }

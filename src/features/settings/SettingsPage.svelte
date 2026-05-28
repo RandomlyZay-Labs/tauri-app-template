@@ -76,9 +76,6 @@ $effect(() => {
 				<Tabs.Content value="general" class="mt-6">
 					<GeneralSettings />
 				</Tabs.Content>
-				<Tabs.Content value="updates" class="mt-6">
-					<UpdateSettings />
-				</Tabs.Content>
 				<Tabs.Content value="appearance" class="mt-6">
 					<AppearanceSettings />
 				</Tabs.Content>
@@ -87,6 +84,9 @@ $effect(() => {
 				</Tabs.Content>
 				<Tabs.Content value="debug" class="mt-6">
 					<DebugSettings />
+				</Tabs.Content>
+				<Tabs.Content value="updates" class="mt-6">
+					<UpdateSettings />
 				</Tabs.Content>
 			</Tabs.Root>
 		</div>

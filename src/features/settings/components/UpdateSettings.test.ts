@@ -1,6 +1,7 @@
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as systemUtils from '@/lib/system-utils';
 import { networkStore } from '@/stores/networkStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
@@ -43,6 +44,18 @@ describe('UpdateSettings', () => {
 				return { installed: true, version: '1.0.0' };
 			if (cmd === 'install_cli') return null;
 		});
+
+		// Mock global fetch for GitHub changelog API
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						body: 'Release notes with a [GitHub Link](https://github.com)',
+					}),
+			}),
+		);
 	});
 
 	afterEach(async () => {
@@ -109,7 +122,6 @@ describe('UpdateSettings', () => {
 		updateStore.status = 'available';
 		updateStore.version = '2.0.0';
 		updateStore.date = '2026-05-21';
-		updateStore.body = 'Release notes';
 		updateStore.activeUpdate = {} as unknown as Update;
 
 		const spy = vi
@@ -121,10 +133,12 @@ describe('UpdateSettings', () => {
 		expect(
 			screen.getByText('updateSettings.updateAvailableTitle'),
 		).toBeTruthy();
-		expect(
-			screen.getByText('settings.version: 2.0.0 (2026-05-21)'),
-		).toBeTruthy();
-		expect(screen.getByText('Release notes')).toBeTruthy();
+		expect(screen.getByText('updateSettings.releasedOn')).toBeTruthy();
+
+		// Changelog is fetched asynchronously from the GitHub API
+		await vi.waitFor(() => {
+			expect(screen.getByText(/Release notes/)).toBeTruthy();
+		});
 
 		const downloadBtn = screen.getByText('updateSettings.downloadAndInstall');
 		await fireEvent.click(downloadBtn);
@@ -279,5 +293,35 @@ describe('UpdateSettings', () => {
 		await vi.waitFor(() => {
 			expect(screen.queryByText('updateSettings.cliManagedByApp')).toBeNull();
 		});
+	});
+
+	it('intercepts markdown link clicks and opens them in default browser', async () => {
+		updateStore.status = 'available';
+		updateStore.version = '2.0.0';
+		updateStore.date = '2026-05-21';
+		updateStore.activeUpdate = {} as unknown as Update;
+
+		const spy = vi
+			.spyOn(systemUtils, 'openExternalLink')
+			.mockResolvedValue(undefined);
+
+		render(UpdateSettings);
+
+		// Wait for changelog with link to render
+		let link: HTMLAnchorElement | null = null;
+		await vi.waitFor(() => {
+			link = screen.getByText('GitHub Link') as HTMLAnchorElement;
+			expect(link).toBeTruthy();
+		});
+
+		if (!link) {
+			throw new Error('Link element not found');
+		}
+
+		// Trigger click event on the link
+		await fireEvent.click(link);
+
+		// Verify openExternalLink was called
+		expect(spy).toHaveBeenCalledWith('https://github.com');
 	});
 });
