@@ -93,7 +93,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             app.manage(AppState {
                 db: db_pool.clone(),
                 log_dir: app_log_dir,
-                app_data_dir: Some(app_data_dir),
+                app_data_dir: Some(app_data_dir.clone()),
                 tray_settings: Mutex::new(TraySettings {
                     minimize_to_tray: false,
                     notify_on_minimize: true,
@@ -146,6 +146,12 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             // 10. Linux Theme Watcher (Freedesktop portal)
             #[cfg(target_os = "linux")]
             services::theme_service::spawn_theme_watcher(app.handle().clone());
+
+            // 11. Write app version for CLI parity check
+            let version_file = app_data_dir.join("app_version.txt");
+            if let Err(e) = std::fs::write(&version_file, env!("CARGO_PKG_VERSION")) {
+                log::error!("Failed to write app version file: {}", e);
+            }
 
             Ok(())
         })

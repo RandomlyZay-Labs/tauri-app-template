@@ -61,11 +61,10 @@
 		"title": "Configuración",
 		"description": "Administra las preferencias de tu aplicación y la configuración del sistema.",
 		"general": "General",
+		"updates": "Actualizaciones",
 		"appearance": "Apariencia",
 		"backups": "Copias de seguridad",
-		"cli": "CLI",
 		"debug": "Depuración",
-		"version": "Versión",
 		"sizeUnit": "MB"
 	},
 	"generalSettings": {
@@ -99,13 +98,10 @@
 		"rerunOnboarding": "Volver a ejecutar bienvenida",
 		"onboardingDescription": "Vuelve a ejecutar el proceso de configuración inicial.",
 		"telemetry": "Telemetría",
-		"telemetryDescription": "Gestionar datos de uso anónimos e informes de errores.",
-		"enableTelemetry": "Habilitar análisis y seguimiento de errores",
-		"telemetryStatus": "Participa para ayudarnos a mejorar la aplicación con datos anónimos."
+		"telemetryDescription": "Gestionar datos de uso anónimos e informes de errores. Participa para ayudarnos a mejorar la aplicación con datos anónimos.",
+		"enableTelemetry": "Habilitar análisis y seguimiento de errores"
 	},
 	"cliSettings": {
-		"title": "Integración de CLI",
-		"description": "Gestionar la interfaz de línea de comandos para tauri-app-template.",
 		"status": "Estado de CLI",
 		"notInstalled": "No instalado",
 		"upToDate": "Actualizado",
@@ -124,10 +120,10 @@
 	"appearanceSettings": {
 		"title": "Apariencia",
 		"themeMode": "Modo de tema",
-		"selectTheme": "Selecciona tu tema de color preferido",
+		"selectTheme": "Selecciona tu tema de color preferido.",
 		"resetThemeMode": "Restablecer modo de tema",
 		"animations": "Animaciones",
-		"animationsDescription": "Habilitar o deshabilitar animaciones de interfaz",
+		"animationsDescription": "Habilitar o deshabilitar animaciones de interfaz.",
 		"resetAnimations": "Restablecer animaciones",
 		"restartRequired": "Reinicio necesario",
 		"restartDescription": "Algunos cambios requieren un reinicio completo de la aplicación para surtir efecto.",
@@ -314,7 +310,6 @@
 	},
 	"updateSettings": {
 		"title": "Actualizaciones de la aplicación",
-		"description": "Gestiona las actualizaciones automáticas y manuales de la aplicación.",
 		"status": "Estado de la actualización",
 		"resetAutoCheck": "Restablecer la búsqueda automática de actualizaciones al valor predeterminado",
 		"checkUpdates": "Buscar actualizaciones",
@@ -323,7 +318,6 @@
 		"noUpdateTitle": "Aplicación al día",
 		"noUpdateDesc": "Estás ejecutando la última versión de la aplicación.",
 		"updateAvailableTitle": "Actualización disponible",
-		"updateAvailableDesc": "La nueva versión {{version}} está disponible. ¿Te gustaría actualizar ahora?",
 		"downloadAndInstall": "Descargar e instalar",
 		"downloading": "Descargando actualización... {{progress}}%",
 		"relaunchToApply": "Reiniciar para aplicar",
@@ -345,6 +339,18 @@
 		"packageManagedDesc": "Esta instalación es gestionada por el gestor de paquetes de su sistema. Utilice el siguiente comando para actualizar:",
 		"debCommand": "sudo apt update && sudo apt upgrade tauri-app-template",
 		"rpmCommand": "sudo dnf upgrade tauri-app-template",
-		"copyCommand": "Copiar Comando"
+		"copyCommand": "Copiar Comando",
+		"cliUpdating": "Actualizando CLI...",
+		"bannerTitle": "Actualización v{{version}} disponible",
+		"bannerAction": "Ver Detalles",
+		"bannerDismiss": "Descartar notificación de actualización",
+		"cliSection": "Integración de CLI",
+		"cliManagedByApp": "La CLI se actualiza automáticamente con la aplicación.",
+		"cliCurrentVersion": "Versión Actual",
+		"releasedOn": "Publicado el {{date}}",
+		"translate": "Traducir",
+		"translating": "Traduciendo...",
+		"showOriginal": "Ver original",
+		"changelog": "Historial de Cambios"
 	}
 }

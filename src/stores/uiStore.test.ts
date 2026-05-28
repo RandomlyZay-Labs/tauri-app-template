@@ -199,4 +199,40 @@ describe('uiStore', () => {
 		const store = await freshStore();
 		expect(store._hasHydrated).toBe(true);
 	});
+
+	it('has default activeSettingsTab as general', async () => {
+		const store = await freshStore();
+		expect(store.activeSettingsTab).toBe('general');
+	});
+
+	it('setActiveSettingsTab validates and updates activeSettingsTab', async () => {
+		const store = await freshStore();
+		mockSavePersistedState.mockClear();
+
+		// valid tab
+		store.setActiveSettingsTab('appearance');
+		expect(store.activeSettingsTab).toBe('appearance');
+		expect(mockSavePersistedState).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'ui-storage' }),
+			expect.objectContaining({ activeSettingsTab: 'appearance' }),
+		);
+
+		// invalid tab falls back to general
+		store.setActiveSettingsTab('invalid-tab-id');
+		expect(store.activeSettingsTab).toBe('general');
+	});
+
+	it('hydrates activeSettingsTab from persisted state and validates it', async () => {
+		mockLoadPersistedState.mockResolvedValue({
+			activeSettingsTab: 'updates',
+		});
+		let store = await freshStore();
+		expect(store.activeSettingsTab).toBe('updates');
+
+		mockLoadPersistedState.mockResolvedValue({
+			activeSettingsTab: 'invalid-stored-tab',
+		});
+		store = await freshStore();
+		expect(store.activeSettingsTab).toBe('general');
+	});
 });

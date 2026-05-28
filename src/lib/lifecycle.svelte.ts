@@ -66,7 +66,7 @@ class LifecycleManager {
 					clearInterval(this.autoCheckInterval);
 					this.autoCheckInterval = undefined;
 				}
-				if (uiStore.autoCheckUpdates) {
+				if (uiStore.autoCheckUpdates && uiStore.onboardingCompleted) {
 					this.autoCheckTimeout = setTimeout(() => {
 						void executeSafeAction(() => updateStore.checkForUpdates(false));
 					}, 3000);

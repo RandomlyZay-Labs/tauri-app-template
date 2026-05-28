@@ -1,5 +1,6 @@
 <script lang="ts">
 import NotificationsSheet from '@/components/NotificationsSheet.svelte';
+import UpdateBanner from '@/components/UpdateBanner.svelte';
 import { t } from '@/lib/i18n';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { tick } from 'svelte';
@@ -34,6 +35,7 @@ let { children } = $props<{ children?: import('svelte').Snippet }>();
 				tabindex="-1"
 				class="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth outline-none transition-all duration-150"
 			>
+				<UpdateBanner />
 				<div class="container mx-auto max-w-7xl p-6">
 					{@render children?.()}
 				</div>
