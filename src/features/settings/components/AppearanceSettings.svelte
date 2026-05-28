@@ -2,7 +2,7 @@
 import * as Tooltip from '@/components/ui/tooltip';
 import { t } from '@/lib/i18n';
 import { toast } from '@/lib/toast';
-import { getSystemAnimationPreference } from '@/lib/utils';
+import { cn, getSystemAnimationPreference } from '@/lib/utils';
 import { animationStore } from '@/stores/animationStore.svelte';
 import { THEME_OPTIONS, type Theme, themeStore } from '@/stores/themeStore.svelte';
 import { Info, RotateCcw } from '@lucide/svelte';
@@ -62,7 +62,9 @@ function handleSettingChange(
 				<Button
 					variant="ghost"
 					size="icon"
-					class="size-8 text-muted-foreground {themeStore.theme === defaultTheme ? 'invisible' : ''}"
+					class={cn('size-8 text-muted-foreground', {
+						invisible: themeStore.theme === defaultTheme,
+					})}
 					onclick={() => handleSettingChange(t('appearanceSettings.themeMode'), () => themeStore.setTheme(defaultTheme))}
 					aria-label={t('appearanceSettings.resetThemeMode')}
 					aria-hidden={themeStore.theme === defaultTheme}
@@ -116,7 +118,9 @@ function handleSettingChange(
 				<Button
 					variant="ghost"
 					size="icon"
-					class="size-8 text-muted-foreground {animationStore.animationsEnabled === defaultAnimation ? 'invisible' : ''}"
+					class={cn('size-8 text-muted-foreground', {
+						invisible: animationStore.animationsEnabled === defaultAnimation,
+					})}
 					onclick={() => handleSettingChange(t('appearanceSettings.animations'), () => animationStore.setAnimationsEnabled(defaultAnimation))}
 					aria-label={t('appearanceSettings.resetAnimations')}
 					aria-hidden={animationStore.animationsEnabled === defaultAnimation}

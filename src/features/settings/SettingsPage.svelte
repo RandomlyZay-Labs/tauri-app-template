@@ -38,7 +38,7 @@ $effect(() => {
 
 $effect(() => {
 	if (uiStore && untrack(() => uiStore.activeSettingsTab) !== activeTab) {
-		uiStore.activeSettingsTab = validateSettingsTab(activeTab);
+		uiStore.setActiveSettingsTab(validateSettingsTab(activeTab));
 	}
 });
 </script>

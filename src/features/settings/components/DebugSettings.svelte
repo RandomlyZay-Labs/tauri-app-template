@@ -4,6 +4,7 @@ import * as Card from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import * as Tooltip from '@/components/ui/tooltip';
 import { executeSafeAction } from '@/lib/async-utils';
+import { cn } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import { commands } from '@/lib/ipc';
 import {
@@ -127,7 +128,9 @@ function handleExportLogs() {
 						<Button
 							variant="ghost"
 							size="icon"
-							class="size-8 text-muted-foreground {!trayStore.minimizeToTray ? 'invisible' : ''}"
+							class={cn('size-8 text-muted-foreground', {
+								invisible: !trayStore.minimizeToTray,
+							})}
 							onclick={() => trayStore.setMinimizeToTray(false)}
 							title={t('common.reset')}
 							aria-hidden={!trayStore.minimizeToTray}
@@ -146,7 +149,12 @@ function handleExportLogs() {
 								{#snippet child({ props })}
 									<span
 										{...props}
-										class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help {!trayStore.minimizeToTray ? 'text-muted-foreground' : ''}"
+										class={cn(
+											'text-sm font-medium inline-flex items-center gap-1.5 cursor-help',
+											{
+												'text-muted-foreground': !trayStore.minimizeToTray,
+											},
+										)}
 									>
 										{t('debugSettings.notifyWhenMinimized')}
 										<Info class="size-3.5 text-muted-foreground/70" />
@@ -162,7 +170,9 @@ function handleExportLogs() {
 						<Button
 							variant="ghost"
 							size="icon"
-							class="size-8 text-muted-foreground {trayStore.notifyOnMinimize ? 'invisible' : ''}"
+							class={cn('size-8 text-muted-foreground', {
+								invisible: trayStore.notifyOnMinimize,
+							})}
 							onclick={() => trayStore.setNotifyOnMinimize(true)}
 							title={t('common.reset')}
 							disabled={!trayStore.minimizeToTray}
@@ -202,7 +212,9 @@ function handleExportLogs() {
 					<Button
 						variant="ghost"
 						size="icon"
-						class="size-8 text-muted-foreground {!uiStore.contextMenuEnabled ? 'invisible' : ''}"
+						class={cn('size-8 text-muted-foreground', {
+							invisible: !uiStore.contextMenuEnabled,
+						})}
 						onclick={() => uiStore.setContextMenuEnabled(false)}
 						title={t('common.reset')}
 						aria-hidden={!uiStore.contextMenuEnabled}
@@ -241,7 +253,9 @@ function handleExportLogs() {
 					<Button
 						variant="ghost"
 						size="icon"
-						class="size-8 text-muted-foreground {!debugOn ? 'invisible' : ''}"
+						class={cn('size-8 text-muted-foreground', {
+							invisible: !debugOn,
+						})}
 						onclick={() => uiStore.setLogLevel('info')}
 						title={t('common.reset')}
 						aria-hidden={!debugOn}
