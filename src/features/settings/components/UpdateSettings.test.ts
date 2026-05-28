@@ -60,6 +60,7 @@ describe('UpdateSettings', () => {
 
 	afterEach(async () => {
 		cleanup();
+		vi.unstubAllGlobals();
 	});
 
 	it('renders update settings controls', { timeout: 10000 }, () => {

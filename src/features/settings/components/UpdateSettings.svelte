@@ -1,6 +1,7 @@
 <script lang="ts">
 import { Button } from '@/components/ui/button';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import * as Card from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import * as Tooltip from '@/components/ui/tooltip';
@@ -48,7 +49,7 @@ function formatUpdateDate(dateString: string | undefined): string | null {
 		if (isNaN(date.getTime())) {
 			return dateString;
 		}
-		return date.toLocaleDateString('en-US', {
+		return date.toLocaleDateString(undefined, {
 			year: 'numeric',
 			month: 'long',
 			day: 'numeric'
@@ -78,19 +79,19 @@ const targetLang = $derived(
 async function fetchGithubChangelog(version: string) {
 	isFetchingChangelog = true;
 	githubChangelog = null;
-	try {
-		const response = await fetch(
-			`https://api.github.com/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v${version}`,
-			{ headers: { Accept: 'application/vnd.github+json' } }
-		);
-		if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
-		const data = await response.json() as { body?: string };
-		githubChangelog = data.body ?? null;
-	} catch (err) {
-		console.error('Failed to fetch GitHub changelog:', err);
-	} finally {
-		isFetchingChangelog = false;
-	}
+	await executeSafeAction(
+		async () => {
+			const response = await fetch(
+				`https://api.github.com/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v${version}`,
+				{ headers: { Accept: 'application/vnd.github+json' } }
+			);
+			if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
+			const data = await response.json() as { body?: string };
+			githubChangelog = data.body ?? null;
+		},
+		{ silent: true }
+	);
+	isFetchingChangelog = false;
 }
 
 $effect(() => {
@@ -115,19 +116,22 @@ async function handleTranslateToggle() {
 		return;
 	}
 
-	if (!githubChangelog) return;
+	const changelogText = githubChangelog;
+	if (!changelogText) return;
 
 	isTranslating = true;
-	try {
-		const translated = await translateText(githubChangelog, targetLang);
-		translatedText = translated;
-		showTranslated = true;
-	} catch (err) {
-		toast.error(t('errors.unexpectedError'));
-		console.error('Translation failed:', err);
-	} finally {
-		isTranslating = false;
-	}
+	await executeSafeAction(
+		async () => {
+			const translated = await translateText(changelogText, targetLang);
+			translatedText = translated;
+			showTranslated = true;
+		},
+		{
+			errorMessage: t('errors.unexpectedError'),
+			onError: (err) => console.error('Translation failed:', err)
+		}
+	);
+	isTranslating = false;
 }
 
 async function translateText(text: string, lang: string): Promise<string> {
@@ -150,7 +154,8 @@ async function translateText(text: string, lang: string): Promise<string> {
 
 const parsedMarkdown = $derived.by(() => {
 	const raw = showTranslated && translatedText ? translatedText : (githubChangelog || '');
-	return marked.parse(raw) as string;
+	const html = marked.parse(raw) as string;
+	return DOMPurify.sanitize(html);
 });
 
 function linkInterceptor(node: HTMLElement) {
@@ -161,7 +166,7 @@ function linkInterceptor(node: HTMLElement) {
 			const href = anchor.getAttribute('href');
 			if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
 				event.preventDefault();
-				void openExternalLink(href);
+				void executeSafeAction(() => openExternalLink(href));
 			}
 		}
 	};
