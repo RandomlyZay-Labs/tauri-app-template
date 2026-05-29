@@ -7,7 +7,9 @@ test.describe('App Flow', () => {
 		// 1. Initial Load & Onboarding
 		await page.goto('/');
 		await expect(page).toHaveTitle(/Tauri/);
-		await expect(page.getByText('Welcome to Tauri App Template')).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Welcome to Tauri App Template' }),
+		).toBeVisible();
 
 		// 2. Navigation & Sidebar
 		await page.getByRole('button', { name: 'Get Started' }).click();
@@ -16,18 +18,26 @@ test.describe('App Flow', () => {
 		// 3. Theme Selection
 		await page.getByRole('button', { name: 'Dark' }).click();
 		await page.getByRole('button', { name: 'Next' }).first().click();
-		await expect(page.getByText(/Experience/i)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Experience' }),
+		).toBeVisible();
 
 		// 4. Animations Selection
 		await page.getByRole('button', { name: 'Next' }).first().click();
-		await expect(page.getByText(/Help us improve/i)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Help us improve' }),
+		).toBeVisible();
 
 		// 5. Complete Onboarding
 		await page.getByRole('button', { name: 'Next' }).first().click(); // Telemetry
-		await expect(page.getByText(/Safe & Secure/i)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Safe & Secure' }),
+		).toBeVisible();
 
 		await page.getByRole('button', { name: 'Next' }).first().click(); // Backups
-		await expect(page.getByText(/You're all set/i)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: "You're all set!" }),
+		).toBeVisible();
 
 		await page.getByRole('button', { name: 'Done' }).click(); // Finish
 

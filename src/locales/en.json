@@ -272,8 +272,7 @@
 	},
 	"finishStep": {
 		"title": "You're all set!",
-		"description": "Your preferences have been saved. You can always change them later in the Settings menu.",
-		"backToPreferences": "Back to preferences"
+		"description": "Your preferences have been saved. You can always change them later in the Settings menu."
 	},
 	"errors": {
 		"somethingWentWrong": "Something went wrong",

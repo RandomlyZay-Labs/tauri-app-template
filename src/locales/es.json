@@ -272,8 +272,7 @@
 	},
 	"finishStep": {
 		"title": "¡Todo listo!",
-		"description": "Tus preferencias se han guardado. Siempre puedes cambiarlas más tarde en el menú de Configuración.",
-		"backToPreferences": "Volver a preferencias"
+		"description": "Tus preferencias se han guardado. Siempre puedes cambiarlas más tarde en el menú de Configuración."
 	},
 	"errors": {
 		"somethingWentWrong": "Algo salió mal",
