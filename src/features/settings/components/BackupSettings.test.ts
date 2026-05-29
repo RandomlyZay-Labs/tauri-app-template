@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BackupMetadata } from '@/bindings';
 import { backupStore } from '@/stores/backupStore.svelte';
+import TestWrapper from '@/test/TestWrapper.svelte';
 import BackupSettings from './BackupSettings.svelte';
 
 // Mock i18n
@@ -37,14 +38,14 @@ describe('BackupSettings', () => {
 	});
 
 	it('renders backup settings controls', async () => {
-		render(BackupSettings);
+		render(TestWrapper, { props: { component: BackupSettings } });
 
 		expect(screen.getByText('backupSettings.automatedBackups')).toBeTruthy();
 		expect(screen.getByText('backupSettings.backupHistory')).toBeTruthy();
 	});
 
 	it('toggles automated backups when switch is clicked', async () => {
-		render(BackupSettings);
+		render(TestWrapper, { props: { component: BackupSettings } });
 
 		const toggle = screen.getByRole('switch');
 		await fireEvent.click(toggle);
@@ -53,7 +54,7 @@ describe('BackupSettings', () => {
 	});
 
 	it('shows no backups message when history is empty', async () => {
-		render(BackupSettings);
+		render(TestWrapper, { props: { component: BackupSettings } });
 
 		await waitFor(() => {
 			expect(screen.getByText('backupSettings.noBackupsFound')).toBeTruthy();
@@ -82,7 +83,7 @@ describe('BackupSettings', () => {
 			if (cmd === 'list_backups') return mockBackups;
 		});
 
-		render(BackupSettings);
+		render(TestWrapper, { props: { component: BackupSettings } });
 
 		await waitFor(() => {
 			const rows = screen.getAllByTestId('backup-row');
@@ -91,7 +92,7 @@ describe('BackupSettings', () => {
 	});
 
 	it('opens create backup dialog when clicking the button', async () => {
-		render(BackupSettings);
+		render(TestWrapper, { props: { component: BackupSettings } });
 
 		const createBtn = screen.getByText('backupSettings.createBackup');
 		await fireEvent.click(createBtn);
@@ -122,7 +123,7 @@ describe('BackupSettings', () => {
 			}
 		});
 
-		render(BackupSettings);
+		render(TestWrapper, { props: { component: BackupSettings } });
 
 		await waitFor(() => {
 			const deleteBtn = screen.getByTestId('delete-btn');
@@ -163,7 +164,7 @@ describe('BackupSettings', () => {
 			}
 		});
 
-		render(BackupSettings);
+		render(TestWrapper, { props: { component: BackupSettings } });
 
 		await waitFor(() => {
 			const restoreBtn = screen.getByTestId('restore-btn');

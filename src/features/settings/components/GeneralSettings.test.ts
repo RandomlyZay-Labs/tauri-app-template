@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { uiStore } from '@/stores/uiStore.svelte';
+import TestWrapper from '@/test/TestWrapper.svelte';
 import GeneralSettings from './GeneralSettings.svelte';
 
 // Mock i18n
@@ -42,7 +43,7 @@ describe('GeneralSettings', () => {
 	});
 
 	it('renders general settings controls', { timeout: 10000 }, () => {
-		render(GeneralSettings);
+		render(TestWrapper, { props: { component: GeneralSettings } });
 
 		expect(screen.getByText('generalSettings.storageLogs')).toBeTruthy();
 		expect(screen.getByText('generalSettings.telemetry')).toBeTruthy();
@@ -59,7 +60,7 @@ describe('GeneralSettings', () => {
 			}
 		});
 
-		render(GeneralSettings);
+		render(TestWrapper, { props: { component: GeneralSettings } });
 
 		const btn = screen.getByText('generalSettings.openLogs');
 		await fireEvent.click(btn);
@@ -78,7 +79,7 @@ describe('GeneralSettings', () => {
 			}
 		});
 
-		render(GeneralSettings);
+		render(TestWrapper, { props: { component: GeneralSettings } });
 
 		const btn = screen.getByText('generalSettings.openData');
 		await fireEvent.click(btn);
@@ -90,7 +91,7 @@ describe('GeneralSettings', () => {
 		timeout: 10000,
 	}, async () => {
 		const { updateTelemetryConsent } = await import('@/lib/telemetry');
-		render(GeneralSettings);
+		render(TestWrapper, { props: { component: GeneralSettings } });
 
 		const initialValue = uiStore.telemetryEnabled;
 		const switches = screen.getAllByRole('switch');
@@ -108,7 +109,7 @@ describe('GeneralSettings', () => {
 	it('opens preference reset dialog and resets preferences', {
 		timeout: 10000,
 	}, async () => {
-		render(GeneralSettings);
+		render(TestWrapper, { props: { component: GeneralSettings } });
 
 		const resetBtn = screen.getByText('generalSettings.resetDefaults');
 		await fireEvent.click(resetBtn);
@@ -138,7 +139,7 @@ describe('GeneralSettings', () => {
 			}
 		});
 
-		render(GeneralSettings);
+		render(TestWrapper, { props: { component: GeneralSettings } });
 
 		const resetBtn = screen.getByText('generalSettings.resetApplication');
 		await fireEvent.click(resetBtn);

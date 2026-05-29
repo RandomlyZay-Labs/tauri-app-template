@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from '@/lib/toast';
 import { animationStore } from '@/stores/animationStore.svelte';
 import { themeStore } from '@/stores/themeStore.svelte';
+import TestWrapper from '@/test/TestWrapper.svelte';
 import AppearanceSettings from './AppearanceSettings.svelte';
 
 // Mock i18n
@@ -26,14 +27,14 @@ describe('AppearanceSettings', () => {
 	});
 
 	it('renders theme and animation controls', () => {
-		render(AppearanceSettings);
+		render(TestWrapper, { props: { component: AppearanceSettings } });
 
 		expect(screen.getByText('appearanceSettings.themeMode')).toBeTruthy();
 		expect(screen.getByText('appearanceSettings.animations')).toBeTruthy();
 	});
 
 	it('changes theme when select option is changed', async () => {
-		render(AppearanceSettings);
+		render(TestWrapper, { props: { component: AppearanceSettings } });
 
 		const setThemeSpy = vi.spyOn(themeStore, 'setTheme');
 
@@ -51,7 +52,7 @@ describe('AppearanceSettings', () => {
 	});
 
 	it('toggles animations when switch is clicked', async () => {
-		render(AppearanceSettings);
+		render(TestWrapper, { props: { component: AppearanceSettings } });
 
 		const initialValue = animationStore.animationsEnabled;
 		const toggle = screen.getByRole('switch');
@@ -63,7 +64,7 @@ describe('AppearanceSettings', () => {
 
 	it('resets theme to default when reset button is clicked', async () => {
 		themeStore.setTheme('dark');
-		render(AppearanceSettings);
+		render(TestWrapper, { props: { component: AppearanceSettings } });
 
 		const resetButton = screen.getByLabelText(
 			'appearanceSettings.resetThemeMode',
@@ -76,7 +77,7 @@ describe('AppearanceSettings', () => {
 	it('resets animations to default when reset button is clicked', async () => {
 		// Force it away from default
 		animationStore.setAnimationsEnabled(false);
-		render(AppearanceSettings);
+		render(TestWrapper, { props: { component: AppearanceSettings } });
 
 		const resetButton = screen.getByLabelText(
 			'appearanceSettings.resetAnimations',

@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { trayStore } from '@/stores/trayStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
+import TestWrapper from '@/test/TestWrapper.svelte';
 import DebugSettings from './DebugSettings.svelte';
 
 // Mock i18n
@@ -56,14 +57,14 @@ describe('DebugSettings', () => {
 	});
 
 	it('renders debug settings controls', () => {
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		expect(screen.getByText('debugSettings.title')).toBeTruthy();
 		expect(screen.getByText('debugSettings.minimizeToTray')).toBeTruthy();
 	});
 
 	it('toggles minimize to tray when switch is clicked', async () => {
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		const switches = screen.getAllByRole('switch');
 		// First switch is minimizeToTray
@@ -75,7 +76,7 @@ describe('DebugSettings', () => {
 	it('resets notify when minimized when reset button is clicked', async () => {
 		trayStore.setMinimizeToTray(true);
 		trayStore.setNotifyOnMinimize(false);
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		const resetButtons = screen.getAllByTitle('common.reset');
 		// Second reset button is for notifyOnMinimize
@@ -85,7 +86,7 @@ describe('DebugSettings', () => {
 	});
 
 	it('toggles debug mode when switch is clicked', async () => {
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		const switches = screen.getAllByRole('switch');
 		// Fourth switch is debug mode
@@ -105,7 +106,7 @@ describe('DebugSettings', () => {
 				return Promise.resolve(true);
 		});
 
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		const btn = screen.getByText('debugSettings.notification');
 		await fireEvent.click(btn);
@@ -122,7 +123,7 @@ describe('DebugSettings', () => {
 			}
 		});
 
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		const btn = screen.getByText('debugSettings.nativeDialog');
 		await fireEvent.click(btn);
@@ -139,7 +140,7 @@ describe('DebugSettings', () => {
 			}
 		});
 
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		const btn = screen.getByText('debugSettings.relaunch');
 		await fireEvent.click(btn);
@@ -156,7 +157,7 @@ describe('DebugSettings', () => {
 			}
 		});
 
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		const btn = screen.getByText('debugSettings.exit');
 		await fireEvent.click(btn);
@@ -176,7 +177,7 @@ describe('DebugSettings', () => {
 				return Promise.resolve('/path/to/logs.txt');
 		});
 
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 		const btn = screen.getByText('debugSettings.exportLogs');
 		await fireEvent.click(btn);
 
@@ -197,7 +198,7 @@ describe('DebugSettings', () => {
 				return Promise.resolve('/path/to/logs.txt');
 		});
 
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 		const btn = screen.getByText('debugSettings.exportLogs');
 		await fireEvent.click(btn);
 	});

@@ -1,9 +1,29 @@
 # Roadmap
 
-## ci/updater-plugin
+## feat/ui-polish
+- Replace many components with more ShadCN components
+  - Use Carosuel for onboarding
+    - Standardize next and back buttons
 
-- Test by making a change, pushing a new release, seeing if the app notifies me of an update, and having the app update
-- Test auto-update flow on AppImage and NSIS bundles
+  - Use button groups for browse file and folder buttons and in settings
+  - Replace custom badges with ShadCN badges
+  - Use ShadCN's kbd component for the home page
+  - Replace custom progress bar with ShadCN's progress component
+  - Replace custom spinner with ShadCN's spinner component
+
+  - Move minimize to tray setting to general settings right at the top. Move Storage and Log settings to debug settings, under debug mode.
+  - Allow "Notify when minimized" setting tooltip to be visible, even if it's parent setting is disabled
+  - Change backup dropdowns to sliders
+  - Remove process control setting.
+
+  - Use ShadCN sonner instead of svelte-sonner directly.
+  - Add a setting to control where the sonner will be (e.g. top-right, bottom-left, etc.); default to top-right.
+  - Only allow some notifications to go to the notification center
+
+  - Remove "The quick brown fox jumps over the lazy dog" placeholder text
+  - Remove spinning star from about page.
+  - Add cool animated and interactive effects to the about page.
+  - Find something to do with the heart at the top of the page.
 
 ## feat/github-pages
 
