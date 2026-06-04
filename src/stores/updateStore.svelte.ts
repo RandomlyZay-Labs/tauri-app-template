@@ -135,6 +135,13 @@ class UpdateStore {
 
 		await executeSafeAction(
 			async () => {
+				// Automatically create a backup first before updating
+				try {
+					await commands.createBackup(`pre-update-${update.version}`);
+				} catch (backupErr) {
+					console.error('Failed to create pre-update backup:', backupErr);
+				}
+
 				await update.downloadAndInstall((progress: DownloadEvent) => {
 					switch (progress.event) {
 						case 'Started':

@@ -18,6 +18,9 @@ vi.mock('@/stores/uiStore.svelte', () => {
 			get onboardingCompleted() {
 				return true;
 			},
+			get toastPosition() {
+				return 'top-right';
+			},
 		},
 	};
 });

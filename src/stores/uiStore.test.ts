@@ -235,4 +235,35 @@ describe('uiStore', () => {
 		store = await freshStore();
 		expect(store.activeSettingsTab).toBe('general');
 	});
+
+	it('has default toastPosition as top-right', async () => {
+		const store = await freshStore();
+		expect(store.toastPosition).toBe('top-right');
+	});
+
+	it('setToastPosition updates and persists toastPosition', async () => {
+		const store = await freshStore();
+		mockSavePersistedState.mockClear();
+
+		store.setToastPosition('bottom-left');
+		expect(store.toastPosition).toBe('bottom-left');
+		expect(mockSavePersistedState).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'ui-storage' }),
+			expect.objectContaining({ toastPosition: 'bottom-left' }),
+		);
+	});
+
+	it('hydrates toastPosition from persisted state and validates it', async () => {
+		mockLoadPersistedState.mockResolvedValue({
+			toastPosition: 'bottom-center',
+		});
+		let store = await freshStore();
+		expect(store.toastPosition).toBe('bottom-center');
+
+		mockLoadPersistedState.mockResolvedValue({
+			toastPosition: 'invalid-position',
+		});
+		store = await freshStore();
+		expect(store.toastPosition).toBe('top-right');
+	});
 });

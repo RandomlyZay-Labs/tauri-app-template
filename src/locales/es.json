@@ -128,7 +128,16 @@
 		"restartDescription": "Algunos cambios requieren un reinicio completo de la aplicación para surtir efecto.",
 		"later": "Más tarde",
 		"restartNow": "Reiniciar ahora",
-		"settingUpdated": "{{label}} actualizado"
+		"settingUpdated": "{{label}} actualizado",
+		"toastPosition": "Posición de notificaciones",
+		"toastPositionDescription": "Elige en qué parte de la pantalla aparecerán las notificaciones emergentes.",
+		"resetToastPosition": "Restablecer posición de notificaciones",
+		"topLeft": "Superior izquierda",
+		"topCenter": "Superior centro",
+		"topRight": "Superior derecha",
+		"bottomLeft": "Inferior izquierda",
+		"bottomCenter": "Inferior centro",
+		"bottomRight": "Inferior derecha"
 	},
 	"backupSettings": {
 		"automatedBackups": "Copias de seguridad automáticas",

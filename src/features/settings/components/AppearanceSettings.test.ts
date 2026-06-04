@@ -88,4 +88,24 @@ describe('AppearanceSettings', () => {
 		// Here we just check it was updated
 		expect(toast.success).toHaveBeenCalled();
 	});
+
+	it('renders toast position controls', () => {
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		expect(screen.getByText('appearanceSettings.toastPosition')).toBeTruthy();
+	});
+
+	it('resets toast position to default when reset button is clicked', async () => {
+		const { uiStore } = await import('@/stores/uiStore.svelte');
+		uiStore.setToastPosition('bottom-left');
+
+		render(TestWrapper, { props: { component: AppearanceSettings } });
+
+		const resetButton = screen.getByLabelText(
+			'appearanceSettings.resetToastPosition',
+		);
+		await fireEvent.click(resetButton);
+
+		expect(uiStore.toastPosition).toBe('top-right');
+	});
 });

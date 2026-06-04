@@ -25,6 +25,26 @@ export function validateSettingsTab(tab: unknown): SettingsTab {
 	return 'general';
 }
 
+const ALLOWED_TOAST_POSITIONS = [
+	'top-left',
+	'top-center',
+	'top-right',
+	'bottom-left',
+	'bottom-center',
+	'bottom-right',
+] as const;
+export type ToastPosition = (typeof ALLOWED_TOAST_POSITIONS)[number];
+
+function validateToastPosition(pos: unknown): ToastPosition {
+	if (
+		typeof pos === 'string' &&
+		ALLOWED_TOAST_POSITIONS.includes(pos as ToastPosition)
+	) {
+		return pos as ToastPosition;
+	}
+	return 'top-right';
+}
+
 interface UIPersistedState {
 	sidebarOpen: boolean;
 	onboardingCompleted: boolean;
@@ -33,6 +53,7 @@ interface UIPersistedState {
 	logLevel: 'trace' | 'debug' | 'info' | 'warn' | 'error';
 	autoCheckUpdates: boolean;
 	activeSettingsTab?: SettingsTab;
+	toastPosition?: ToastPosition;
 }
 
 const persistConfig: PersistConfig<UIPersistedState> = {
@@ -47,6 +68,7 @@ class UIStore {
 	commandPaletteOpen = $state(false);
 	logLevel = $state<'trace' | 'debug' | 'info' | 'warn' | 'error'>('error');
 	autoCheckUpdates = $state(true);
+	toastPosition = $state<ToastPosition>('top-right');
 	_hasHydrated = $state(false);
 	activeSettingsTab = $state<SettingsTab>(validateSettingsTab('general'));
 
@@ -66,6 +88,8 @@ class UIStore {
 		if (saved.logLevel !== undefined) this.logLevel = saved.logLevel;
 		if (saved.autoCheckUpdates !== undefined)
 			this.autoCheckUpdates = saved.autoCheckUpdates;
+		if (saved.toastPosition !== undefined)
+			this.toastPosition = validateToastPosition(saved.toastPosition);
 		if (saved.activeSettingsTab !== undefined)
 			this.activeSettingsTab = validateSettingsTab(saved.activeSettingsTab);
 		this._hasHydrated = true;
@@ -80,6 +104,7 @@ class UIStore {
 			logLevel: this.logLevel,
 			autoCheckUpdates: this.autoCheckUpdates,
 			activeSettingsTab: this.activeSettingsTab,
+			toastPosition: this.toastPosition,
 		});
 	}
 
@@ -125,6 +150,11 @@ class UIStore {
 
 	setActiveSettingsTab(tab: unknown) {
 		this.activeSettingsTab = validateSettingsTab(tab);
+		this.persist();
+	}
+
+	setToastPosition(position: ToastPosition) {
+		this.toastPosition = position;
 		this.persist();
 	}
 }

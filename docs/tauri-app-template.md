@@ -1,10 +1,6 @@
 # Roadmap
 
 ## feat/ui-polish
-- Use ShadCN sonner instead of svelte-sonner directly.
-- Add a setting to control where the sonner will be (e.g. top-right, bottom-left, etc.); default to top-right.
-- Backup should to tied to app updates. When there's an update, the app should automatically create a backup first.
-
 - Remove "The quick brown fox jumps over the lazy dog" placeholder text
 - Remove spinning star from about page.
 - Add cool animated and interactive effects to the about page.

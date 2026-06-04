@@ -128,7 +128,16 @@
 		"restartDescription": "Some changes require a full application restart to take effect.",
 		"later": "Later",
 		"restartNow": "Restart Now",
-		"settingUpdated": "{{label}} updated"
+		"settingUpdated": "{{label}} updated",
+		"toastPosition": "Toast Position",
+		"toastPositionDescription": "Choose where on the screen toast notifications will appear.",
+		"resetToastPosition": "Reset Toast Position to default",
+		"topLeft": "Top Left",
+		"topCenter": "Top Center",
+		"topRight": "Top Right",
+		"bottomLeft": "Bottom Left",
+		"bottomCenter": "Bottom Center",
+		"bottomRight": "Bottom Right"
 	},
 	"backupSettings": {
 		"automatedBackups": "Automated Backups",

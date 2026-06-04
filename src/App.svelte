@@ -14,7 +14,7 @@ import { toast } from '@/lib/toast';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { AlertTriangle, Download, Home, RefreshCw } from '@lucide/svelte';
 import { onDestroy, onMount } from 'svelte';
-import { Toaster } from 'svelte-sonner';
+import { Toaster } from '@/components/ui/sonner';
 import Router, { push, router } from 'svelte-spa-router';
 
 import { mapErrorToI18n } from '@/lib/error-utils';
@@ -86,7 +86,7 @@ function getLocalizedErrorMessage(error: unknown): string {
 
 <svelte:boundary>
 	<Router {routes} />
-	<Toaster position="top-right" />
+	<Toaster position={uiStore.toastPosition} />
 	<CommandPalette />
 	<ActivityCenter />
 
@@ -122,6 +122,6 @@ function getLocalizedErrorMessage(error: unknown): string {
 				</Card.Content>
 			</Card.Root>
 		</div>
-		<Toaster position="top-right" />
+		<Toaster position={uiStore.toastPosition} />
 	{/snippet}
 </svelte:boundary>
