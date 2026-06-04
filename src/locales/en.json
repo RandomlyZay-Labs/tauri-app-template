@@ -280,14 +280,7 @@
 		"statusCancelled": "Cancelled",
 		"statusInterrupted": "Interrupted"
 	},
-	"notifications": {
-		"title": "Notifications",
-		"openNotifications": "Open Notifications",
-		"clearAll": "Clear All",
-		"empty": "No notifications",
-		"markAsRead": "Mark as read",
-		"markAllAsRead": "Mark all as read"
-	},
+
 	"updateSettings": {
 		"title": "Application Updates",
 		"status": "Update Status",

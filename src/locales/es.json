@@ -280,14 +280,7 @@
 		"statusCancelled": "Cancelado",
 		"statusInterrupted": "Interrumpido"
 	},
-	"notifications": {
-		"title": "Notificaciones",
-		"openNotifications": "Abrir notificaciones",
-		"clearAll": "Borrar todo",
-		"empty": "No hay notificaciones",
-		"markAsRead": "Marcar como leído",
-		"markAllAsRead": "Marcar todo como leído"
-	},
+
 	"updateSettings": {
 		"title": "Actualizaciones de la aplicación",
 		"status": "Estado de la actualización",

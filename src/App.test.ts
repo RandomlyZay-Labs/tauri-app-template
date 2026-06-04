@@ -33,14 +33,6 @@ vi.mock('@/stores/activityStore.svelte', () => ({
 	},
 }));
 
-vi.mock('@/stores/notificationStore.svelte', () => ({
-	notificationStore: {
-		get isOpen() {
-			return false;
-		},
-	},
-}));
-
 vi.mock('@/lib/lifecycle.svelte', () => ({
 	lifecycleManager: {
 		init: vi.fn(),

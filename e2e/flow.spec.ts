@@ -56,59 +56,6 @@ test.describe('App Flow', () => {
 		await expect(page.getByText('Dashboard')).toBeVisible();
 	});
 
-	test('notification management', async ({ page }) => {
-		await injectMockIpc(page);
-		await page.addInitScript(() => {
-			window.localStorage.setItem(
-				'ui-storage',
-				JSON.stringify({
-					state: { onboardingCompleted: true },
-					version: 0,
-				}),
-			);
-			window.localStorage.setItem(
-				'backup-settings',
-				JSON.stringify({
-					enabled: false,
-					interval: 86400000,
-					maxBackups: 5,
-					lastBackupTime: Date.now(),
-				}),
-			);
-		});
-
-		await page.goto('/#/settings');
-		await page.getByTestId('tab-trigger-appearance').click();
-
-		// Trigger a notification by toggling animations
-		const animationsSwitch = page.locator('#animations-toggle');
-		await expect(animationsSwitch).toBeVisible();
-		await animationsSwitch.click();
-		await expect(page.getByText(/Animations updated/i)).toBeVisible();
-
-		// Open notifications sheet
-		await page.getByLabel(/Open Notifications/i).click();
-		await expect(
-			page.getByRole('heading', { name: /Notifications/i }),
-		).toBeVisible();
-
-		// Check one notification is present
-		await expect(
-			page.getByTestId('notification-item').getByText(/Animations updated/i),
-		).toBeVisible();
-
-		// Check buttons
-		await expect(
-			page.getByRole('button', { name: /Clear All/i }),
-		).toBeVisible();
-		await expect(
-			page.getByRole('button', { name: /Mark all as read/i }),
-		).toBeVisible();
-
-		await page.getByRole('button', { name: /Clear All/i }).click();
-		await expect(page.getByText(/No notifications/i)).toBeVisible();
-	});
-
 	test('appearance toggling', async ({ page }) => {
 		await injectMockIpc(page);
 		await page.addInitScript(() => {

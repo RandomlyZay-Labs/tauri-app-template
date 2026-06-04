@@ -1,8 +1,12 @@
 import { type ExternalToast, toast as sonnerToast } from 'svelte-sonner';
-import {
-	type NotificationType,
-	notificationStore,
-} from '@/stores/notificationStore.svelte';
+import { logger } from '@/lib/logger';
+
+export type NotificationType =
+	| 'success'
+	| 'error'
+	| 'info'
+	| 'warning'
+	| 'default';
 
 const handleCopy = (text: string) => {
 	void navigator.clipboard.writeText(text);
@@ -14,12 +18,14 @@ const notifyAndStore = (
 	type: NotificationType,
 	data?: ExternalToast,
 ) => {
-	notificationStore.addNotification({
-		title: message,
-		description:
-			typeof data?.description === 'string' ? data.description : undefined,
-		type,
-	});
+	const logMessage = `Toast [${type}]: ${message}${data?.description ? ` - ${data.description}` : ''}`;
+	if (type === 'error') {
+		void logger.error(logMessage);
+	} else if (type === 'warning') {
+		void logger.warn(logMessage);
+	} else {
+		void logger.info(logMessage);
+	}
 
 	const mergedData: ExternalToast = {
 		...data,

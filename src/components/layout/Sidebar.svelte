@@ -4,11 +4,9 @@ import * as Tooltip from '@/components/ui/tooltip';
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { activityStore } from '@/stores/activityStore.svelte';
-import { notificationStore } from '@/stores/notificationStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import {
     Activity,
-    Bell,
     Home,
     Info,
     PanelLeftClose,
@@ -175,10 +173,8 @@ let hasRunning = $derived(
 		>
 			{#if !uiStore.sidebarOpen}
 				{@render TooltipButton(Activity, t('activityCenter.openActivity'), (e: MouseEvent) => { activityStore.setIsOpen(true); (e.currentTarget as HTMLButtonElement).blur(); }, 'activityCenter.title', true)}
-				{@render TooltipButton(Bell, t('notifications.openNotifications'), (e: MouseEvent) => { notificationStore.setIsOpen(true); (e.currentTarget as HTMLButtonElement).blur(); }, 'notifications.title')}
 			{:else}
 				{@render NavButton(Activity, t('activityCenter.openActivity'), () => activityStore.setIsOpen(true), 'activityCenter.title', {}, true)}
-				{@render NavButton(Bell, t('notifications.openNotifications'), () => notificationStore.setIsOpen(true), 'notifications.title')}
 			{/if}
 
 			{#each bottomNavigation as item}

@@ -28,15 +28,6 @@ vi.mock('@/stores/activityStore.svelte', () => ({
 	},
 }));
 
-vi.mock('@/stores/notificationStore.svelte', () => ({
-	notificationStore: {
-		get isOpen() {
-			return false;
-		},
-		setIsOpen: vi.fn(),
-	},
-}));
-
 vi.mock('@/lib/i18n', () => ({
 	t: (key: string) => key,
 }));

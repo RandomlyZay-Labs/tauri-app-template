@@ -4,7 +4,6 @@ import {
 	activityStore,
 } from '@/stores/activityStore.svelte';
 import { networkStore } from '@/stores/networkStore.svelte';
-import { notificationStore } from '@/stores/notificationStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
 import { watcherStore } from '@/stores/watcherStore.svelte';
@@ -119,12 +118,6 @@ class LifecycleManager {
 
 			toast.message(t('debugSettings.fileWatcherEvent'), {
 				description: message,
-			});
-
-			notificationStore.addNotification({
-				title: t('debugSettings.fileWatcherEvent'),
-				description: message,
-				type: 'info',
 			});
 		});
 	}

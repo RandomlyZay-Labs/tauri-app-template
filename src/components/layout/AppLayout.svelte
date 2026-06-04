@@ -1,5 +1,4 @@
 <script lang="ts">
-import NotificationsSheet from '@/components/NotificationsSheet.svelte';
 import UpdateBanner from '@/components/UpdateBanner.svelte';
 import { t } from '@/lib/i18n';
 import { uiStore } from '@/stores/uiStore.svelte';
@@ -40,7 +39,6 @@ let { children } = $props<{ children?: import('svelte').Snippet }>();
 					{@render children?.()}
 				</div>
 			</main>
-			<NotificationsSheet />
 		</div>
 	</TooltipProvider>
 {/if}
