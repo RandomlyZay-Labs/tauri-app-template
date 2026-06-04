@@ -18,7 +18,7 @@ import * as Card from '@/components/ui/card';
 import * as Dialog from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import * as Select from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
 let backups = $state<BackupMetadata[]>([]);
@@ -28,11 +28,54 @@ let deleteTarget = $state<string | null>(null);
 let showCreateDialog = $state(false);
 let backupName = $state('');
 
-const intervalLabels: Record<number, string> = {
-	[BACKUP_INTERVALS.HOURLY]: t('backupSettings.everyHour'),
-	[BACKUP_INTERVALS.DAILY]: t('backupSettings.daily'),
-	[BACKUP_INTERVALS.WEEKLY]: t('backupSettings.weekly'),
-};
+let frequencyHours = $state(Math.round(backupStore.interval / (3600 * 1000)));
+let retentionCount = $state(backupStore.maxBackups);
+
+$effect(() => {
+	frequencyHours = Math.round(backupStore.interval / (3600 * 1000));
+});
+
+$effect(() => {
+	if (frequencyHours === undefined || frequencyHours === null || Number.isNaN(frequencyHours)) {
+		return;
+	}
+	let clamped = Math.round(frequencyHours);
+	if (clamped < 1) clamped = 1;
+	if (clamped > 168) clamped = 168;
+
+	const ms = clamped * 3600 * 1000;
+	if (ms !== backupStore.interval) {
+		backupStore.setInterval(ms);
+	}
+});
+
+$effect(() => {
+	retentionCount = backupStore.maxBackups;
+});
+
+$effect(() => {
+	if (retentionCount === undefined || retentionCount === null || Number.isNaN(retentionCount)) {
+		return;
+	}
+	let clamped = Math.round(retentionCount);
+	if (clamped < 1) clamped = 1;
+	if (clamped > 30) clamped = 30;
+
+	if (clamped !== backupStore.maxBackups) {
+		backupStore.setMaxBackups(clamped);
+	}
+});
+
+function formatInterval(hours: number): string {
+	if (hours === 1) {
+		return t('backupSettings.everyHours', { count: 1 });
+	} else if (hours % 24 === 0) {
+		const days = hours / 24;
+		return t('backupSettings.everyDays', { count: days });
+	} else {
+		return t('backupSettings.everyHours', { count: hours });
+	}
+}
 
 async function loadBackups() {
 	try {
@@ -131,45 +174,76 @@ function handleRestore() {
 			{#if backupStore.enabled}
 				<div class="grid gap-6 md:grid-cols-2">
 					<div class="space-y-2">
-						<label for="backup-frequency-select" class="text-sm font-medium block">{t('backupSettings.frequency')}</label>
-						<Select.Root
-							type="single"
-							value={backupStore.interval.toString()}
-							onValueChange={(val) => backupStore.setInterval(Number(val))}
-						>
-							<Select.Trigger id="backup-frequency-select" class="w-full">
-								{#if backupStore.interval === BACKUP_INTERVALS.HOURLY}
-									{t('backupSettings.everyHour')}
-								{:else if backupStore.interval === BACKUP_INTERVALS.DAILY}
-									{t('backupSettings.daily')}
-								{:else}
-									{t('backupSettings.weekly')}
-								{/if}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Item value={BACKUP_INTERVALS.HOURLY.toString()}>{t('backupSettings.everyHour')}</Select.Item>
-								<Select.Item value={BACKUP_INTERVALS.DAILY.toString()}>{t('backupSettings.daily')}</Select.Item>
-								<Select.Item value={BACKUP_INTERVALS.WEEKLY.toString()}>{t('backupSettings.weekly')}</Select.Item>
-							</Select.Content>
-						</Select.Root>
+						<div class="flex items-center justify-between">
+							<label for="backup-frequency-slider" class="text-sm font-medium">{t('backupSettings.frequency')}</label>
+							<span class="text-sm text-muted-foreground font-medium">{formatInterval(frequencyHours)}</span>
+						</div>
+						<div class="flex items-start gap-4">
+							<div class="flex-1">
+								<div class="relative pb-6 pt-2">
+									<Slider
+										id="backup-frequency-slider"
+										type="single"
+										bind:value={frequencyHours}
+										min={1}
+										max={168}
+										step={1}
+									/>
+									<div class="absolute inset-x-0 bottom-0 h-4">
+										{#each [24, 48, 72, 96, 120, 144] as hour}
+											{@const pct = ((hour - 1) / 167) * 100}
+											<div class="absolute -translate-x-1/2 flex flex-col items-center" style="left: {pct}%">
+												<div class="w-px h-1 bg-muted-foreground/40"></div>
+												<span class="text-[9px] text-muted-foreground font-mono mt-0.5">{hour / 24}d</span>
+											</div>
+										{/each}
+									</div>
+								</div>
+							</div>
+							<Input
+								type="number"
+								min={1}
+								max={168}
+								bind:value={frequencyHours}
+								class="w-20 text-center font-mono h-9"
+							/>
+						</div>
 					</div>
 					<div class="space-y-2">
-						<label for="backup-retention-select" class="text-sm font-medium block">{t('backupSettings.retention')}</label>
-						<Select.Root
-							type="single"
-							value={backupStore.maxBackups.toString()}
-							onValueChange={(val) => backupStore.setMaxBackups(Number(val))}
-						>
-							<Select.Trigger id="backup-retention-select" class="w-full">
-								{t('backupSettings.keepLast', { count: backupStore.maxBackups })}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Item value="3">{t('backupSettings.keepLast', { count: 3 })}</Select.Item>
-								<Select.Item value="5">{t('backupSettings.keepLast', { count: 5 })}</Select.Item>
-								<Select.Item value="10">{t('backupSettings.keepLast', { count: 10 })}</Select.Item>
-								<Select.Item value="20">{t('backupSettings.keepLast', { count: 20 })}</Select.Item>
-							</Select.Content>
-						</Select.Root>
+						<div class="flex items-center justify-between">
+							<label for="backup-retention-slider" class="text-sm font-medium">{t('backupSettings.retention')}</label>
+							<span class="text-sm text-muted-foreground font-medium">{t('backupSettings.keepLast', { count: retentionCount })}</span>
+						</div>
+						<div class="flex items-start gap-4">
+							<div class="flex-1">
+								<div class="relative pb-6 pt-2">
+									<Slider
+										id="backup-retention-slider"
+										type="single"
+										bind:value={retentionCount}
+										min={1}
+										max={30}
+										step={1}
+									/>
+									<div class="absolute inset-x-0 bottom-0 h-4">
+										{#each [5, 10, 15, 20, 25] as count}
+											{@const pct = ((count - 1) / 29) * 100}
+											<div class="absolute -translate-x-1/2 flex flex-col items-center" style="left: {pct}%">
+												<div class="w-px h-1 bg-muted-foreground/40"></div>
+												<span class="text-[9px] text-muted-foreground font-mono mt-0.5">{count}</span>
+											</div>
+										{/each}
+									</div>
+								</div>
+							</div>
+							<Input
+								type="number"
+								min={1}
+								max={30}
+								bind:value={retentionCount}
+								class="w-20 text-center font-mono h-9"
+							/>
+						</div>
 					</div>
 				</div>
 			{/if}

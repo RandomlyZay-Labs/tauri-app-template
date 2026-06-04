@@ -68,7 +68,6 @@
 		"sizeUnit": "MB"
 	},
 	"generalSettings": {
-		"storageLogs": "Almacenamiento y registros",
 		"applicationData": "Datos de la aplicación",
 		"openDataFolder": "Abrir la carpeta de datos local.",
 		"openData": "Abrir datos",
@@ -136,9 +135,10 @@
 		"automatedBackupsDescription": "Habilitar o deshabilitar copias de seguridad automáticas.",
 		"enableAutoBackup": "Habilitar copia automática",
 		"frequency": "Frecuencia",
-		"everyHour": "Cada hora",
-		"daily": "Diario",
-		"weekly": "Semanal",
+		"everyHours_one": "Cada hora",
+		"everyHours_other": "Cada {{count}} horas",
+		"everyDays_one": "Cada día",
+		"everyDays_other": "Cada {{count}} días",
 		"retention": "Retención",
 		"keepLast_one": "Mantener último {{count}}",
 		"keepLast_other": "Mantener últimos {{count}}",

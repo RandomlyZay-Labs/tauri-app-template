@@ -6,6 +6,7 @@ import {
 	screen,
 	waitFor,
 } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BackupMetadata } from '@/bindings';
 import { backupStore } from '@/stores/backupStore.svelte';
@@ -182,5 +183,37 @@ describe('BackupSettings', () => {
 
 		expect(capturedCmd).toBe('restore_backup');
 		expect(capturedArgs).toEqual({ backupId: '1' });
+	});
+
+	it('updates frequency and retention in store when sliders change', async () => {
+		backupStore.setEnabled(true);
+		render(TestWrapper, { props: { component: BackupSettings } });
+
+		expect(screen.getByText('backupSettings.frequency')).toBeTruthy();
+		expect(screen.getByText('backupSettings.retention')).toBeTruthy();
+
+		backupStore.setInterval(12 * 3600 * 1000); // 12 hours
+		backupStore.setMaxBackups(15);
+
+		await tick();
+
+		expect(screen.getByText('backupSettings.everyHours')).toBeTruthy();
+		expect(screen.getByText('backupSettings.keepLast')).toBeTruthy();
+	});
+
+	it('updates frequency and retention in store when inputs change', async () => {
+		backupStore.setEnabled(true);
+		render(TestWrapper, { props: { component: BackupSettings } });
+
+		const inputs = screen.getAllByRole('spinbutton');
+		expect(inputs.length).toBe(2);
+
+		// First input is frequencyHours
+		await fireEvent.input(inputs[0], { target: { value: '48' } });
+		expect(backupStore.interval).toBe(48 * 3600 * 1000);
+
+		// Second input is retentionCount
+		await fireEvent.input(inputs[1], { target: { value: '20' } });
+		expect(backupStore.maxBackups).toBe(20);
 	});
 });

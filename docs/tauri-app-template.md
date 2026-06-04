@@ -1,10 +1,6 @@
 # Roadmap
 
 ## feat/ui-polish
-- Move minimize to tray setting to general settings right at the top. Move Storage and Log settings to debug settings, under debug mode.
-- Allow "Notify when minimized" setting tooltip to be visible, even if it's parent setting is disabled
-- Change backup dropdowns to sliders
-
 - Use ShadCN sonner instead of svelte-sonner directly.
 - Add a setting to control where the sonner will be (e.g. top-right, bottom-left, etc.); default to top-right.
 - Only allow some notifications to go to the notification center

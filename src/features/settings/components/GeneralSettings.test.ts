@@ -2,6 +2,7 @@ import { mockIPC } from '@tauri-apps/api/mocks';
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { trayStore } from '@/stores/trayStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import TestWrapper from '@/test/TestWrapper.svelte';
 import GeneralSettings from './GeneralSettings.svelte';
@@ -28,11 +29,22 @@ describe('GeneralSettings', () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 		vi.clearAllMocks();
+		trayStore.setMinimizeToTray(false);
+
+		// Mock window.Notification for Tauri 2 plugin-notification
+		// @ts-expect-error
+		window.Notification = {
+			permission: 'granted',
+			requestPermission: vi.fn(() => Promise.resolve('granted')),
+		};
 
 		mockIPC((cmd) => {
 			if (cmd === 'open_log_dir') return null;
 			if (cmd === 'open_data_dir') return null;
 			if (cmd === 'reset_application') return null;
+			if (cmd === 'plugin:notification|is_permission_granted')
+				return Promise.resolve(true);
+			if (cmd === 'notify') return Promise.resolve(null);
 		});
 	});
 
@@ -45,46 +57,34 @@ describe('GeneralSettings', () => {
 	it('renders general settings controls', { timeout: 10000 }, () => {
 		render(TestWrapper, { props: { component: GeneralSettings } });
 
-		expect(screen.getByText('generalSettings.storageLogs')).toBeTruthy();
+		expect(screen.getAllByText('debugSettings.minimizeToTray')[0]).toBeTruthy();
 		expect(screen.getByText('generalSettings.telemetry')).toBeTruthy();
 	});
 
-	it('opens log directory when button is clicked', {
+	it('toggles minimize to tray when switch is clicked', {
 		timeout: 10000,
 	}, async () => {
-		let capturedCmd: string | null = null;
-		mockIPC((cmd) => {
-			if (cmd === 'open_log_dir') {
-				capturedCmd = cmd;
-				return null;
-			}
-		});
-
 		render(TestWrapper, { props: { component: GeneralSettings } });
 
-		const btn = screen.getByText('generalSettings.openLogs');
-		await fireEvent.click(btn);
+		const switches = screen.getAllByRole('switch');
+		// First switch is minimizeToTray
+		await fireEvent.click(switches[0]);
 
-		expect(capturedCmd).toBe('open_log_dir');
+		expect(trayStore.minimizeToTray).toBe(true);
 	});
 
-	it('opens data directory when button is clicked', {
+	it('resets notify when minimized when reset button is clicked', {
 		timeout: 10000,
 	}, async () => {
-		let capturedCmd: string | null = null;
-		mockIPC((cmd) => {
-			if (cmd === 'open_data_dir') {
-				capturedCmd = cmd;
-				return null;
-			}
-		});
-
+		trayStore.setMinimizeToTray(true);
+		trayStore.setNotifyOnMinimize(false);
 		render(TestWrapper, { props: { component: GeneralSettings } });
 
-		const btn = screen.getByText('generalSettings.openData');
-		await fireEvent.click(btn);
+		const resetButtons = screen.getAllByTitle('common.reset');
+		// Second reset button is for notifyOnMinimize
+		await fireEvent.click(resetButtons[1]);
 
-		expect(capturedCmd).toBe('open_data_dir');
+		expect(trayStore.notifyOnMinimize).toBe(true);
 	});
 
 	it('toggles telemetry when switch is clicked', {

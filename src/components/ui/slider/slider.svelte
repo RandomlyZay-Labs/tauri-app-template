@@ -7,8 +7,20 @@
 		value = $bindable(),
 		orientation = "horizontal",
 		class: className,
+		type = "single",
 		...restProps
-	}: WithoutChildrenOrChild<SliderPrimitive.RootProps> = $props();
+	}: {
+		ref?: HTMLElement | null;
+		value?: number;
+		orientation?: "horizontal" | "vertical";
+		class?: string;
+		type?: "single";
+		min?: number;
+		max?: number;
+		step?: number;
+		id?: string;
+		onValueChange?: (val: number) => void;
+	} = $props();
 </script>
 
 <!--
@@ -20,6 +32,7 @@ get along, so we shut typescript up by casting `value` to `never`.
 	bind:value={value as never}
 	data-slot="slider"
 	{orientation}
+	type={type as "single"}
 	class={cn(
 		"data-vertical:min-h-40 relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:w-auto data-vertical:flex-col",
 		className
