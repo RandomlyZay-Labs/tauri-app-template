@@ -6,11 +6,14 @@ import { createBackup, deleteBackup, listBackups, restoreBackup } from '@/lib/ba
 import { t } from '@/lib/i18n';
 import { formatSize } from '@/lib/utils';
 import { BACKUP_INTERVALS, backupStore } from '@/stores/backupStore.svelte';
-import { Archive, HardDriveDownload, Info, Loader2, RotateCcw, Trash2 } from '@lucide/svelte';
+import { Archive, HardDriveDownload, Info, RotateCcw, Trash2 } from '@lucide/svelte';
 import { format } from 'date-fns';
 import { onMount } from 'svelte';
 
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
 import * as Card from '@/components/ui/card';
 import * as Dialog from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -197,23 +200,23 @@ function handleRestore() {
 									<div class="flex items-center gap-2">
 										<span class="font-medium text-sm">{format(new Date(backup.created_at), 'PPP p')}</span>
 										{#if isManual}
-											<span class="inline-flex h-5 items-center rounded-full border bg-background/50 px-1.5 text-[10px] font-normal">
+											<Badge variant="outline" class="h-5 px-1.5 text-[10px] font-normal bg-background/50">
 												{backup.label || t('common.manual')}
-											</span>
+											</Badge>
 										{/if}
 									</div>
 									<div class="flex items-center gap-2 text-muted-foreground text-xs">
 										<span class="font-mono">{formatSize(backup.size_bytes)}</span>
 									</div>
 								</div>
-								<div class="flex gap-2">
+								<ButtonGroup>
 									<Button data-testid="restore-btn" variant="outline" size="icon" class="size-7" onclick={() => (restoreTarget = backup.id)} title={t('backupSettings.restoreBackup')} aria-label={t('backupSettings.restoreBackup')}>
 										<RotateCcw class="size-3.5" />
 									</Button>
 									<Button data-testid="delete-btn" variant="ghost" size="icon" class="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive" onclick={() => (deleteTarget = backup.id)} title={t('backupSettings.deleteBackup')} aria-label={t('backupSettings.deleteBackup')}>
 										<Trash2 class="size-3.5" />
 									</Button>
-								</div>
+								</ButtonGroup>
 							</div>
 						{/each}
 					</div>
@@ -238,7 +241,7 @@ function handleRestore() {
 			<Button variant="outline" onclick={() => (showCreateDialog = false)}>{t('common.cancel')}</Button>
 			<Button onclick={handleCreateSubmit} disabled={!backupName.trim() || isCreating}>
 				{#if isCreating}
-					<Loader2 class="mr-2 size-4 animate-spin" />
+					<Spinner class="mr-2" />
 					{t('backupSettings.creating')}
 				{:else}
 					{t('backupSettings.createBackup')}

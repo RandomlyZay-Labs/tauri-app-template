@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { updateStore } from '@/stores/updateStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
-import { push } from 'svelte-spa-router';
+import { push, router } from 'svelte-spa-router';
 import { ArrowRight, Info, X } from '@lucide/svelte';
 import { slide } from 'svelte/transition';
 import { t } from '@/lib/i18n';
@@ -16,9 +16,15 @@ function handleViewDetails() {
 function handleDismiss() {
 	updateStore.hasUnseenUpdate = false;
 }
+
+$effect(() => {
+	if (router.location === '/settings' && uiStore.activeSettingsTab === 'updates') {
+		updateStore.hasUnseenUpdate = false;
+	}
+});
 </script>
 
-{#if updateStore.hasUnseenUpdate && uiStore.onboardingCompleted}
+{#if updateStore.hasUnseenUpdate && uiStore.onboardingCompleted && !(router.location === '/settings' && uiStore.activeSettingsTab === 'updates')}
 	<div
 		transition:slide={{ duration: 150 }}
 		class="relative bg-primary/10 border-b border-primary/20 text-foreground py-2.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 font-medium text-xs md:text-sm animate-in fade-in"

@@ -7,22 +7,12 @@ import { executeSafeAction } from '@/lib/async-utils';
 import { cn } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import { commands } from '@/lib/ipc';
-import {
-    exitApp,
-    relaunchApp,
-    showConfirmDialog,
-    triggerNotification,
-} from '@/lib/system-utils';
 import { toast } from '@/lib/toast';
 import { trayStore } from '@/stores/trayStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import {
-    Bell,
     Download,
     Info,
-    MessageSquare,
-    Power,
-    RefreshCw,
     RotateCcw,
 } from '@lucide/svelte';
 
@@ -36,51 +26,6 @@ $effect(() => {
 		throw new Error('This is a simulated crash to test the Error Boundary.');
 	}
 });
-
-function handleTestNotification() {
-	void executeSafeAction(
-		() =>
-			triggerNotification(
-				t('debugSettings.testNotificationTitle'),
-				t('debugSettings.testNotificationBody'),
-			),
-		{
-			successMessage: t('debugSettings.systemNotificationSent'),
-			errorMessage: t('debugSettings.failedToSendNotification'),
-		},
-	);
-}
-
-function handleTestNativeDialog() {
-	void executeSafeAction(
-		async () => {
-			const confirmed = await showConfirmDialog(
-				t('debugSettings.nativeDialogMessage'),
-				t('debugSettings.nativeDialogTitle'),
-			);
-			toast.info(
-				t('debugSettings.nativeDialogResult', {
-					result: confirmed
-						? t('debugSettings.resultYes')
-						: t('debugSettings.resultNo'),
-				}),
-			);
-		},
-		{ errorMessage: t('debugSettings.failedToOpenDialog') },
-	);
-}
-
-function handleRelaunch() {
-	void executeSafeAction(() => relaunchApp(), {
-		errorMessage: t('debugSettings.failedToRelaunch'),
-	});
-}
-
-function handleExit() {
-	void executeSafeAction(() => exitApp(), {
-		errorMessage: t('debugSettings.failedToExit'),
-	});
-}
 
 function handleExportLogs() {
 	void executeSafeAction(
@@ -264,70 +209,6 @@ function handleExportLogs() {
 						<RotateCcw class="size-4" />
 					</Button>
 					<Switch checked={debugOn} onCheckedChange={() => uiStore.setLogLevel(debugOn ? 'info' : 'debug')} />
-				</div>
-			</div>
-
-			<!-- Native Features -->
-			<div class="flex items-center justify-between border-b pb-4">
-				<div class="space-y-0.5">
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							{#snippet child({ props })}
-								<span
-									{...props}
-									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
-								>
-									{t('debugSettings.nativeFeatures')}
-									<Info class="size-3.5 text-muted-foreground/70" />
-								</span>
-							{/snippet}
-						</Tooltip.Trigger>
-						<Tooltip.Content side="top" align="center">
-							<p>{t('debugSettings.nativeFeaturesDescription')}</p>
-						</Tooltip.Content>
-					</Tooltip.Root>
-				</div>
-				<div class="flex gap-2">
-					<Button variant="outline" onclick={handleTestNotification}>
-						<Bell class="mr-2 size-4" />
-						{t('debugSettings.notification')}
-					</Button>
-					<Button variant="outline" onclick={handleTestNativeDialog}>
-						<MessageSquare class="mr-2 size-4" />
-						{t('debugSettings.nativeDialog')}
-					</Button>
-				</div>
-			</div>
-
-			<!-- Process Control -->
-			<div class="flex items-center justify-between border-b pb-4">
-				<div class="space-y-0.5">
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							{#snippet child({ props })}
-								<span
-									{...props}
-									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
-								>
-									{t('debugSettings.processControl')}
-									<Info class="size-3.5 text-muted-foreground/70" />
-								</span>
-							{/snippet}
-						</Tooltip.Trigger>
-						<Tooltip.Content side="top" align="center">
-							<p>{t('debugSettings.processControlDescription')}</p>
-						</Tooltip.Content>
-					</Tooltip.Root>
-				</div>
-				<div class="flex gap-2">
-					<Button variant="outline" onclick={handleRelaunch}>
-						<RefreshCw class="mr-2 size-4" />
-						{t('debugSettings.relaunch')}
-					</Button>
-					<Button variant="outline" onclick={handleExit}>
-						<Power class="mr-2 size-4" />
-						{t('debugSettings.exit')}
-					</Button>
 				</div>
 			</div>
 

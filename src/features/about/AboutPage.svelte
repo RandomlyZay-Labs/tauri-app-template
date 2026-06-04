@@ -8,6 +8,7 @@ import { openExternalLink } from '@/lib/system-utils';
 import { animationStore } from '@/stores/animationStore.svelte';
 import { ExternalLink, Heart, Sparkles } from '@lucide/svelte';
 import { fade } from 'svelte/transition';
+import { Badge } from '@/components/ui/badge';
 
 
 function openLink(url: string) {
@@ -89,11 +90,11 @@ const appVersion = $derived(getAppVersion());
 				</div>
 
 				<div class="flex flex-col items-center gap-4">
-					<div class="flex items-center gap-2 rounded-full border border-border/50 bg-muted/50 px-3 py-1 font-mono text-muted-foreground/70 text-xs">
+					<Badge variant="outline" class="flex items-center gap-2 rounded-full border border-border/50 bg-muted/50 px-3 py-1 font-mono text-muted-foreground/70 text-xs h-auto">
 						<span>v{appVersion}</span>
 						<span class="h-1 w-1 rounded-full bg-muted-foreground/30"></span>
 						<span>{t('about.license')}</span>
-					</div>
+					</Badge>
 					<p class="text-muted-foreground/40 text-xs">{t('about.madeWith')}</p>
 				</div>
 			</div>
