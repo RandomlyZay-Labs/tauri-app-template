@@ -1,10 +1,7 @@
 # Roadmap
 
 ## feat/ui-polish
-- Remove "The quick brown fox jumps over the lazy dog" placeholder text
-- Remove spinning star from about page.
-- Add cool animated and interactive effects to the about page.
-- Find something to do with the heart at the top of the page.
+- Remove unnecessary toasts (e.g., setting updates)
 
 - Implement tauri-controls plugin
 

@@ -50,7 +50,7 @@
 	},
 	"about": {
 		"title": "Tauri App Template",
-		"description": "The quick brown fox jumps over the lazy dog.",
+		"description": "A modern, batteries-included desktop app starter built with Tauri, Svelte, and Rust.",
 		"supportOnKofi": "Support me on Ko-fi",
 		"checkOutProjects": "Check out my other projects",
 		"failedToOpenLink": "Failed to open link",

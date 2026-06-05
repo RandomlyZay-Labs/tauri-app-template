@@ -50,7 +50,7 @@
 	},
 	"about": {
 		"title": "Tauri App Template",
-		"description": "El veloz zorro marrón salta sobre el perro perezoso.",
+		"description": "Una aplicación de escritorio moderna y completa, creada con Tauri, Svelte y Rust.",
 		"supportOnKofi": "Apóyame en Ko-fi",
 		"checkOutProjects": "Mira mis otros proyectos",
 		"failedToOpenLink": "Error al abrir el enlace",
