@@ -5,6 +5,9 @@
 
 - Implement features from tauri-ui repository
 
+## chore/MIT-license
+- Switch to MIT license
+
 ## feat/github-pages
 
 - Set up GitHub Pages

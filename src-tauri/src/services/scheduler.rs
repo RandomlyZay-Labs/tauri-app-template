@@ -39,7 +39,12 @@ impl<R: tauri::Runtime> TauriSettingsStore<R> {
 
 impl<R: tauri::Runtime> SettingsStore for TauriSettingsStore<R> {
     fn get_backup_settings(&self) -> Result<Option<BackupSettings>, Box<dyn std::error::Error>> {
-        let stores = self.app.store("store.bin")?;
+        let state = self.app.state::<AppState>();
+        let store_path = match &state.app_data_dir {
+            Some(dir) => dir.join("store.bin"),
+            None => std::path::PathBuf::from("store.bin"),
+        };
+        let stores = self.app.store(store_path)?;
         let Some(val) = stores.get("backup-settings") else {
             return Ok(None);
         };
@@ -48,7 +53,12 @@ impl<R: tauri::Runtime> SettingsStore for TauriSettingsStore<R> {
     }
 
     fn save_backup_settings(&self, settings: BackupSettings) -> Result<(), Box<dyn std::error::Error>> {
-        let stores = self.app.store("store.bin")?;
+        let state = self.app.state::<AppState>();
+        let store_path = match &state.app_data_dir {
+            Some(dir) => dir.join("store.bin"),
+            None => std::path::PathBuf::from("store.bin"),
+        };
+        let stores = self.app.store(store_path)?;
         let wrapper = StoreWrapper {
             state: settings,
             version: 0,
@@ -116,8 +126,16 @@ async fn check_and_perform_backup_internal(
     store: &dyn SettingsStore,
     now: u64
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let Some(mut settings) = store.get_backup_settings()? else {
-        return Ok(());
+    // If settings are not found (e.g. fresh install), fallback to default settings:
+    // enabled: true, interval: 24h, max_backups: 5, last_backup_time: None.
+    let mut settings = match store.get_backup_settings()? {
+        Some(s) => s,
+        None => BackupSettings {
+            enabled: true,
+            interval: 24 * 3600 * 1000, // 24 hours in ms
+            max_backups: 5,
+            last_backup_time: None,
+        },
     };
 
     if should_backup(&settings, now) {
@@ -221,6 +239,32 @@ mod tests {
         // Settings should remain unchanged
         let current_settings = store.get_backup_settings()?.ok_or("No settings")?;
         assert_eq!(current_settings.last_backup_time, Some(5000));
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_check_and_perform_backup_falls_back_to_defaults() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = tempfile::tempdir()?;
+        let data_dir = tmp.path().to_path_buf();
+        let db_path = data_dir.join("source.db");
+        tokio::fs::File::create(&db_path).await?;
+
+        let db = SqlitePoolOptions::new()
+            .connect(&format!("sqlite://{}", db_path.to_string_lossy()))
+            .await?;
+        
+        let store = MockStore { settings: Mutex::new(None) };
+
+        // Should perform backup because settings are None (falls back to defaults, last_backup_time = None)
+        check_and_perform_backup_internal(&db, Some(&data_dir), &store, 10000).await?;
+        
+        // Settings should now be created and saved with last_backup_time = Some(10000)
+        let current_settings = store.get_backup_settings()?.ok_or("No settings saved")?;
+        assert!(current_settings.enabled);
+        assert_eq!(current_settings.interval, 24 * 3600 * 1000);
+        assert_eq!(current_settings.max_backups, 5);
+        assert_eq!(current_settings.last_backup_time, Some(10000));
         
         Ok(())
     }
