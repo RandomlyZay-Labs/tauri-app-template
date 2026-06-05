@@ -75,6 +75,7 @@ vi.mock('@/stores/watcherStore.svelte', () => ({
 
 vi.mock('./i18n', () => ({
 	t: vi.fn((key, opts) => opts?.defaultValue || key),
+	syncLocaleWithSystem: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('LifecycleManager', () => {

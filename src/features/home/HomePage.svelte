@@ -13,7 +13,9 @@ function getGreetingKey(): string {
 	return 'home.greetingEvening';
 }
 
-const isMac = navigator.userAgent.includes('Mac');
+import { platform } from '@tauri-apps/plugin-os';
+
+const isMac = platform() === 'macos';
 const shortcutLabel = isMac ? t('home.shortcutMac') : t('home.shortcutWindows');
 </script>
 

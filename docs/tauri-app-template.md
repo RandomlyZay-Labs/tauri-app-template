@@ -1,11 +1,7 @@
 # Roadmap
 
-## feat/ui-polish
-- Implement tauri-controls plugin
-
-- Implement features from tauri-ui repository
-
 ## chore/MIT-license
+
 - Switch to MIT license
 
 ## feat/github-pages

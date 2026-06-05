@@ -9,6 +9,7 @@ import * as Dialog from '@/components/ui/dialog';
 import { getAppVersion } from '@/lib/app-version.svelte';
 import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
+import i18n from 'i18next';
 import { getCliStatus, installCli, openExternalLink } from '@/lib/system-utils';
 import { cn } from '@/lib/utils';
 import { uiStore } from '@/stores/uiStore.svelte';
@@ -66,16 +67,8 @@ let showTranslated = $state(false);
 let githubChangelog = $state<string | null>(null);
 let isFetchingChangelog = $state(false);
 
-const isNotEnglish = $derived(
-	typeof navigator !== 'undefined' &&
-	navigator.language?.split('-')[0] !== 'en'
-);
-
-const targetLang = $derived(
-	typeof navigator !== 'undefined'
-		? navigator.language?.split('-')[0] || 'en'
-		: 'en'
-);
+const isNotEnglish = $derived(i18n.language !== 'en');
+const targetLang = $derived(i18n.language || 'en');
 
 async function fetchGithubChangelog(version: string) {
 	isFetchingChangelog = true;

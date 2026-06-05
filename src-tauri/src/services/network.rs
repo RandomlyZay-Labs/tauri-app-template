@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use futures_util::StreamExt;
-use bytes::Bytes;
 use crate::error::CResult;
+use async_trait::async_trait;
+use bytes::Bytes;
+use futures_util::StreamExt;
 
 pub struct NetworkResponse {
     pub status: reqwest::StatusCode,
@@ -36,9 +36,11 @@ impl NetworkClient for RealNetworkClient {
         Ok(NetworkResponse {
             status: response.status(),
             content_length: response.content_length(),
-            bytes_stream: Box::pin(response.bytes_stream().map(|r| {
-                r.map_err(|e| crate::error::Error::Network(e.to_string()))
-            })),
+            bytes_stream: Box::pin(
+                response
+                    .bytes_stream()
+                    .map(|r| r.map_err(|e| crate::error::Error::Network(e.to_string()))),
+            ),
         })
     }
 }
@@ -51,7 +53,8 @@ mod tests {
     #[tokio::test]
     async fn test_real_network_client_success() -> Result<(), Box<dyn std::error::Error>> {
         let mut server = mockito::Server::new_async().await;
-        let _m = server.mock("GET", "/test")
+        let _m = server
+            .mock("GET", "/test")
             .with_status(200)
             .with_header("content-length", "4")
             .with_body("data")
@@ -59,11 +62,13 @@ mod tests {
             .await;
 
         let client = RealNetworkClient::new(reqwest::Client::new());
-        let response = client.send_request(&format!("{}/test", server.url()), None).await?;
+        let response = client
+            .send_request(&format!("{}/test", server.url()), None)
+            .await?;
 
         assert_eq!(response.status, reqwest::StatusCode::OK);
         assert_eq!(response.content_length, Some(4));
-        
+
         let body = response.bytes_stream.collect::<Vec<_>>().await;
         assert_eq!(body.len(), 1);
         let first_chunk = body[0].as_ref().map_err(|e| e.to_string())?;
@@ -75,17 +80,20 @@ mod tests {
     #[tokio::test]
     async fn test_real_network_client_range_header() -> Result<(), Box<dyn std::error::Error>> {
         let mut server = mockito::Server::new_async().await;
-        let _m = server.mock("GET", "/test")
+        let _m = server
+            .mock("GET", "/test")
             .match_header("Range", "bytes=0-10")
             .with_status(206)
             .create_async()
             .await;
 
         let client = RealNetworkClient::new(reqwest::Client::new());
-        let response = client.send_request(
-            &format!("{}/test", server.url()), 
-            Some("bytes=0-10".to_string())
-        ).await?;
+        let response = client
+            .send_request(
+                &format!("{}/test", server.url()),
+                Some("bytes=0-10".to_string()),
+            )
+            .await?;
 
         assert_eq!(response.status, reqwest::StatusCode::PARTIAL_CONTENT);
         Ok(())
@@ -94,13 +102,16 @@ mod tests {
     #[tokio::test]
     async fn test_real_network_client_error() -> Result<(), Box<dyn std::error::Error>> {
         let mut server = mockito::Server::new_async().await;
-        let _m = server.mock("GET", "/error")
+        let _m = server
+            .mock("GET", "/error")
             .with_status(404)
             .create_async()
             .await;
 
         let client = RealNetworkClient::new(reqwest::Client::new());
-        let result = client.send_request(&format!("{}/error", server.url()), None).await;
+        let result = client
+            .send_request(&format!("{}/error", server.url()), None)
+            .await;
 
         assert!(result.is_err());
         Ok(())

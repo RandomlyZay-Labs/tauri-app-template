@@ -29,6 +29,7 @@
 		"process:default",
 		"store:default",
 		"better-posthog:default",
-		"updater:default"
+		"updater:default",
+		"os:default"
 	]
 }

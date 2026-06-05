@@ -1,8 +1,8 @@
 use crate::error::{CResult, Error};
-use std::path::Path;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use std::fs::File;
-use std::io::{Write, Read};
+use std::io::{Read, Write};
+use std::path::Path;
 
 pub fn get_binary_details(version: &str) -> CResult<(String, String)> {
     let os = std::env::consts::OS;
@@ -13,7 +13,12 @@ pub fn get_binary_details(version: &str) -> CResult<(String, String)> {
         ("windows", "aarch64") => ("windows", "arm64", ".exe"),
         ("linux", "x86_64") => ("linux", "amd64", ""),
         ("linux", "aarch64") => ("linux", "arm64", ""),
-        _ => return Err(Error::Unknown(format!("Unsupported platform: {}-{}", os, arch))),
+        _ => {
+            return Err(Error::Unknown(format!(
+                "Unsupported platform: {}-{}",
+                os, arch
+            )));
+        }
     };
 
     let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
@@ -25,11 +30,20 @@ pub fn get_binary_details(version: &str) -> CResult<(String, String)> {
     Ok((binary_name, url))
 }
 
-pub async fn get_expected_sha(client: &reqwest::Client, version: &str, binary_name: &str) -> CResult<String> {
+pub async fn get_expected_sha(
+    client: &reqwest::Client,
+    version: &str,
+    binary_name: &str,
+) -> CResult<String> {
     get_expected_sha_from_base(client, "https://api.github.com", version, binary_name).await
 }
 
-async fn get_expected_sha_from_base(client: &reqwest::Client, base_url: &str, version: &str, binary_name: &str) -> CResult<String> {
+async fn get_expected_sha_from_base(
+    client: &reqwest::Client,
+    base_url: &str,
+    version: &str,
+    binary_name: &str,
+) -> CResult<String> {
     let api_url = format!(
         "{}/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v{}",
         base_url, version
@@ -44,7 +58,8 @@ async fn get_expected_sha_from_base(client: &reqwest::Client, base_url: &str, ve
     }
 
     let release_info: serde_json::Value = res.json().await?;
-    let assets = release_info.get("assets")
+    let assets = release_info
+        .get("assets")
         .and_then(|a| a.as_array())
         .ok_or_else(|| Error::Unknown("Release JSON missing assets array".into()))?;
 
@@ -60,7 +75,10 @@ async fn get_expected_sha_from_base(client: &reqwest::Client, base_url: &str, ve
     }
 
     sha_opt.ok_or_else(|| {
-        Error::Unknown(format!("Could not find SHA-256 digest for asset {} in release assets metadata", binary_name))
+        Error::Unknown(format!(
+            "Could not find SHA-256 digest for asset {} in release assets metadata",
+            binary_name
+        ))
     })
 }
 
@@ -76,7 +94,10 @@ pub fn verify_checksum(file_path: &Path, expected_sha: &str) -> CResult<()> {
         hasher.update(&buffer[..count]);
     }
     let hash_result = hasher.finalize();
-    let computed_sha = hash_result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+    let computed_sha = hash_result
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>();
 
     if computed_sha != expected_sha {
         return Err(Error::Unknown(format!(
@@ -96,7 +117,8 @@ pub fn install_binary_file(tmp_path: &Path, target_path: &Path) -> CResult<()> {
 
         if is_already_exists {
             if let Err(rm_err) = std::fs::remove_file(target_path) {
-                secondary_error = Some(format!("Failed to remove existing target file: {}", rm_err));
+                secondary_error =
+                    Some(format!("Failed to remove existing target file: {}", rm_err));
             } else if let Err(rename_err) = std::fs::rename(tmp_path, target_path) {
                 secondary_error = Some(format!("Failed to rename binary on retry: {}", rename_err));
             } else {
@@ -106,7 +128,10 @@ pub fn install_binary_file(tmp_path: &Path, target_path: &Path) -> CResult<()> {
 
         if !retry_success {
             let msg = if let Some(sec_err) = secondary_error {
-                format!("Failed to rename binary: {}. Secondary error: {}", e, sec_err)
+                format!(
+                    "Failed to rename binary: {}. Secondary error: {}",
+                    e, sec_err
+                )
             } else {
                 format!("Failed to rename binary: {}", e)
             };
@@ -129,7 +154,9 @@ pub fn install_binary_file(tmp_path: &Path, target_path: &Path) -> CResult<()> {
 
 pub async fn update_cli_standalone(target_version: &str, target_path: &Path) -> CResult<()> {
     let (binary_name, url) = get_binary_details(target_version)?;
-    let target_dir = target_path.parent().ok_or_else(|| Error::Unknown("Invalid CLI path".into()))?;
+    let target_dir = target_path
+        .parent()
+        .ok_or_else(|| Error::Unknown("Invalid CLI path".into()))?;
     std::fs::create_dir_all(target_dir)?;
 
     let client = reqwest::Client::builder()
@@ -161,7 +188,12 @@ pub async fn update_cli_standalone(target_version: &str, target_path: &Path) -> 
 
         if let Some(total) = total_size {
             let percent = (downloaded as f64 / total as f64) * 100.0;
-            print!("\rDownloading: {:.1}% ({}/{})", percent, crate::util::format_bytes(downloaded), crate::util::format_bytes(total));
+            print!(
+                "\rDownloading: {:.1}% ({}/{})",
+                percent,
+                crate::util::format_bytes(downloaded),
+                crate::util::format_bytes(total)
+            );
         } else {
             print!("\rDownloading: {}", crate::util::format_bytes(downloaded));
         }
@@ -205,7 +237,7 @@ mod tests {
         let mut temp_file = tempfile::NamedTempFile::new()?;
         let content = b"hello world";
         temp_file.write_all(content)?;
-        
+
         let expected_sha = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
         let result = verify_checksum(temp_file.path(), expected_sha);
         assert!(result.is_ok());
@@ -218,7 +250,7 @@ mod tests {
         let mut temp_file = tempfile::NamedTempFile::new()?;
         let content = b"hello world";
         temp_file.write_all(content)?;
-        
+
         let expected_sha = "wrong_sha";
         let result = verify_checksum(temp_file.path(), expected_sha);
         assert!(result.is_err());
@@ -229,7 +261,7 @@ mod tests {
     async fn test_get_expected_sha() -> Result<(), Box<dyn std::error::Error>> {
         let mut server = mockito::Server::new_async().await;
         let url = server.url();
-        
+
         let body = serde_json::json!({
             "assets": [
                 {
@@ -239,7 +271,11 @@ mod tests {
             ]
         });
 
-        let _mock = server.mock("GET", "/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v1.0.0")
+        let _mock = server
+            .mock(
+                "GET",
+                "/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v1.0.0",
+            )
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(serde_json::to_string(&body)?)
@@ -250,8 +286,17 @@ mod tests {
             .user_agent("tauri-app-template")
             .build()?;
 
-        let res = get_expected_sha_from_base(&client, &url, "1.0.0", "tauri-app-template-cli-linux-amd64").await?;
-        assert_eq!(res, "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+        let res = get_expected_sha_from_base(
+            &client,
+            &url,
+            "1.0.0",
+            "tauri-app-template-cli-linux-amd64",
+        )
+        .await?;
+        assert_eq!(
+            res,
+            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+        );
         Ok(())
     }
 
@@ -274,7 +319,10 @@ mod tests {
 
         // Assert target file exists
         assert!(target_path.exists());
-        assert_eq!(target_path.file_name().ok_or("No file name")?, "installed_binary");
+        assert_eq!(
+            target_path.file_name().ok_or("No file name")?,
+            "installed_binary"
+        );
 
         // Assert is executable on Unix
         #[cfg(unix)]

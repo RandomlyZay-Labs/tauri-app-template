@@ -109,12 +109,16 @@ pub async fn list_backups(app_data_dir: &Path) -> CResult<Vec<BackupMetadata>> {
         if path.extension().and_then(|s| s.to_str()) == Some("db") {
             tasks.spawn(async move {
                 let metadata = tokio::fs::metadata(&path).await?;
-                let timestamp = metadata.created()
+                let timestamp = metadata
+                    .created()
                     .or_else(|_| metadata.modified())
                     .unwrap_or_else(|_| std::time::SystemTime::now());
                 let created: DateTime<Local> = timestamp.into();
                 let Some(file_name_os) = path.file_name() else {
-                    return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid filename"));
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Invalid filename",
+                    ));
                 };
                 let file_name = file_name_os.to_string_lossy().to_string();
 
@@ -122,7 +126,9 @@ pub async fn list_backups(app_data_dir: &Path) -> CResult<Vec<BackupMetadata>> {
                 let is_manual = file_name.starts_with("manual_backup");
                 let label = if is_manual {
                     // Split once by the triple underscore separator to safely capture the full label
-                    file_name.split_once("___").map(|(_, s)| s.replace(".db", ""))
+                    file_name
+                        .split_once("___")
+                        .map(|(_, s)| s.replace(".db", ""))
                 } else {
                     None
                 };
@@ -157,7 +163,10 @@ pub async fn list_backups(app_data_dir: &Path) -> CResult<Vec<BackupMetadata>> {
 /// Prunes automated backups if the count exceeds max_backups.
 /// Keeps manual backups intact.
 pub async fn prune_backups(app_data_dir: &Path, max_backups: u32) -> CResult<usize> {
-    log::debug!("[BackupService] Pruning backups, max allowed: {}", max_backups);
+    log::debug!(
+        "[BackupService] Pruning backups, max allowed: {}",
+        max_backups
+    );
     let backups = list_backups(app_data_dir).await?;
     let max = max_backups as usize;
 
@@ -224,7 +233,10 @@ pub async fn prepare_restore_with_fs(
     app_data_dir: &Path,
     backup_id: String,
 ) -> CResult<()> {
-    log::debug!("[BackupService] Preparing restore for backup_id: {}", backup_id);
+    log::debug!(
+        "[BackupService] Preparing restore for backup_id: {}",
+        backup_id
+    );
     validate_backup_id(&backup_id)?;
 
     let backup_dir = get_backup_dir(app_data_dir).await?;
@@ -274,41 +286,43 @@ mod tests {
     #[tokio::test]
     async fn test_create_backup() -> Result<(), Box<dyn std::error::Error>> {
         use sqlx::sqlite::SqlitePoolOptions;
-        
+
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
         let source_db_path = test_dir.join("source.db");
         // Create an empty file first if it doesn't exist so SQLx can connect to it
         tokio::fs::File::create(&source_db_path).await?;
-        
+
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect(&format!("sqlite://{}", source_db_path.to_string_lossy()))
             .await?;
-            
-        sqlx::query("CREATE TABLE test (id INTEGER PRIMARY KEY); INSERT INTO test (id) VALUES (42);")
-            .execute(&pool)
-            .await?;
-            
+
+        sqlx::query(
+            "CREATE TABLE test (id INTEGER PRIMARY KEY); INSERT INTO test (id) VALUES (42);",
+        )
+        .execute(&pool)
+        .await?;
+
         let label = Some("my_first_backup".to_string());
-        
+
         let metadata = create_backup(&pool, test_dir, label).await?;
-        
+
         let backup_dir = test_dir.join(BACKUP_DIR_NAME);
         let file_path = backup_dir.join(&metadata.id);
-        
+
         assert!(tokio::fs::try_exists(&file_path).await?);
-        
+
         let backup_pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect(&format!("sqlite://{}", file_path.to_string_lossy()))
             .await?;
-            
+
         let row: (i64,) = sqlx::query_as("SELECT id FROM test")
             .fetch_one(&backup_pool)
             .await?;
-            
+
         assert_eq!(row.0, 42);
 
         Ok(())
@@ -317,23 +331,23 @@ mod tests {
     #[tokio::test]
     async fn test_create_backup_invalid_label() -> Result<(), Box<dyn std::error::Error>> {
         use sqlx::sqlite::SqlitePoolOptions;
-        
+
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
         let source_db_path = test_dir.join("source.db");
         tokio::fs::File::create(&source_db_path).await?;
-        
+
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect(&format!("sqlite://{}", source_db_path.to_string_lossy()))
             .await?;
-            
+
         // Label with only special characters should be sanitized to empty and fail
         let label = Some("!!! @#$".to_string());
-        
+
         let result = create_backup(&pool, test_dir, label).await;
-        
+
         assert!(result.is_err());
         if let Err(e) = result {
             assert!(e.to_string().contains("Backup name cannot be empty"));
@@ -374,8 +388,7 @@ mod tests {
         // Create 3 automated backups with slightly different names
         for i in 0..3 {
             let name = format!("backup_{}.db", i);
-            tokio::fs::write(backup_dir.join(name), "data")
-                .await?;
+            tokio::fs::write(backup_dir.join(name), "data").await?;
         }
 
         // Prune to keep only 1
@@ -448,13 +461,19 @@ mod tests {
 
         // 1. Verify that the backup file is successfully copied to the RESTORE_STAGING_NAME path
         let staging_path = test_dir.join(RESTORE_STAGING_NAME);
-        assert!(tokio::fs::try_exists(&staging_path).await?, "Staging file should exist");
+        assert!(
+            tokio::fs::try_exists(&staging_path).await?,
+            "Staging file should exist"
+        );
         let staging_content = tokio::fs::read_to_string(&staging_path).await?;
         assert_eq!(staging_content, "backup database content");
 
         // 2. Verify that the application correctly stages it for restoration (marker file exists)
         let marker_path = test_dir.join(MARKER_RESTORE_NAME);
-        assert!(tokio::fs::try_exists(&marker_path).await?, "Restore marker file should exist");
+        assert!(
+            tokio::fs::try_exists(&marker_path).await?,
+            "Restore marker file should exist"
+        );
         let marker_content = tokio::fs::read_to_string(&marker_path).await?;
         assert_eq!(marker_content, "restore_pending");
 
@@ -468,17 +487,31 @@ mod tests {
         struct ErrorFs;
         #[async_trait]
         impl crate::services::io::FileSystem for ErrorFs {
-            async fn create_dir_all(&self, _path: &Path) -> std::io::Result<()> { Ok(()) }
-            async fn exists(&self, _path: &Path) -> bool { true }
-            async fn metadata_len(&self, _path: &Path) -> std::io::Result<u64> { Ok(0) }
-            async fn remove_file(&self, _path: &Path) -> std::io::Result<()> { Ok(()) }
+            async fn create_dir_all(&self, _path: &Path) -> std::io::Result<()> {
+                Ok(())
+            }
+            async fn exists(&self, _path: &Path) -> bool {
+                true
+            }
+            async fn metadata_len(&self, _path: &Path) -> std::io::Result<u64> {
+                Ok(0)
+            }
+            async fn remove_file(&self, _path: &Path) -> std::io::Result<()> {
+                Ok(())
+            }
             async fn copy(&self, _from: &Path, _to: &Path) -> std::io::Result<u64> {
                 Err(std::io::Error::other("Disk Full"))
             }
-            async fn create(&self, _path: &Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            async fn create(
+                &self,
+                _path: &Path,
+            ) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
                 Err(std::io::Error::other("Disk Full"))
             }
-            async fn open_append(&self, _path: &Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            async fn open_append(
+                &self,
+                _path: &Path,
+            ) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
                 Err(std::io::Error::other("Disk Full"))
             }
         }
@@ -490,12 +523,16 @@ mod tests {
         let result = prepare_restore_with_fs(
             std::sync::Arc::new(ErrorFs),
             test_dir,
-            "fake_backup.db".to_string()
-        ).await;
+            "fake_backup.db".to_string(),
+        )
+        .await;
 
         assert!(result.is_err());
         if let Err(e) = result {
-            assert!(e.to_string().contains("Disk Full"), "Error should propagate");
+            assert!(
+                e.to_string().contains("Disk Full"),
+                "Error should propagate"
+            );
         }
 
         Ok(())
@@ -551,7 +588,8 @@ mod perf_tests {
     }
 
     #[tokio::test]
-    async fn test_list_backups_robustness_to_malformed_files() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_list_backups_robustness_to_malformed_files()
+    -> Result<(), Box<dyn std::error::Error>> {
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
@@ -560,13 +598,13 @@ mod perf_tests {
 
         // 1. Valid backup
         tokio::fs::write(backup_dir.join("backup_valid.db"), "data").await?;
-        
-        // 2. "Malformed" file - a file that starts_with manual_backup but has no ___ 
+
+        // 2. "Malformed" file - a file that starts_with manual_backup but has no ___
         // This will have label None but still be listed.
         tokio::fs::write(backup_dir.join("manual_backup_invalid.db"), "data").await?;
 
         let backups = list_backups(test_dir).await?;
-        
+
         // Should still contain the valid one
         assert!(backups.iter().any(|b| b.id == "backup_valid.db"));
         // The one without ___ should have label None but still be listed

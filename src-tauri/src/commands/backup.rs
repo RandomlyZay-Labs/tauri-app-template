@@ -34,7 +34,10 @@ pub async fn restore_backup(
     state: State<'_, AppState>,
     backup_id: String,
 ) -> CResult<()> {
-    log::debug!("[Command] restore_backup called with backup_id: {}", backup_id);
+    log::debug!(
+        "[Command] restore_backup called with backup_id: {}",
+        backup_id
+    );
     let data_dir = state
         .app_data_dir
         .as_ref()

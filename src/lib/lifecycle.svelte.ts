@@ -9,7 +9,7 @@ import { updateStore } from '@/stores/updateStore.svelte';
 import { watcherStore } from '@/stores/watcherStore.svelte';
 import { JOB_EVENT_NAME, type JobProgress } from '@/types/job';
 import { executeSafeAction } from './async-utils';
-import { t } from './i18n';
+import { syncLocaleWithSystem, t } from './i18n';
 import { commands } from './ipc';
 import { captureEvent } from './telemetry';
 import { toast } from './toast';
@@ -25,6 +25,9 @@ class LifecycleManager {
 	private autoCheckInterval: ReturnType<typeof setInterval> | undefined;
 
 	async init() {
+		// Sync native system locale settings with i18n
+		await syncLocaleWithSystem();
+
 		// Sync network events
 		this.handleOnline = () => networkStore.setIsOffline(false);
 		this.handleOffline = () => networkStore.setIsOffline(true);

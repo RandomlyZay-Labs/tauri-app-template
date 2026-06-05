@@ -12,9 +12,12 @@ pub async fn get_log_path(state: State<'_, AppState>) -> CResult<String> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn export_diagnostics(app: tauri::AppHandle, state: State<'_, AppState>) -> CResult<bool> {
+pub async fn export_diagnostics(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> CResult<bool> {
     log::debug!("[Command] export_diagnostics called");
-    
+
     let log_path = state.log_dir.join("latest.log");
     let log_content = tokio::fs::read_to_string(&log_path).await.ok();
 
@@ -22,7 +25,11 @@ pub async fn export_diagnostics(app: tauri::AppHandle, state: State<'_, AppState
         env!("CARGO_PKG_VERSION"),
         std::env::consts::OS,
         std::env::consts::ARCH,
-        state.app_data_dir.as_ref().map(|d| d.to_string_lossy().to_string()).as_deref(),
+        state
+            .app_data_dir
+            .as_ref()
+            .map(|d| d.to_string_lossy().to_string())
+            .as_deref(),
         log_content.as_deref(),
     );
 
@@ -36,12 +43,18 @@ pub async fn export_diagnostics(app: tauri::AppHandle, state: State<'_, AppState
             let _ = tx.send(file_path);
         });
 
-    let file_path = rx.await.map_err(|_| crate::error::Error::Unknown("Dialog channel closed".into()))?;
+    let file_path = rx
+        .await
+        .map_err(|_| crate::error::Error::Unknown("Dialog channel closed".into()))?;
 
     if let Some(path) = file_path {
-        tokio::fs::write(path.into_path().map_err(|e| crate::error::Error::Io(e.to_string()))?, output)
-            .await
-            .map_err(|e| crate::error::Error::Io(e.to_string()))?;
+        tokio::fs::write(
+            path.into_path()
+                .map_err(|e| crate::error::Error::Io(e.to_string()))?,
+            output,
+        )
+        .await
+        .map_err(|e| crate::error::Error::Io(e.to_string()))?;
         Ok(true)
     } else {
         Ok(false)
@@ -59,7 +72,10 @@ fn generate_diagnostics_string(
     output.push_str("=== Diagnostics ===\n");
     output.push_str(&format!("App Version: {}\n", version));
     output.push_str(&format!("OS: {} ({})\n", os, arch));
-    output.push_str(&format!("Data Directory: {}\n", data_dir.unwrap_or_default()));
+    output.push_str(&format!(
+        "Data Directory: {}\n",
+        data_dir.unwrap_or_default()
+    ));
     output.push_str("\n=== Log ===\n");
     output.push_str(log_content.unwrap_or("No log file found."));
     output
@@ -91,7 +107,7 @@ pub async fn open_data_dir(app: tauri::AppHandle, state: State<'_, AppState>) ->
         .app_data_dir
         .as_ref()
         .ok_or_else(|| crate::error::Error::Validation("missing app_data_dir".into()))?;
-    
+
     app.opener()
         .open_path(data_dir.to_string_lossy().to_string(), None::<&str>)
         .map_err(|e| crate::error::Error::Io(e.to_string()))?;
@@ -102,7 +118,7 @@ pub async fn open_data_dir(app: tauri::AppHandle, state: State<'_, AppState>) ->
 #[specta::specta]
 pub async fn reset_application(state: State<'_, AppState>) -> CResult<()> {
     log::debug!("[Command] reset_application called");
-    
+
     let data_dir = state
         .app_data_dir
         .as_ref()
@@ -136,7 +152,13 @@ mod tests {
 
     #[test]
     fn test_generate_diagnostics_string() {
-        let output = generate_diagnostics_string("1.0.0", "linux", "x86_64", Some("/data/dir"), Some("app log content"));
+        let output = generate_diagnostics_string(
+            "1.0.0",
+            "linux",
+            "x86_64",
+            Some("/data/dir"),
+            Some("app log content"),
+        );
         assert!(output.contains("=== Diagnostics ==="));
         assert!(output.contains("App Version: 1.0.0"));
         assert!(output.contains("OS: linux (x86_64)"));
@@ -196,7 +218,6 @@ mod tests {
         }
     }
 }
-
 
 #[tauri::command]
 #[specta::specta]
