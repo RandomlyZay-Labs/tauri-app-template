@@ -59,7 +59,6 @@ describe('AppearanceSettings', () => {
 		await fireEvent.click(toggle);
 
 		expect(animationStore.animationsEnabled).toBe(!initialValue);
-		expect(toast.success).toHaveBeenCalled();
 	});
 
 	it('resets theme to default when reset button is clicked', async () => {
@@ -86,7 +85,6 @@ describe('AppearanceSettings', () => {
 
 		// Default is usually true in tests (or based on getSystemAnimationPreference which we should mock)
 		// Here we just check it was updated
-		expect(toast.success).toHaveBeenCalled();
 	});
 
 	it('renders toast position controls', () => {
@@ -107,5 +105,6 @@ describe('AppearanceSettings', () => {
 		await fireEvent.click(resetButton);
 
 		expect(uiStore.toastPosition).toBe('top-right');
+		expect(toast.success).toHaveBeenCalled();
 	});
 });

@@ -1,8 +1,6 @@
 # Roadmap
 
 ## feat/ui-polish
-- Remove unnecessary toasts (e.g., setting updates)
-
 - Implement tauri-controls plugin
 
 - Implement features from tauri-ui repository

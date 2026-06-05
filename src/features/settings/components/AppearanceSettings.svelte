@@ -20,15 +20,12 @@ const defaultTheme: Theme = 'system';
 const defaultAnimation = getSystemAnimationPreference();
 
 function handleSettingChange(
-	label: string,
 	action: () => void,
 	requiresReload = false,
 ) {
 	action();
 	if (requiresReload) {
 		showReloadDialog = true;
-	} else {
-		toast.success(t('appearanceSettings.settingUpdated', { label }));
 	}
 }
 
@@ -83,7 +80,7 @@ const _unusedKeysDummy = [
 					class={cn('size-8 text-muted-foreground', {
 						invisible: themeStore.theme === defaultTheme,
 					})}
-					onclick={() => handleSettingChange(t('appearanceSettings.themeMode'), () => themeStore.setTheme(defaultTheme))}
+					onclick={() => handleSettingChange(() => themeStore.setTheme(defaultTheme))}
 					aria-label={t('appearanceSettings.resetThemeMode')}
 					aria-hidden={themeStore.theme === defaultTheme}
 					tabindex={themeStore.theme === defaultTheme ? -1 : 0}
@@ -94,7 +91,7 @@ const _unusedKeysDummy = [
 					type="single"
 					value={themeStore.theme}
 					onValueChange={(val) => {
-						handleSettingChange(t('appearanceSettings.themeMode'), () => themeStore.setTheme(val as Theme));
+						handleSettingChange(() => themeStore.setTheme(val as Theme));
 					}}
 				>
 					<Select.Trigger id="theme-mode" class="h-9 w-40 capitalize">
@@ -139,7 +136,7 @@ const _unusedKeysDummy = [
 					class={cn('size-8 text-muted-foreground', {
 						invisible: animationStore.animationsEnabled === defaultAnimation,
 					})}
-					onclick={() => handleSettingChange(t('appearanceSettings.animations'), () => animationStore.setAnimationsEnabled(defaultAnimation))}
+					onclick={() => handleSettingChange(() => animationStore.setAnimationsEnabled(defaultAnimation))}
 					aria-label={t('appearanceSettings.resetAnimations')}
 					aria-hidden={animationStore.animationsEnabled === defaultAnimation}
 					tabindex={animationStore.animationsEnabled === defaultAnimation ? -1 : 0}
@@ -149,7 +146,7 @@ const _unusedKeysDummy = [
 				<Switch
 					id="animations-toggle"
 					checked={animationStore.animationsEnabled}
-					onCheckedChange={() => handleSettingChange(t('appearanceSettings.animations'), () => animationStore.setAnimationsEnabled(!animationStore.animationsEnabled))}
+					onCheckedChange={() => handleSettingChange(() => animationStore.setAnimationsEnabled(!animationStore.animationsEnabled))}
 				/>
 			</div>
 		</div>
@@ -184,7 +181,10 @@ const _unusedKeysDummy = [
 					class={cn('size-8 text-muted-foreground', {
 						invisible: uiStore.toastPosition === 'top-right',
 					})}
-					onclick={() => handleSettingChange(t('appearanceSettings.toastPosition'), () => uiStore.setToastPosition('top-right'))}
+					onclick={() => {
+						handleSettingChange(() => uiStore.setToastPosition('top-right'));
+						toast.success(t('appearanceSettings.settingUpdated', { label: t('appearanceSettings.toastPosition') }));
+					}}
 					aria-label={t('appearanceSettings.resetToastPosition')}
 					aria-hidden={uiStore.toastPosition === 'top-right'}
 					tabindex={uiStore.toastPosition === 'top-right' ? -1 : 0}
@@ -195,7 +195,8 @@ const _unusedKeysDummy = [
 					type="single"
 					value={uiStore.toastPosition}
 					onValueChange={(val) => {
-						handleSettingChange(t('appearanceSettings.toastPosition'), () => uiStore.setToastPosition(val as ToastPosition));
+						handleSettingChange(() => uiStore.setToastPosition(val as ToastPosition));
+						toast.success(t('appearanceSettings.settingUpdated', { label: t('appearanceSettings.toastPosition') }));
 					}}
 				>
 					<Select.Trigger id="toast-position" class="h-9 w-40 capitalize">

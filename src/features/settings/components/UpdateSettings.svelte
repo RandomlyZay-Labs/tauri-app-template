@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
 import { networkStore } from '@/stores/networkStore.svelte';
-import { toast } from '@/lib/toast';
 import {
 	AlertCircle,
 	Check,
@@ -292,7 +291,6 @@ $effect(() => {
 						class={cn("size-8 text-muted-foreground", { 'invisible': uiStore.autoCheckUpdates === defaultAutoCheck })}
 						onclick={() => {
 							uiStore.setAutoCheckUpdates(defaultAutoCheck);
-							toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
 						}}
 						aria-label={t('updateSettings.resetAutoCheck')}
 						aria-hidden={uiStore.autoCheckUpdates === defaultAutoCheck}
@@ -305,7 +303,6 @@ $effect(() => {
 						checked={uiStore.autoCheckUpdates}
 						onCheckedChange={(enabled) => {
 							uiStore.setAutoCheckUpdates(enabled);
-							toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
 						}}
 					/>
 				</div>

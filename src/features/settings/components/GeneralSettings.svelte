@@ -72,7 +72,6 @@ function handleRerunOnboarding() {
 function handleTelemetryToggle(enabled: boolean) {
         uiStore.setTelemetryEnabled(enabled);
         updateTelemetryConsent(enabled);
-        toast.success(t('appearanceSettings.settingUpdated', { label: t('generalSettings.telemetry') }));
 }
 </script>
 

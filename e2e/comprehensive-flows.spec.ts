@@ -115,8 +115,13 @@ test.describe('Comprehensive User Flows', () => {
 
 		// Toggle telemetry
 		const telemetrySwitch = page.locator('#telemetry-switch');
+		const isTelemetryChecked =
+			(await telemetrySwitch.getAttribute('aria-checked')) === 'true';
 		await telemetrySwitch.click();
-		await expect(page.getByText(/Telemetry updated/i)).toBeVisible();
+		await expect(telemetrySwitch).toHaveAttribute(
+			'aria-checked',
+			isTelemetryChecked ? 'false' : 'true',
+		);
 
 		// CLI Management (Mock not installed)
 		await injectMockIpc(page, {

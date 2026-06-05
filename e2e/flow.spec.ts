@@ -95,8 +95,14 @@ test.describe('App Flow', () => {
 		await expect(html).toHaveClass(/dark/);
 
 		// Animations switch
-		await page.locator('#animations-toggle').click();
-		await expect(page.getByText(/Animations updated/i)).toBeVisible();
+		const animationsToggle = page.locator('#animations-toggle');
+		const isAnimationsChecked =
+			(await animationsToggle.getAttribute('aria-checked')) === 'true';
+		await animationsToggle.click();
+		await expect(animationsToggle).toHaveAttribute(
+			'aria-checked',
+			isAnimationsChecked ? 'false' : 'true',
+		);
 	});
 
 	test('backup destructive actions', async ({ page }) => {
