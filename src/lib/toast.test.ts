@@ -86,7 +86,7 @@ describe('toast wrapper', () => {
 	});
 
 	it('provides a default copy action that writes to clipboard', async () => {
-		toast.success('Test message');
+		toast.success('Test message', { shouldCopy: true });
 
 		const callData = vi.mocked(sonnerToast.success).mock.calls[0][1];
 		expect(callData?.action?.label).toBe('Copy');
