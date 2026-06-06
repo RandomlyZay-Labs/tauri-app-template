@@ -67,7 +67,7 @@ test.describe('Edge Cases & Resiliency', () => {
 		});
 
 		await page.goto('/#/settings');
-		await page.getByTestId('tab-trigger-cli').click();
+		await page.getByTestId('tab-trigger-updates').click();
 
 		// 1. Ensure Install button is visible
 		const installBtn = page.getByRole('button', { name: /Install CLI/i });

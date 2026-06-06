@@ -4,13 +4,12 @@ import {
 	activityStore,
 } from '@/stores/activityStore.svelte';
 import { networkStore } from '@/stores/networkStore.svelte';
-import { notificationStore } from '@/stores/notificationStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
 import { watcherStore } from '@/stores/watcherStore.svelte';
 import { JOB_EVENT_NAME, type JobProgress } from '@/types/job';
 import { executeSafeAction } from './async-utils';
-import { t } from './i18n';
+import { syncLocaleWithSystem, t } from './i18n';
 import { commands } from './ipc';
 import { captureEvent } from './telemetry';
 import { toast } from './toast';
@@ -26,6 +25,9 @@ class LifecycleManager {
 	private autoCheckInterval: ReturnType<typeof setInterval> | undefined;
 
 	async init() {
+		// Sync native system locale settings with i18n
+		await syncLocaleWithSystem();
+
 		// Sync network events
 		this.handleOnline = () => networkStore.setIsOffline(false);
 		this.handleOffline = () => networkStore.setIsOffline(true);
@@ -66,7 +68,7 @@ class LifecycleManager {
 					clearInterval(this.autoCheckInterval);
 					this.autoCheckInterval = undefined;
 				}
-				if (uiStore.autoCheckUpdates) {
+				if (uiStore.autoCheckUpdates && uiStore.onboardingCompleted) {
 					this.autoCheckTimeout = setTimeout(() => {
 						void executeSafeAction(() => updateStore.checkForUpdates(false));
 					}, 3000);
@@ -119,12 +121,6 @@ class LifecycleManager {
 
 			toast.message(t('debugSettings.fileWatcherEvent'), {
 				description: message,
-			});
-
-			notificationStore.addNotification({
-				title: t('debugSettings.fileWatcherEvent'),
-				description: message,
-				type: 'info',
 			});
 		});
 	}

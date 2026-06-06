@@ -301,3 +301,39 @@
 			rotate(var(--tw-exit-rotate, 0));
 	}
 }
+
+/* Toast Progress Bar */
+[data-sonner-toast] {
+	position: relative;
+	overflow: hidden;
+}
+
+[data-sonner-toast]::after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	height: 3px;
+	background: var(--color-primary, oklch(0.45 0.2 275));
+	width: 100%;
+	transform-origin: left;
+	animation: toast-progress var(--toast-duration, 4000ms) linear forwards;
+	z-index: 50;
+}
+
+/* Pause progress bar when toaster or toast is hovered or swiped */
+[data-sonner-toaster]:hover [data-sonner-toast]::after,
+[data-sonner-toaster][data-hovered="true"] [data-sonner-toast]::after,
+[data-sonner-toaster][data-swiped="true"] [data-sonner-toast]::after,
+[data-sonner-toast]:hover::after {
+	animation-play-state: paused;
+}
+
+@keyframes toast-progress {
+	from {
+		transform: scaleX(1);
+	}
+	to {
+		transform: scaleX(0);
+	}
+}

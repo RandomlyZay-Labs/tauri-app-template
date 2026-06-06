@@ -1,6 +1,6 @@
 import { toast as sonnerToast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { notificationStore } from '@/stores/notificationStore.svelte';
+import { logger } from './logger';
 import { toast } from './toast';
 
 vi.mock('svelte-sonner', () => ({
@@ -15,9 +15,11 @@ vi.mock('svelte-sonner', () => ({
 	}),
 }));
 
-vi.mock('@/stores/notificationStore.svelte', () => ({
-	notificationStore: {
-		addNotification: vi.fn(),
+vi.mock('./logger', () => ({
+	logger: {
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
 	},
 }));
 
@@ -32,14 +34,12 @@ describe('toast wrapper', () => {
 		});
 	});
 
-	it('syncs success toast with notificationStore and sonner', () => {
+	it('syncs success toast with logger and sonner', () => {
 		toast.success('Success message', { description: 'Detail' });
 
-		expect(notificationStore.addNotification).toHaveBeenCalledWith({
-			title: 'Success message',
-			description: 'Detail',
-			type: 'success',
-		});
+		expect(logger.info).toHaveBeenCalledWith(
+			'Toast [success]: Success message - Detail',
+		);
 
 		expect(sonnerToast.success).toHaveBeenCalledWith(
 			'Success message',
@@ -49,14 +49,10 @@ describe('toast wrapper', () => {
 		);
 	});
 
-	it('syncs error toast with notificationStore and sonner', () => {
+	it('syncs error toast with logger and sonner', () => {
 		toast.error('Error message');
 
-		expect(notificationStore.addNotification).toHaveBeenCalledWith({
-			title: 'Error message',
-			description: undefined,
-			type: 'error',
-		});
+		expect(logger.error).toHaveBeenCalledWith('Toast [error]: Error message');
 
 		expect(sonnerToast.error).toHaveBeenCalledWith(
 			'Error message',
@@ -64,33 +60,25 @@ describe('toast wrapper', () => {
 		);
 	});
 
-	it('syncs info toast with notificationStore and sonner', () => {
+	it('syncs info toast with logger and sonner', () => {
 		toast.info('Info message');
-		expect(notificationStore.addNotification).toHaveBeenCalledWith({
-			title: 'Info message',
-			description: undefined,
-			type: 'info',
-		});
+		expect(logger.info).toHaveBeenCalledWith('Toast [info]: Info message');
 		expect(sonnerToast.info).toHaveBeenCalled();
 	});
 
-	it('syncs warning toast with notificationStore and sonner', () => {
+	it('syncs warning toast with logger and sonner', () => {
 		toast.warning('Warning message');
-		expect(notificationStore.addNotification).toHaveBeenCalledWith({
-			title: 'Warning message',
-			description: undefined,
-			type: 'warning',
-		});
+		expect(logger.warn).toHaveBeenCalledWith(
+			'Toast [warning]: Warning message',
+		);
 		expect(sonnerToast.warning).toHaveBeenCalled();
 	});
 
-	it('syncs message (default) toast with notificationStore and sonner', () => {
+	it('syncs message (default) toast with logger and sonner', () => {
 		toast.message('Default message');
-		expect(notificationStore.addNotification).toHaveBeenCalledWith({
-			title: 'Default message',
-			description: undefined,
-			type: 'default',
-		});
+		expect(logger.info).toHaveBeenCalledWith(
+			'Toast [default]: Default message',
+		);
 		expect(sonnerToast).toHaveBeenCalledWith(
 			'Default message',
 			expect.any(Object),
@@ -98,7 +86,7 @@ describe('toast wrapper', () => {
 	});
 
 	it('provides a default copy action that writes to clipboard', async () => {
-		toast.success('Test message');
+		toast.success('Test message', { shouldCopy: true });
 
 		const callData = vi.mocked(sonnerToast.success).mock.calls[0][1];
 		expect(callData?.action?.label).toBe('Copy');

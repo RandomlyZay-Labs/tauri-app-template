@@ -1,3 +1,4 @@
+import { locale } from '@tauri-apps/plugin-os';
 import i18n from 'i18next';
 import en from '@/locales/en.json';
 import es from '@/locales/es.json';
@@ -61,4 +62,22 @@ export function t(key: string, options?: Record<string, unknown>): string {
 
 function _changeLanguage(lng: string) {
 	return i18n.changeLanguage(lng);
+}
+
+/**
+ * Asynchronously query the native OS locale, and if it's one of the supported
+ * languages, switch the i18n language to it.
+ */
+export async function syncLocaleWithSystem() {
+	try {
+		const sysLocale = await locale();
+		if (sysLocale) {
+			const lang = sysLocale.split('-')[0];
+			if ((SUPPORTED_LANGUAGES as readonly string[]).includes(lang)) {
+				await i18n.changeLanguage(lang);
+			}
+		}
+	} catch (e) {
+		console.warn('[i18n] Failed to sync locale with system:', e);
+	}
 }

@@ -1,8 +1,8 @@
 use crate::error::{CResult, Error};
-use crate::state::AppState;
-use crate::services::events::AppEmitter;
 use crate::services::download_service::{DownloadRequest, ProgressCallback};
-use crate::services::job_service::{JobKind, JobStatus, EmitJobProgressArgs, emit_job_progress};
+use crate::services::events::AppEmitter;
+use crate::services::job_service::{EmitJobProgressArgs, JobKind, JobStatus, emit_job_progress};
+use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::path::PathBuf;
@@ -35,20 +35,28 @@ impl CliMgmtService {
 
         #[cfg(windows)]
         {
-            let local_app_data = dirs::data_local_dir().ok_or_else(|| Error::Unknown("Could not find LocalAppData directory".into()))?;
-            Ok(local_app_data.join("tauri-app-template").join("bin").join("tauri-app-template-cli.exe"))
+            let local_app_data = dirs::data_local_dir()
+                .ok_or_else(|| Error::Unknown("Could not find LocalAppData directory".into()))?;
+            Ok(local_app_data
+                .join("tauri-app-template")
+                .join("bin")
+                .join("tauri-app-template-cli.exe"))
         }
-        
+
         #[cfg(not(windows))]
         {
-            let home = dirs::home_dir().ok_or_else(|| Error::Unknown("Could not find home directory".into()))?;
-            Ok(home.join(".local").join("bin").join("tauri-app-template-cli"))
+            let home = dirs::home_dir()
+                .ok_or_else(|| Error::Unknown("Could not find home directory".into()))?;
+            Ok(home
+                .join(".local")
+                .join("bin")
+                .join("tauri-app-template-cli"))
         }
     }
 
     pub fn get_cli_status() -> CResult<CliStatus> {
         let path = Self::get_cli_path()?;
-        
+
         if !path.is_file() {
             return Ok(CliStatus {
                 installed: false,
@@ -57,8 +65,8 @@ impl CliMgmtService {
         }
 
         // Try to run the CLI to get its version
-        use wait_timeout::ChildExt;
         use std::time::Duration;
+        use wait_timeout::ChildExt;
 
         let child = Command::new(&path)
             .arg("--version")
@@ -67,24 +75,22 @@ impl CliMgmtService {
             .spawn();
 
         let output = match child {
-            Ok(mut child_proc) => {
-                match child_proc.wait_timeout(Duration::from_secs(3)) {
-                    Ok(Some(_status)) => child_proc.wait_with_output(),
-                    Ok(None) => {
-                        let _ = child_proc.kill();
-                        let _ = child_proc.wait();
-                        Err(std::io::Error::new(
-                            std::io::ErrorKind::TimedOut,
-                            "CLI process timed out",
-                        ))
-                    }
-                    Err(e) => {
-                        let _ = child_proc.kill();
-                        let _ = child_proc.wait();
-                        Err(e)
-                    }
+            Ok(mut child_proc) => match child_proc.wait_timeout(Duration::from_secs(3)) {
+                Ok(Some(_status)) => child_proc.wait_with_output(),
+                Ok(None) => {
+                    let _ = child_proc.kill();
+                    let _ = child_proc.wait();
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        "CLI process timed out",
+                    ))
                 }
-            }
+                Err(e) => {
+                    let _ = child_proc.kill();
+                    let _ = child_proc.wait();
+                    Err(e)
+                }
+            },
             Err(e) => Err(e),
         };
 
@@ -115,25 +121,12 @@ impl CliMgmtService {
 
         let version = app_handle.package_info().version.to_string();
         let target_path = Self::get_cli_path()?;
-        let target_dir = target_path.parent().ok_or_else(|| Error::Unknown("Invalid CLI path".into()))?;
+        let target_dir = target_path
+            .parent()
+            .ok_or_else(|| Error::Unknown("Invalid CLI path".into()))?;
 
         // 1. Determine download URL
-        let os = std::env::consts::OS;
-        let arch = std::env::consts::ARCH;
-
-        let (os_name, arch_name, ext) = match (os, arch) {
-            ("windows", "x86_64") => ("windows", "x64", ".exe"),
-            ("windows", "aarch64") => ("windows", "arm64", ".exe"),
-            ("linux", "x86_64") => ("linux", "amd64", ""),
-            ("linux", "aarch64") => ("linux", "arm64", ""),
-            _ => return Err(Error::Unknown(format!("Unsupported platform: {}-{}", os, arch))),
-        };
-
-        let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
-        let url = format!(
-            "https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v{}/{}",
-            version, binary_name
-        );
+        let (binary_name, url) = super::cli_update_service::get_binary_details(&version)?;
 
         // Ensure target directory exists
         std::fs::create_dir_all(target_dir).map_err(|e| Error::Io(e.to_string()))?;
@@ -148,10 +141,20 @@ impl CliMgmtService {
             filename: Some(temp_filename.clone()),
         };
         let metadata_json = serde_json::to_string(&request).ok();
-        let job = job_manager.create_job(JobKind::Download, metadata_json).await?;
+        let job = job_manager
+            .create_job(JobKind::Download, metadata_json)
+            .await?;
         let job_id = job.id.clone();
 
-        job_manager.update_status(&job_id, JobStatus::Running, Some(0.0), Some("Installing CLI...")).await.ok();
+        job_manager
+            .update_status(
+                &job_id,
+                JobStatus::Running,
+                Some(0.0),
+                Some("Installing CLI..."),
+            )
+            .await
+            .ok();
         emit_job_progress(
             &*emitter,
             EmitJobProgressArgs {
@@ -168,44 +171,43 @@ impl CliMgmtService {
         // 4. Download binary using start_download_tracked, updating job progress in real-time
         let emitter_for_progress = Arc::clone(&emitter);
         let job_id_clone = job_id.clone();
-        let on_progress = Some(Box::new(move |bytes: u64, total: Option<u64>, speed: Option<u64>, eta: Option<u64>| {
-            let percent = total.and_then(|t| {
-                if t > 0 {
-                    Some((bytes as f64 / t as f64) * 100.0)
-                } else {
-                    None
-                }
-            });
-            let msg = match total {
-                Some(t) => format!(
-                    "Downloading CLI {} / {}",
-                    crate::util::format_bytes(bytes),
-                    crate::util::format_bytes(t)
-                ),
-                None => format!("Downloading CLI {}", crate::util::format_bytes(bytes)),
-            };
-            emit_job_progress(
-                &*emitter_for_progress,
-                EmitJobProgressArgs {
-                    job_id: &job_id_clone,
-                    kind: &JobKind::Download,
-                    status: JobStatus::Running,
-                    percent,
-                    speed_bps: speed,
-                    eta_secs: eta,
-                    message: Some(&msg),
-                },
-            );
-        }) as ProgressCallback);
+        let on_progress = Some(Box::new(
+            move |bytes: u64, total: Option<u64>, speed: Option<u64>, eta: Option<u64>| {
+                let percent = total.and_then(|t| {
+                    if t > 0 {
+                        Some((bytes as f64 / t as f64) * 100.0)
+                    } else {
+                        None
+                    }
+                });
+                let msg = match total {
+                    Some(t) => format!(
+                        "Downloading CLI {} / {}",
+                        crate::util::format_bytes(bytes),
+                        crate::util::format_bytes(t)
+                    ),
+                    None => format!("Downloading CLI {}", crate::util::format_bytes(bytes)),
+                };
+                emit_job_progress(
+                    &*emitter_for_progress,
+                    EmitJobProgressArgs {
+                        job_id: &job_id_clone,
+                        kind: &JobKind::Download,
+                        status: JobStatus::Running,
+                        percent,
+                        speed_bps: speed,
+                        eta_secs: eta,
+                        message: Some(&msg),
+                    },
+                );
+            },
+        ) as ProgressCallback);
 
         let token = job_manager.register_token(&job_id).await;
-        let download_result = download_manager.start_download_tracked(
-            Arc::clone(&emitter),
-            request,
-            &token,
-            on_progress,
-        ).await;
-        
+        let download_result = download_manager
+            .start_download_tracked(Arc::clone(&emitter), request, &token, on_progress)
+            .await;
+
         job_manager.unregister_token(&job_id).await;
 
         let tmp_path = target_dir.join(&temp_filename);
@@ -213,44 +215,22 @@ impl CliMgmtService {
         match download_result {
             Ok(_) => {
                 log::info!("[CliMgmtService] Download completed. Verifying checksum...");
-                let file_bytes = match std::fs::read(&tmp_path) {
-                    Ok(bytes) => bytes,
-                    Err(e) => {
-                        let _ = std::fs::remove_file(&tmp_path);
-                        let msg = format!("Failed to read temporary download file: {}", e);
-                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                        emit_job_progress(
-                            &*emitter,
-                            EmitJobProgressArgs {
-                                job_id: &job_id,
-                                kind: &JobKind::Download,
-                                status: JobStatus::Failed,
-                                percent: None,
-                                speed_bps: None,
-                                eta_secs: None,
-                                message: Some(&msg),
-                            },
-                        );
-                        return Err(Error::Io(e.to_string()));
-                    }
-                };
-
-                use sha2::{Sha256, Digest};
-                let mut hasher = Sha256::new();
-                hasher.update(&file_bytes);
-                let hash_result = hasher.finalize();
-                let computed_sha = hash_result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-
                 let api_url = format!(
                     "https://api.github.com/repos/RandomlyZay-Labs/tauri-app-template/releases/tags/v{}",
                     version
                 );
-                log::info!("[CliMgmtService] Fetching release metadata from {}", api_url);
-                
+                log::info!(
+                    "[CliMgmtService] Fetching release metadata from {}",
+                    api_url
+                );
+
                 let expected_sha = match async {
                     use futures_util::StreamExt;
-                    let api_res = download_manager.network_client().send_request(&api_url, None).await?;
-                    
+                    let api_res = download_manager
+                        .network_client()
+                        .send_request(&api_url, None)
+                        .await?;
+
                     // Collect stream into bytes
                     let mut api_stream = api_res.bytes_stream;
                     let mut api_bytes = bytes::BytesMut::new();
@@ -258,14 +238,19 @@ impl CliMgmtService {
                         let chunk = chunk_result?;
                         api_bytes.extend_from_slice(&chunk);
                     }
-                    
+
                     let release_info: serde_json::Value = serde_json::from_slice(&api_bytes)
-                        .map_err(|e| Error::Unknown(format!("Failed to parse release JSON: {}", e)))?;
-                    
-                    let assets = release_info.get("assets")
+                        .map_err(|e| {
+                            Error::Unknown(format!("Failed to parse release JSON: {}", e))
+                        })?;
+
+                    let assets = release_info
+                        .get("assets")
                         .and_then(|a| a.as_array())
-                        .ok_or_else(|| Error::Unknown("Release JSON missing assets array".into()))?;
-                        
+                        .ok_or_else(|| {
+                            Error::Unknown("Release JSON missing assets array".into())
+                        })?;
+
                     let mut sha_opt = None;
                     for asset in assets {
                         let name = asset.get("name").and_then(|n| n.as_str());
@@ -276,16 +261,24 @@ impl CliMgmtService {
                             break;
                         }
                     }
-                    
+
                     sha_opt.ok_or_else(|| {
-                        Error::Unknown(format!("Could not find SHA-256 digest for asset {} in release assets metadata", binary_name))
+                        Error::Unknown(format!(
+                            "Could not find SHA-256 digest for asset {} in release assets metadata",
+                            binary_name
+                        ))
                     })
-                }.await {
+                }
+                .await
+                {
                     Ok(sha) => sha,
                     Err(e) => {
                         let _ = std::fs::remove_file(&tmp_path);
                         let msg = format!("Failed to fetch expected checksum: {}", e);
-                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
+                        job_manager
+                            .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                            .await
+                            .ok();
                         emit_job_progress(
                             &*emitter,
                             EmitJobProgressArgs {
@@ -302,117 +295,19 @@ impl CliMgmtService {
                     }
                 };
 
-                if computed_sha != expected_sha {
-                    let _ = std::fs::remove_file(&tmp_path);
-                    let msg = "Integrity check failed: checksum mismatch".to_string();
-                    job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                    emit_job_progress(
-                        &*emitter,
-                        EmitJobProgressArgs {
-                            job_id: &job_id,
-                            kind: &JobKind::Download,
-                            status: JobStatus::Failed,
-                            percent: None,
-                            speed_bps: None,
-                            eta_secs: None,
-                            message: Some(&msg),
-                        },
-                    );
-                    return Err(Error::Unknown(format!(
-                        "Integrity check failed: checksum mismatch. Expected: {}, Computed: {}",
-                        expected_sha, computed_sha
-                    )));
-                }
-
-                // 5. Write/Rename to target path
-                if let Err(e) = std::fs::rename(&tmp_path, &target_path) {
-                    let is_already_exists = e.kind() == std::io::ErrorKind::AlreadyExists;
-                    let mut retry_success = false;
-                    let mut secondary_error = None;
-
-                    if is_already_exists {
-                        if let Err(rm_err) = std::fs::remove_file(&target_path) {
-                            secondary_error = Some(format!("Failed to remove existing target file: {}", rm_err));
-                        } else if let Err(rename_err) = std::fs::rename(&tmp_path, &target_path) {
-                            secondary_error = Some(format!("Failed to rename binary on retry: {}", rename_err));
-                        } else {
-                            retry_success = true;
-                        }
-                    }
-
-                    if !retry_success {
-                        let _ = std::fs::remove_file(&tmp_path);
-                        let msg = if let Some(sec_err) = secondary_error {
-                            format!("Failed to rename binary: {}. Secondary error: {}", e, sec_err)
-                        } else {
-                            format!("Failed to rename binary: {}", e)
-                        };
-                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                        emit_job_progress(
-                            &*emitter,
-                            EmitJobProgressArgs {
-                                job_id: &job_id,
-                                kind: &JobKind::Download,
-                                status: JobStatus::Failed,
-                                percent: None,
-                                speed_bps: None,
-                                eta_secs: None,
-                                message: Some(&msg),
-                            },
-                        );
-                        return Err(Error::Io(msg));
-                    }
-                }
-
-                // 5b. Set executable permissions on Unix
-                #[cfg(unix)]
+                if let Err(e) = super::cli_update_service::verify_checksum(&tmp_path, &expected_sha)
                 {
-                    use std::os::unix::fs::PermissionsExt;
-                    let metadata = match std::fs::metadata(&target_path) {
-                        Ok(m) => m,
-                        Err(e) => {
-                            let msg = format!("Failed to read metadata: {}", e);
-                            job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                            emit_job_progress(
-                                &*emitter,
-                                EmitJobProgressArgs {
-                                    job_id: &job_id,
-                                    kind: &JobKind::Download,
-                                    status: JobStatus::Failed,
-                                    percent: None,
-                                    speed_bps: None,
-                                    eta_secs: None,
-                                    message: Some(&msg),
-                                },
-                            );
-                            return Err(Error::Io(e.to_string()));
+                    let _ = std::fs::remove_file(&tmp_path);
+                    let msg = match e {
+                        Error::Io(ref io_err) => {
+                            format!("Failed to read temporary download file: {}", io_err)
                         }
+                        _ => format!("Integrity check failed: {}", e),
                     };
-                    let mut perms = metadata.permissions();
-                    perms.set_mode(0o755);
-                    if let Err(e) = std::fs::set_permissions(&target_path, perms) {
-                        let msg = format!("Failed to set permissions: {}", e);
-                        job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
-                        emit_job_progress(
-                            &*emitter,
-                            EmitJobProgressArgs {
-                                job_id: &job_id,
-                                kind: &JobKind::Download,
-                                status: JobStatus::Failed,
-                                percent: None,
-                                speed_bps: None,
-                                eta_secs: None,
-                                message: Some(&msg),
-                            },
-                        );
-                        return Err(Error::Io(e.to_string()));
-                    }
-                }
-
-                // 6. Update PATH
-                if let Err(e) = Self::ensure_in_path(target_dir) {
-                    let msg = format!("Failed to configure PATH: {}", e);
-                    job_manager.update_status(&job_id, JobStatus::Failed, None, Some(&msg)).await.ok();
+                    job_manager
+                        .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                        .await
+                        .ok();
                     emit_job_progress(
                         &*emitter,
                         EmitJobProgressArgs {
@@ -428,13 +323,66 @@ impl CliMgmtService {
                     return Err(e);
                 }
 
-                log::info!("[CliMgmtService] CLI installed successfully to {}", target_path.display());
-                job_manager.update_status(
-                    &job_id,
-                    JobStatus::Completed,
-                    Some(100.0),
-                    Some("CLI installed successfully"),
-                ).await.ok();
+                log::info!("[CliMgmtService] Checksum verified. Installing CLI binary...");
+                if let Err(e) =
+                    super::cli_update_service::install_binary_file(&tmp_path, &target_path)
+                {
+                    let _ = std::fs::remove_file(&tmp_path);
+                    let msg = format!("Installation failed: {}", e);
+                    job_manager
+                        .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                        .await
+                        .ok();
+                    emit_job_progress(
+                        &*emitter,
+                        EmitJobProgressArgs {
+                            job_id: &job_id,
+                            kind: &JobKind::Download,
+                            status: JobStatus::Failed,
+                            percent: None,
+                            speed_bps: None,
+                            eta_secs: None,
+                            message: Some(&msg),
+                        },
+                    );
+                    return Err(e);
+                }
+
+                // 6. Update PATH
+                if let Err(e) = Self::ensure_in_path(target_dir) {
+                    let msg = format!("Failed to configure PATH: {}", e);
+                    job_manager
+                        .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                        .await
+                        .ok();
+                    emit_job_progress(
+                        &*emitter,
+                        EmitJobProgressArgs {
+                            job_id: &job_id,
+                            kind: &JobKind::Download,
+                            status: JobStatus::Failed,
+                            percent: None,
+                            speed_bps: None,
+                            eta_secs: None,
+                            message: Some(&msg),
+                        },
+                    );
+                    return Err(e);
+                }
+
+                log::info!(
+                    "[CliMgmtService] CLI installed successfully to {}",
+                    target_path.display()
+                );
+                job_manager
+                    .update_status(
+                        &job_id,
+                        JobStatus::Completed,
+                        Some(100.0),
+                        Some("CLI installed successfully"),
+                    )
+                    .await
+                    .ok();
                 emit_job_progress(
                     &*emitter,
                     EmitJobProgressArgs {
@@ -458,7 +406,10 @@ impl CliMgmtService {
                     (JobStatus::Failed, e.to_string())
                 };
 
-                job_manager.update_status(&job_id, status.clone(), None, Some(&msg)).await.ok();
+                job_manager
+                    .update_status(&job_id, status.clone(), None, Some(&msg))
+                    .await
+                    .ok();
                 emit_job_progress(
                     &*emitter,
                     EmitJobProgressArgs {
@@ -480,13 +431,15 @@ impl CliMgmtService {
     fn ensure_in_path(target_dir: &std::path::Path) -> CResult<()> {
         #[cfg(windows)]
         {
-            let dir_str = target_dir.to_str().ok_or_else(|| Error::Unknown("Invalid path".into()))?;
+            let dir_str = target_dir
+                .to_str()
+                .ok_or_else(|| Error::Unknown("Invalid path".into()))?;
             let dir_str_escaped = dir_str.replace('\'', "''");
             let script = format!(
                 r#"$oldPath = [Environment]::GetEnvironmentVariable("Path", "User"); if ($oldPath -split ';' -notcontains '{}') {{ [Environment]::SetEnvironmentVariable("Path", $oldPath + ";{}", "User") }}"#,
                 dir_str_escaped, dir_str_escaped
             );
-            
+
             let output = Command::new("powershell")
                 .arg("-Command")
                 .arg(script)
@@ -498,7 +451,9 @@ impl CliMgmtService {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 return Err(Error::Unknown(format!(
                     "PowerShell script failed with exit code: {:?}. stdout: {}, stderr: {}",
-                    output.status.code(), stdout, stderr
+                    output.status.code(),
+                    stdout,
+                    stderr
                 )));
             }
         }
@@ -509,9 +464,13 @@ impl CliMgmtService {
             // Automatically modifying .bashrc/.zshrc is risky, but we can try to be helpful.
             let path_env = std::env::var("PATH").unwrap_or_default();
             let dir_str = target_dir.to_str().unwrap_or_default();
-            
+
             if !path_env.split(':').any(|p| p == dir_str) {
-                log::warn!("[CliMgmtService] {} is not in PATH. You may need to add 'export PATH=\"$PATH:{}\"' to your shell profile.", dir_str, dir_str);
+                log::warn!(
+                    "[CliMgmtService] {} is not in PATH. You may need to add 'export PATH=\"$PATH:{}\"' to your shell profile.",
+                    dir_str,
+                    dir_str
+                );
             }
         }
 
@@ -522,12 +481,12 @@ impl CliMgmtService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
-    use crate::state::TraySettings;
-    use crate::services::io::RealFileSystem;
     use crate::services::download_service::DownloadManager;
+    use crate::services::io::RealFileSystem;
     use crate::services::job_service::JobManager;
     use crate::services::watcher_service::WatcherManager;
+    use crate::state::TraySettings;
+    use std::sync::Mutex;
     use tauri::Manager;
 
     struct MockCliNetwork {
@@ -537,7 +496,11 @@ mod tests {
 
     #[async_trait::async_trait]
     impl crate::services::network::NetworkClient for MockCliNetwork {
-        async fn send_request(&self, url: &str, _range: Option<String>) -> crate::error::CResult<crate::services::network::NetworkResponse> {
+        async fn send_request(
+            &self,
+            url: &str,
+            _range: Option<String>,
+        ) -> crate::error::CResult<crate::services::network::NetworkResponse> {
             if url.contains("/releases/tags/") {
                 let bytes = bytes::Bytes::from(self.api_response.clone());
                 Ok(crate::services::network::NetworkResponse {
@@ -580,10 +543,14 @@ mod tests {
 
         // Generate checksum for mock binary
         let mock_binary = b"mock CLI binary content".to_vec();
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(&mock_binary);
-        let computed_sha = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let computed_sha = hasher
+            .finalize()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
 
         let os = std::env::consts::OS;
         let arch = std::env::consts::ARCH;
@@ -595,11 +562,10 @@ mod tests {
             _ => panic!("Unsupported platform: {}-{}", os, arch),
         };
         let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
-        
+
         let mock_api_response = format!(
             r#"{{"assets": [{{"name": "{}", "digest": "sha256:{}"}}]}}"#,
-            binary_name,
-            computed_sha
+            binary_name, computed_sha
         );
 
         // Setup mock tauri app and AppState
@@ -607,22 +573,17 @@ mod tests {
         let handle = app.handle();
 
         let db = sqlx::SqlitePool::connect("sqlite::memory:").await?;
-        
+
         // Run database migrations to set up the jobs table
-        sqlx::migrate!("./migrations")
-            .run(&db)
-            .await?;
+        sqlx::migrate!("./migrations").run(&db).await?;
 
         let mock_network = Arc::new(MockCliNetwork {
             api_response: mock_api_response,
             binary: mock_binary,
         });
 
-        let download_manager = DownloadManager::with_mocks(
-            1,
-            mock_network,
-            Arc::new(RealFileSystem),
-        );
+        let download_manager =
+            DownloadManager::with_mocks(1, mock_network, Arc::new(RealFileSystem));
 
         handle.manage(AppState {
             db: db.clone(),
@@ -668,7 +629,7 @@ mod tests {
             _ => panic!("Unsupported platform: {}-{}", os, arch),
         };
         let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
-        
+
         let mock_api_response = format!(
             r#"{{"assets": [{{"name": "{}", "digest": "sha256:incorrect_sha256_hash"}}]}}"#,
             binary_name
@@ -678,20 +639,15 @@ mod tests {
         let handle = app.handle();
 
         let db = sqlx::SqlitePool::connect("sqlite::memory:").await?;
-        sqlx::migrate!("./migrations")
-            .run(&db)
-            .await?;
+        sqlx::migrate!("./migrations").run(&db).await?;
 
         let mock_network = Arc::new(MockCliNetwork {
             api_response: mock_api_response,
             binary: mock_binary,
         });
 
-        let download_manager = DownloadManager::with_mocks(
-            1,
-            mock_network,
-            Arc::new(RealFileSystem),
-        );
+        let download_manager =
+            DownloadManager::with_mocks(1, mock_network, Arc::new(RealFileSystem));
 
         handle.manage(AppState {
             db: db.clone(),
@@ -734,10 +690,16 @@ mod tests {
         async fn copy(&self, from: &std::path::Path, to: &std::path::Path) -> std::io::Result<u64> {
             RealFileSystem.copy(from, to).await
         }
-        async fn create(&self, _path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+        async fn create(
+            &self,
+            _path: &std::path::Path,
+        ) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
             Ok(Box::new(tokio::io::sink()))
         }
-        async fn open_append(&self, _path: &std::path::Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+        async fn open_append(
+            &self,
+            _path: &std::path::Path,
+        ) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
             Ok(Box::new(tokio::io::sink()))
         }
     }
@@ -752,10 +714,14 @@ mod tests {
 
         // Generate checksum for mock binary
         let mock_binary = b"mock CLI binary content".to_vec();
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(&mock_binary);
-        let computed_sha = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let computed_sha = hasher
+            .finalize()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
 
         let os = std::env::consts::OS;
         let arch = std::env::consts::ARCH;
@@ -767,11 +733,10 @@ mod tests {
             _ => panic!("Unsupported platform: {}-{}", os, arch),
         };
         let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
-        
+
         let mock_api_response = format!(
             r#"{{"assets": [{{"name": "{}", "digest": "sha256:{}"}}]}}"#,
-            binary_name,
-            computed_sha
+            binary_name, computed_sha
         );
 
         // Setup mock tauri app and AppState
@@ -779,22 +744,17 @@ mod tests {
         let handle = app.handle();
 
         let db = sqlx::SqlitePool::connect("sqlite::memory:").await?;
-        
+
         // Run database migrations to set up the jobs table
-        sqlx::migrate!("./migrations")
-            .run(&db)
-            .await?;
+        sqlx::migrate!("./migrations").run(&db).await?;
 
         let mock_network = Arc::new(MockCliNetwork {
             api_response: mock_api_response,
             binary: mock_binary,
         });
 
-        let download_manager = DownloadManager::with_mocks(
-            1,
-            mock_network,
-            Arc::new(MockFailureFileSystem),
-        );
+        let download_manager =
+            DownloadManager::with_mocks(1, mock_network, Arc::new(MockFailureFileSystem));
 
         handle.manage(AppState {
             db: db.clone(),
@@ -822,11 +782,17 @@ mod tests {
         let jobs: Vec<TestJobRow> = sqlx::query_as("SELECT status, message FROM jobs")
             .fetch_all(&db)
             .await?;
-        
+
         // We registered 1 download job for the binary (excluding checksum, which runs instantly without job row)
         assert_eq!(jobs.len(), 1);
         assert_eq!(jobs[0].status, "failed");
-        assert!(jobs[0].message.as_deref().unwrap_or_default().contains("Failed to read temporary download file"));
+        assert!(
+            jobs[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("Failed to read temporary download file")
+        );
 
         Ok(())
     }
@@ -835,7 +801,7 @@ mod tests {
     async fn test_get_cli_status_timeout() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         let path = temp.path().join("tauri-app-template-cli-slow");
-        
+
         // Write a mock script that sleeps to simulate a hanging CLI process
         #[cfg(unix)]
         {
@@ -870,7 +836,7 @@ mod tests {
     async fn test_install_cli_target_exists() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         let path = temp.path().join("tauri-app-template-cli");
-        
+
         // Pre-create the target file with some dummy content
         std::fs::write(&path, "existing CLI binary content")?;
 
@@ -880,10 +846,14 @@ mod tests {
 
         // Generate checksum for mock binary
         let mock_binary = b"mock CLI binary content".to_vec();
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(&mock_binary);
-        let computed_sha = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let computed_sha = hasher
+            .finalize()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
 
         let os = std::env::consts::OS;
         let arch = std::env::consts::ARCH;
@@ -895,11 +865,10 @@ mod tests {
             _ => panic!("Unsupported platform: {}-{}", os, arch),
         };
         let binary_name = format!("tauri-app-template-cli-{}-{}{}", os_name, arch_name, ext);
-        
+
         let mock_api_response = format!(
             r#"{{"assets": [{{"name": "{}", "digest": "sha256:{}"}}]}}"#,
-            binary_name,
-            computed_sha
+            binary_name, computed_sha
         );
 
         // Setup mock tauri app and AppState
@@ -907,22 +876,17 @@ mod tests {
         let handle = app.handle();
 
         let db = sqlx::SqlitePool::connect("sqlite::memory:").await?;
-        
+
         // Run database migrations to set up the jobs table
-        sqlx::migrate!("./migrations")
-            .run(&db)
-            .await?;
+        sqlx::migrate!("./migrations").run(&db).await?;
 
         let mock_network = Arc::new(MockCliNetwork {
             api_response: mock_api_response,
             binary: mock_binary,
         });
 
-        let download_manager = DownloadManager::with_mocks(
-            1,
-            mock_network,
-            Arc::new(RealFileSystem),
-        );
+        let download_manager =
+            DownloadManager::with_mocks(1, mock_network, Arc::new(RealFileSystem));
 
         handle.manage(AppState {
             db: db.clone(),

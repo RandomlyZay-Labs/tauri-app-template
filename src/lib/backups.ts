@@ -7,8 +7,9 @@ export async function listBackups(): Promise<BackupMetadata[]> {
 
 export async function createBackup(
 	label: string | null,
+	isManual?: boolean | null,
 ): Promise<BackupMetadata> {
-	return await commands.createBackup(label);
+	return await commands.createBackup(label, isManual ?? null);
 }
 
 export async function deleteBackup(id: string): Promise<null> {

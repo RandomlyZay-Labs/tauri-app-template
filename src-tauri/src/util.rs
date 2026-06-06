@@ -37,7 +37,10 @@ pub fn resolve_dev_data_dir(dir_name: String) -> PathBuf {
 pub fn check_and_perform_reset(data_dir: &Path) {
     let marker = data_dir.join(MARKER_WIPE_NAME);
     if marker.exists() {
-        log::info!("Factory reset marker found at {:?}. Wiping target data...", marker);
+        log::info!(
+            "Factory reset marker found at {:?}. Wiping target data...",
+            marker
+        );
         let _ = fs::remove_file(&marker);
 
         // Safely remove only the DB files and key-value store, leaving backups and logs intact.
@@ -50,18 +53,20 @@ pub fn check_and_perform_reset(data_dir: &Path) {
 
         for target in targets_to_remove {
             if target.exists()
-                && let Err(e) = fs::remove_file(&target) {
-                    log::error!("Failed to remove file {:?}: {}", target, e);
-                }
+                && let Err(e) = fs::remove_file(&target)
+            {
+                log::error!("Failed to remove file {:?}: {}", target, e);
+            }
         }
 
         // Wipe the webview cache specifically
         let webview_dir = data_dir.join("webview");
         if webview_dir.exists()
-            && let Err(e) = fs::remove_dir_all(&webview_dir) {
-                log::error!("Failed to wipe webview data: {}", e);
-            }
-        
+            && let Err(e) = fs::remove_dir_all(&webview_dir)
+        {
+            log::error!("Failed to wipe webview data: {}", e);
+        }
+
         log::info!("Factory reset completed.");
     }
 }
@@ -126,7 +131,11 @@ mod tests {
     #[test]
     fn test_resolve_dev_data_dir() {
         // Absolute path
-        let abs_path = if cfg!(windows) { "C:\\test" } else { "/tmp/test" };
+        let abs_path = if cfg!(windows) {
+            "C:\\test"
+        } else {
+            "/tmp/test"
+        };
         let dir = resolve_dev_data_dir(abs_path.to_string());
         assert_eq!(dir, PathBuf::from(abs_path));
 
@@ -187,7 +196,9 @@ mod tests {
         fs::write(&wal_file, "old_wal").unwrap();
 
         // 1. Schedule restore
-        schedule_restore(data_dir).await.expect("Failed to schedule restore");
+        schedule_restore(data_dir)
+            .await
+            .expect("Failed to schedule restore");
         assert!(data_dir.join(MARKER_RESTORE_NAME).exists());
 
         // 2. Perform restore
@@ -197,7 +208,7 @@ mod tests {
         assert!(!data_dir.join(MARKER_RESTORE_NAME).exists());
         assert!(!staging_file.exists());
         assert!(!wal_file.exists());
-        
+
         let content = fs::read_to_string(&db_file).unwrap();
         assert_eq!(content, "new_db");
     }

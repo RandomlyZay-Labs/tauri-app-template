@@ -7,7 +7,9 @@ test.describe('App Flow', () => {
 		// 1. Initial Load & Onboarding
 		await page.goto('/');
 		await expect(page).toHaveTitle(/Tauri/);
-		await expect(page.getByText('Welcome to Tauri App Template')).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Welcome to Tauri App Template' }),
+		).toBeVisible();
 
 		// 2. Navigation & Sidebar
 		await page.getByRole('button', { name: 'Get Started' }).click();
@@ -16,18 +18,26 @@ test.describe('App Flow', () => {
 		// 3. Theme Selection
 		await page.getByRole('button', { name: 'Dark' }).click();
 		await page.getByRole('button', { name: 'Next' }).first().click();
-		await expect(page.getByText(/Experience/i)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Experience' }),
+		).toBeVisible();
 
 		// 4. Animations Selection
 		await page.getByRole('button', { name: 'Next' }).first().click();
-		await expect(page.getByText(/Help us improve/i)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Help us improve' }),
+		).toBeVisible();
 
 		// 5. Complete Onboarding
 		await page.getByRole('button', { name: 'Next' }).first().click(); // Telemetry
-		await expect(page.getByText(/Safe & Secure/i)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Safe & Secure' }),
+		).toBeVisible();
 
 		await page.getByRole('button', { name: 'Next' }).first().click(); // Backups
-		await expect(page.getByText(/You're all set/i)).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: "You're all set!" }),
+		).toBeVisible();
 
 		await page.getByRole('button', { name: 'Done' }).click(); // Finish
 
@@ -44,59 +54,6 @@ test.describe('App Flow', () => {
 		await page.keyboard.type('Home');
 		await page.keyboard.press('Enter');
 		await expect(page.getByText('Dashboard')).toBeVisible();
-	});
-
-	test('notification management', async ({ page }) => {
-		await injectMockIpc(page);
-		await page.addInitScript(() => {
-			window.localStorage.setItem(
-				'ui-storage',
-				JSON.stringify({
-					state: { onboardingCompleted: true },
-					version: 0,
-				}),
-			);
-			window.localStorage.setItem(
-				'backup-settings',
-				JSON.stringify({
-					enabled: false,
-					interval: 86400000,
-					maxBackups: 5,
-					lastBackupTime: Date.now(),
-				}),
-			);
-		});
-
-		await page.goto('/#/settings');
-		await page.getByTestId('tab-trigger-appearance').click();
-
-		// Trigger a notification by toggling animations
-		const animationsSwitch = page.locator('#animations-toggle');
-		await expect(animationsSwitch).toBeVisible();
-		await animationsSwitch.click();
-		await expect(page.getByText(/Animations updated/i)).toBeVisible();
-
-		// Open notifications sheet
-		await page.getByLabel(/Open Notifications/i).click();
-		await expect(
-			page.getByRole('heading', { name: /Notifications/i }),
-		).toBeVisible();
-
-		// Check one notification is present
-		await expect(
-			page.getByTestId('notification-item').getByText(/Animations updated/i),
-		).toBeVisible();
-
-		// Check buttons
-		await expect(
-			page.getByRole('button', { name: /Clear All/i }),
-		).toBeVisible();
-		await expect(
-			page.getByRole('button', { name: /Mark all as read/i }),
-		).toBeVisible();
-
-		await page.getByRole('button', { name: /Clear All/i }).click();
-		await expect(page.getByText(/No notifications/i)).toBeVisible();
 	});
 
 	test('appearance toggling', async ({ page }) => {
@@ -138,8 +95,14 @@ test.describe('App Flow', () => {
 		await expect(html).toHaveClass(/dark/);
 
 		// Animations switch
-		await page.locator('#animations-toggle').click();
-		await expect(page.getByText(/Animations updated/i)).toBeVisible();
+		const animationsToggle = page.locator('#animations-toggle');
+		const isAnimationsChecked =
+			(await animationsToggle.getAttribute('aria-checked')) === 'true';
+		await animationsToggle.click();
+		await expect(animationsToggle).toHaveAttribute(
+			'aria-checked',
+			isAnimationsChecked ? 'false' : 'true',
+		);
 	});
 
 	test('backup destructive actions', async ({ page }) => {

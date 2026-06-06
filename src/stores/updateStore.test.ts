@@ -2,6 +2,7 @@ import { mockIPC } from '@tauri-apps/api/mocks';
 import type { Update } from '@tauri-apps/plugin-updater';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { networkStore } from '@/stores/networkStore.svelte';
+import { uiStore } from '@/stores/uiStore.svelte';
 import type { UpdateStatus } from './updateStore.svelte';
 
 // Mock Tauri plugin-updater and plugin-process
@@ -34,6 +35,7 @@ describe('updateStore', () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		networkStore.isOffline = false;
+		uiStore.onboardingCompleted = true; // Default to onboarding completed for updater tests
 
 		mockIPC((cmd) => {
 			if (cmd === 'plugin:updater|check') {
@@ -47,6 +49,20 @@ describe('updateStore', () => {
 			}
 			if (cmd === 'get_install_type') {
 				return 'nsis';
+			}
+			if (cmd === 'install_cli') {
+				return Promise.resolve();
+			}
+			if (cmd === 'create_backup') {
+				return Promise.resolve({
+					id: 'mock_backup.db',
+					name: 'mock_backup.db',
+					path: 'mock_path',
+					size_bytes: 0n,
+					created_at: new Date().toISOString(),
+					is_manual: false,
+					label: null,
+				});
 			}
 		});
 
@@ -62,6 +78,8 @@ describe('updateStore', () => {
 		updateStore.activeUpdate = null;
 		updateStore.installType = 'unknown';
 		updateStore.installTypeInitialized = false;
+		updateStore.hasUnseenUpdate = false;
+		updateStore.cliUpdateStatus = 'idle';
 	});
 
 	async function getStore() {
@@ -81,6 +99,8 @@ describe('updateStore', () => {
 		expect(store.error).toBeNull();
 		expect(store.activeUpdate).toBeNull();
 		expect(store.percentage).toBe(0);
+		expect(store.hasUnseenUpdate).toBe(false);
+		expect(store.cliUpdateStatus).toBe('idle');
 	});
 
 	it('asserts install-type state transitions and derivations - deb success path', async () => {
@@ -195,7 +215,7 @@ describe('updateStore', () => {
 		);
 	});
 
-	it('sets available status and values when update is found', async () => {
+	it('sets available status and sets hasUnseenUpdate to true when update is found in auto-check', async () => {
 		const store = await getStore();
 		const mockMetadata = {
 			rid: 1,
@@ -205,20 +225,33 @@ describe('updateStore', () => {
 			body: 'New cool features',
 		};
 		mockCheck.mockResolvedValue(mockMetadata);
+		uiStore.onboardingCompleted = true;
 
 		await store.checkForUpdates(false);
 
 		expect(store.status).toBe('available');
 		expect(store.activeUpdate).toBeDefined();
 		expect(store.activeUpdate?.version).toBe('2.0.0');
-		expect(store.activeUpdate?.date).toBe('2026-05-21');
-		expect(store.activeUpdate?.body).toBe('New cool features');
-		expect(mockToastMessage).toHaveBeenCalledWith(
-			'updateSettings.updateAvailableTitle',
-			{
-				description: 'updateSettings.updateAvailableDesc:{"version":"2.0.0"}',
-			},
-		);
+		expect(store.hasUnseenUpdate).toBe(true);
+		expect(mockToastMessage).not.toHaveBeenCalled(); // Toast is removed
+	});
+
+	it('does not set hasUnseenUpdate if onboarding is not completed', async () => {
+		const store = await getStore();
+		const mockMetadata = {
+			rid: 1,
+			currentVersion: '1.0.0',
+			version: '2.0.0',
+			date: '2026-05-21',
+			body: 'New cool features',
+		};
+		mockCheck.mockResolvedValue(mockMetadata);
+		uiStore.onboardingCompleted = false;
+
+		await store.checkForUpdates(false);
+
+		expect(store.status).toBe('available');
+		expect(store.hasUnseenUpdate).toBe(false);
 	});
 
 	it('handles update check failure', async () => {
@@ -244,7 +277,7 @@ describe('updateStore', () => {
 		);
 	});
 
-	it('tracks download progress and finishes successfully', async () => {
+	it('tracks download progress, updates CLI for bundled, and finishes successfully', async () => {
 		const store = await getStore();
 		const mockUpdate = {
 			version: '2.0.0',
@@ -256,6 +289,31 @@ describe('updateStore', () => {
 			}),
 		};
 		store.activeUpdate = mockUpdate as unknown as Update;
+		store.installType = 'nsis'; // Bundled
+
+		let installCliCalled = false;
+		let createBackupCalled = false;
+		let backupLabel: string | null = null;
+		mockIPC((cmd, args) => {
+			if (cmd === 'install_cli') {
+				installCliCalled = true;
+				return Promise.resolve();
+			}
+			if (cmd === 'create_backup') {
+				createBackupCalled = true;
+				backupLabel = (args as Record<string, unknown>).label as string;
+				expect((args as Record<string, unknown>).isManual).toBe(false);
+				return Promise.resolve({
+					id: 'mock_backup.db',
+					name: 'mock_backup.db',
+					path: 'mock_path',
+					size_bytes: 0n,
+					created_at: new Date().toISOString(),
+					is_manual: false,
+					label: null,
+				});
+			}
+		});
 
 		const downloadPromise = store.downloadAndInstallUpdate();
 		await downloadPromise;
@@ -264,12 +322,62 @@ describe('updateStore', () => {
 		expect(store.contentLength).toBe(1000);
 		expect(store.downloadedBytes).toBe(750);
 		expect(store.percentage).toBe(75);
+		expect(installCliCalled).toBe(true);
+		expect(createBackupCalled).toBe(true);
+		expect(backupLabel).toBe('pre-update-2.0.0');
+		expect(store.cliUpdateStatus).toBe('done');
 		expect(mockToastSuccess).toHaveBeenCalledWith(
 			'updateSettings.downloadSuccessTitle',
 			{
 				description: 'updateSettings.downloadSuccessDesc',
 			},
 		);
+	});
+
+	it('tracks download successfully but does not auto-update CLI for package-managed', async () => {
+		const store = await getStore();
+		const mockUpdate = {
+			version: '2.0.0',
+			downloadAndInstall: vi.fn().mockImplementation(async (cb) => {
+				cb({ event: 'Started', data: { contentLength: 1000 } });
+				cb({ event: 'Progress', data: { chunkLength: 250 } });
+				cb({ event: 'Finished' });
+			}),
+		};
+		store.activeUpdate = mockUpdate as unknown as Update;
+		store.installType = 'deb'; // Package-managed
+
+		let installCliCalled = false;
+		let createBackupCalled = false;
+		let backupLabel: string | null = null;
+		mockIPC((cmd, args) => {
+			if (cmd === 'install_cli') {
+				installCliCalled = true;
+				return Promise.resolve();
+			}
+			if (cmd === 'create_backup') {
+				createBackupCalled = true;
+				backupLabel = (args as Record<string, unknown>).label as string;
+				expect((args as Record<string, unknown>).isManual).toBe(false);
+				return Promise.resolve({
+					id: 'mock_backup.db',
+					name: 'mock_backup.db',
+					path: 'mock_path',
+					size_bytes: 0n,
+					created_at: new Date().toISOString(),
+					is_manual: false,
+					label: null,
+				});
+			}
+		});
+
+		await store.downloadAndInstallUpdate();
+
+		expect(store.status).toBe('downloaded');
+		expect(installCliCalled).toBe(false);
+		expect(createBackupCalled).toBe(true);
+		expect(backupLabel).toBe('pre-update-2.0.0');
+		expect(store.cliUpdateStatus).toBe('idle');
 	});
 
 	it('handles download failure', async () => {

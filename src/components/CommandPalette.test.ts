@@ -33,8 +33,8 @@ describe('CommandPalette', () => {
 	afterEach(async () => {
 		uiStore.setCommandPaletteOpen(false);
 		await tick();
-		// Wait an extra tick for bits-ui to clear microtasks
-		await new Promise((r) => setTimeout(r, 0));
+		// Wait for bits-ui to clear body scroll lock timeout (minimum 24ms delay)
+		await new Promise((r) => setTimeout(r, 50));
 
 		// @ts-expect-error
 		if (Object.prototype.querySelector) {

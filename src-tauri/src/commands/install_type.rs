@@ -7,7 +7,7 @@ pub fn get_install_type() -> CResult<String> {
     {
         Ok("nsis".to_string())
     }
-    
+
     #[cfg(target_os = "linux")]
     {
         if std::env::var("APPIMAGE").is_ok() {
@@ -27,7 +27,7 @@ pub fn get_install_type() -> CResult<String> {
                 if is_deb {
                     return Ok("deb".to_string());
                 }
-                
+
                 let is_rpm = match std::process::Command::new("rpm")
                     .args(["-qf", &path_str])
                     .output()
@@ -43,7 +43,7 @@ pub fn get_install_type() -> CResult<String> {
             Ok("unknown".to_string())
         }
     }
-    
+
     #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         Ok("unknown".to_string())

@@ -3,7 +3,6 @@ import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { activityStore } from '@/stores/activityStore.svelte';
 import { networkStore } from '@/stores/networkStore.svelte';
-import { notificationStore } from '@/stores/notificationStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { JOB_EVENT_NAME } from '@/types/job';
 import { commands } from './ipc';
@@ -62,12 +61,6 @@ vi.mock('@/stores/networkStore.svelte', () => ({
 	},
 }));
 
-vi.mock('@/stores/notificationStore.svelte', () => ({
-	notificationStore: {
-		addNotification: vi.fn(),
-	},
-}));
-
 vi.mock('@/stores/uiStore.svelte', () => ({
 	uiStore: {
 		contextMenuEnabled: false,
@@ -82,6 +75,7 @@ vi.mock('@/stores/watcherStore.svelte', () => ({
 
 vi.mock('./i18n', () => ({
 	t: vi.fn((key, opts) => opts?.defaultValue || key),
+	syncLocaleWithSystem: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('LifecycleManager', () => {
@@ -225,11 +219,6 @@ describe('LifecycleManager', () => {
 		await tick();
 
 		expect(toast.message).toHaveBeenCalled();
-		expect(notificationStore.addNotification).toHaveBeenCalledWith(
-			expect.objectContaining({
-				type: 'info',
-			}),
-		);
 	});
 
 	it('cleans up resources on destroy', async () => {

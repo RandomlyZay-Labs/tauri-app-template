@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import WelcomeStep from './WelcomeStep.svelte';
 
@@ -9,19 +9,9 @@ vi.mock('@/lib/i18n', () => ({
 
 describe('WelcomeStep', () => {
 	it('renders welcome content', () => {
-		render(WelcomeStep, { onNext: vi.fn() });
+		render(WelcomeStep);
 
 		expect(screen.getByText('welcomeStep.title')).toBeTruthy();
-		expect(screen.getByText('welcomeStep.getStarted')).toBeTruthy();
-	});
-
-	it('calls onNext when get started is clicked', async () => {
-		const onNext = vi.fn();
-		render(WelcomeStep, { onNext });
-
-		const btn = screen.getByText('welcomeStep.getStarted');
-		await fireEvent.click(btn);
-
-		expect(onNext).toHaveBeenCalled();
+		expect(screen.getByText('welcomeStep.description')).toBeTruthy();
 	});
 });

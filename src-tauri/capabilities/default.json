@@ -28,7 +28,14 @@
 		"notification:allow-notify",
 		"process:default",
 		"store:default",
-		"better-posthog:default",
-		"updater:default"
+		"updater:default",
+		"os:default",
+		"core:window:allow-set-decorations",
+		"core:window:allow-start-dragging",
+		"core:window:allow-minimize",
+		"core:window:allow-toggle-maximize",
+		"core:window:allow-close",
+		"core:window:allow-is-fullscreen",
+		"core:window:allow-set-fullscreen"
 	]
 }

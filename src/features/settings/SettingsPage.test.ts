@@ -12,6 +12,14 @@ vi.mock('@/stores/uiStore.svelte', () => ({
 		get sidebarOpen() {
 			return true;
 		},
+		get toastPosition() {
+			return 'top-right';
+		},
+		setActiveSettingsTab: vi.fn(),
+	},
+	validateSettingsTab: (tab: unknown) => {
+		const allowed = ['general', 'appearance', 'backups', 'debug', 'updates'];
+		return typeof tab === 'string' && allowed.includes(tab) ? tab : 'general';
 	},
 }));
 

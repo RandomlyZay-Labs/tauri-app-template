@@ -94,6 +94,7 @@ describe('SecureStorageCard', () => {
 		await waitFor(() => {
 			expect(toast.info).toHaveBeenCalledWith(
 				'debugSettings.secretValue_result_{"value":"retrieved-value"}',
+				{ shouldCopy: true },
 			);
 		});
 	});

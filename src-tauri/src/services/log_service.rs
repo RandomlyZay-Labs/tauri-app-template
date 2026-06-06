@@ -14,7 +14,10 @@ pub async fn update_config_log_level(data_dir: &Path, level: &str) -> crate::err
     };
 
     if let Some(obj) = config.as_object_mut() {
-        obj.insert("logLevel".to_string(), serde_json::Value::String(level.to_string()));
+        obj.insert(
+            "logLevel".to_string(),
+            serde_json::Value::String(level.to_string()),
+        );
     }
 
     let content = serde_json::to_string_pretty(&config)

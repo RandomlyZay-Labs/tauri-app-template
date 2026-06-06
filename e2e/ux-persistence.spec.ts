@@ -48,18 +48,18 @@ test.describe('Expanded Features E2E', () => {
 		}
 		await expect(autoBackupSwitch).toBeChecked();
 
-		// 2. Interact with frequency and retention dropdowns
-		const frequencyTrigger = page.locator('#backup-frequency-select');
-		await expect(frequencyTrigger).toBeVisible();
-		await frequencyTrigger.click();
-		await page.getByRole('option', { name: 'Daily' }).click();
-		await expect(frequencyTrigger).toContainText('Daily');
+		// 2. Interact with frequency and retention inputs
+		const frequencyInput = page.getByRole('spinbutton').first();
+		await expect(frequencyInput).toBeVisible();
+		await expect(page.getByText('Every day')).toBeVisible();
+		await frequencyInput.fill('48');
+		await expect(page.getByText('Every 2 days')).toBeVisible();
 
-		const retentionTrigger = page.locator('#backup-retention-select');
-		await expect(retentionTrigger).toBeVisible();
-		await retentionTrigger.click();
-		await page.getByRole('option', { name: 'Keep last 10' }).click();
-		await expect(retentionTrigger).toContainText('Keep last 10');
+		const retentionInput = page.getByRole('spinbutton').nth(1);
+		await expect(retentionInput).toBeVisible();
+		await expect(page.getByText('Keep last 5')).toBeVisible();
+		await retentionInput.fill('10');
+		await expect(page.getByText('Keep last 10')).toBeVisible();
 
 		// 3. Manual backup creation
 		await page.getByRole('button', { name: /Create Backup/i }).click();
@@ -214,14 +214,14 @@ test.describe('Expanded Features E2E', () => {
 		await expect(sidebar).toBeVisible();
 
 		// 1. Verify initial expanded state
-		await expect(page.getByText('Tauri App Template')).toBeVisible();
+		await expect(sidebar.getByText('Tauri App Template')).toBeVisible();
 
 		const initialBox = await sidebar.boundingBox();
 		expect(initialBox?.width).toBeGreaterThan(150);
 
 		// 2. Collapse Sidebar
 		await page.getByLabel('Collapse Sidebar').click();
-		await expect(page.getByText('Tauri App Template')).not.toBeVisible();
+		await expect(sidebar.getByText('Tauri App Template')).not.toBeVisible();
 
 		await expect
 			.poll(async () => {
@@ -235,13 +235,13 @@ test.describe('Expanded Features E2E', () => {
 		// Wait for sidebar to be ready/visible instead of hard timeout
 		await expect(sidebar).toBeVisible();
 
-		await expect(page.getByText('Tauri App Template')).not.toBeVisible();
+		await expect(sidebar.getByText('Tauri App Template')).not.toBeVisible();
 		const collapsedBox = await sidebar.boundingBox();
 		expect(collapsedBox?.width).toBeLessThan(100);
 
 		// 4. Expand again
 		await page.getByLabel('Expand Sidebar').click();
-		await expect(page.getByText('Tauri App Template')).toBeVisible();
+		await expect(sidebar.getByText('Tauri App Template')).toBeVisible();
 		const expandedBox = await sidebar.boundingBox();
 		expect(expandedBox?.width).toBeGreaterThan(150);
 	});

@@ -35,8 +35,8 @@ async setTraySettings(minimizeToTray: boolean, notifyOnMinimize: boolean) : Prom
 async notify(title: string, body: string) : Promise<null> {
     return await TAURI_INVOKE("notify", { title, body });
 },
-async createBackup(label: string | null) : Promise<BackupMetadata> {
-    return await TAURI_INVOKE("create_backup", { label });
+async createBackup(label: string | null, isManual: boolean | null) : Promise<BackupMetadata> {
+    return await TAURI_INVOKE("create_backup", { label, isManual });
 },
 async listBackups() : Promise<BackupMetadata[]> {
     return await TAURI_INVOKE("list_backups");
