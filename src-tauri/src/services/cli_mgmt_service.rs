@@ -231,6 +231,13 @@ impl CliMgmtService {
                         .send_request(&api_url, None)
                         .await?;
 
+                    if !api_res.status.is_success() {
+                        return Err(Error::Network(format!(
+                            "Failed to fetch release metadata. Status: {}",
+                            api_res.status
+                        )));
+                    }
+
                     // Collect stream into bytes
                     let mut api_stream = api_res.bytes_stream;
                     let mut api_bytes = bytes::BytesMut::new();
@@ -302,6 +309,14 @@ impl CliMgmtService {
                         .network_client()
                         .send_request(&sig_url, None)
                         .await?;
+
+                    if !sig_res.status.is_success() {
+                        return Err(Error::Network(format!(
+                            "Failed to download CLI signature. Status: {}",
+                            sig_res.status
+                        )));
+                    }
+
                     let mut sig_stream = sig_res.bytes_stream;
                     let mut bytes = bytes::BytesMut::new();
                     while let Some(chunk_res) = sig_stream.next().await {
