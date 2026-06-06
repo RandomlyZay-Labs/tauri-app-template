@@ -2,7 +2,7 @@
 
 [![Build Status](https://github.com/RandomlyZay-Labs/tauri-app-template/actions/workflows/build.yml/badge.svg)](https://github.com/RandomlyZay-Labs/tauri-app-template/actions)
 [![Release](https://img.shields.io/github/v/release/RandomlyZay-Labs/tauri-app-template)](https://github.com/RandomlyZay-Labs/tauri-app-template/releases)
-[![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri-24c8db.svg)](https://tauri.app/)
 
 A production-ready boilerplate for building high-performance, cross-platform desktop applications using **Tauri v2**, **Svelte 5**, and **Rust**.
@@ -96,4 +96,4 @@ Or let the GitHub Actions pipeline do the heavy lifting. Pushing a release will 
 Want to make this template even better? PRs are welcome. 
 
 ## 📄 License
-AGPL-3.0-or-later. Check the [LICENSE](LICENSE) file.
+MIT. Check the [LICENSE](LICENSE) file.
