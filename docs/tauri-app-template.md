@@ -12,6 +12,7 @@
 ## chore/release-prep
 
 - Template Finalization
+  - Add SPDX Identifiers to all source files
   - Update README template
     - Include instructions for setting up CI and Tauri Updater
     - Can a new dev actually set everything up using just the README?
