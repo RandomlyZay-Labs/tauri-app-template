@@ -231,6 +231,13 @@ impl CliMgmtService {
                         .send_request(&api_url, None)
                         .await?;
 
+                    if !api_res.status.is_success() {
+                        return Err(Error::Network(format!(
+                            "Failed to fetch release metadata. Status: {}",
+                            api_res.status
+                        )));
+                    }
+
                     // Collect stream into bytes
                     let mut api_stream = api_res.bytes_stream;
                     let mut api_bytes = bytes::BytesMut::new();
@@ -295,7 +302,105 @@ impl CliMgmtService {
                     }
                 };
 
-                if let Err(e) = super::cli_update_service::verify_checksum(&tmp_path, &expected_sha)
+                let sig_url = format!("{}.sig", url);
+                let sig_bytes = match async {
+                    use futures_util::StreamExt;
+                    let sig_res = download_manager
+                        .network_client()
+                        .send_request(&sig_url, None)
+                        .await?;
+
+                    if !sig_res.status.is_success() {
+                        return Err(Error::Network(format!(
+                            "Failed to download CLI signature. Status: {}",
+                            sig_res.status
+                        )));
+                    }
+
+                    let mut sig_stream = sig_res.bytes_stream;
+                    let mut bytes = bytes::BytesMut::new();
+                    while let Some(chunk_res) = sig_stream.next().await {
+                        let chunk = chunk_res?;
+                        bytes.extend_from_slice(&chunk);
+                    }
+                    Ok(bytes.freeze())
+                }
+                .await
+                {
+                    Ok(b) => b,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = format!("Failed to fetch signature: {}", e);
+                        job_manager
+                            .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                            .await
+                            .ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(e);
+                    }
+                };
+
+                let config: serde_json::Value = match serde_json::from_str(include_str!("../../tauri.conf.json")) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = format!("Failed to parse config: {}", e);
+                        job_manager
+                            .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                            .await
+                            .ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(Error::Unknown(msg));
+                    }
+                };
+                let pubkey_str = match config["plugins"]["updater"]["pubkey"].as_str() {
+                    Some(s) => s,
+                    None => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = "Public key not found in config".to_string();
+                        job_manager
+                            .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                            .await
+                            .ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(Error::Unknown(msg));
+                    }
+                };
+
+                if let Err(e) = state.cli_verifier.verify_checksum(&tmp_path, &expected_sha, &sig_bytes, pubkey_str)
                 {
                     let _ = std::fs::remove_file(&tmp_path);
                     let msg = match e {
@@ -325,7 +430,7 @@ impl CliMgmtService {
 
                 log::info!("[CliMgmtService] Checksum verified. Installing CLI binary...");
                 if let Err(e) =
-                    super::cli_update_service::install_binary_file(&tmp_path, &target_path)
+                    super::cli_update_service::install_binary_file(&tmp_path, &target_path, false)
                 {
                     let _ = std::fs::remove_file(&tmp_path);
                     let msg = format!("Installation failed: {}", e);
@@ -508,6 +613,13 @@ mod tests {
                     content_length: Some(bytes.len() as u64),
                     bytes_stream: Box::pin(futures_util::stream::once(async move { Ok(bytes) })),
                 })
+            } else if url.ends_with(".sig") {
+                let bytes = bytes::Bytes::from("mock_sig");
+                Ok(crate::services::network::NetworkResponse {
+                    status: reqwest::StatusCode::OK,
+                    content_length: Some(bytes.len() as u64),
+                    bytes_stream: Box::pin(futures_util::stream::once(async move { Ok(bytes) })),
+                })
             } else {
                 let bytes = bytes::Bytes::from(self.binary.clone());
                 Ok(crate::services::network::NetworkResponse {
@@ -585,6 +697,32 @@ mod tests {
         let download_manager =
             DownloadManager::with_mocks(1, mock_network, Arc::new(RealFileSystem));
 
+        struct MockCliVerifier {
+            expected_sig: Vec<u8>,
+            called: std::sync::atomic::AtomicBool,
+        }
+
+        impl crate::services::cli_update_service::CliVerifier for MockCliVerifier {
+            fn verify_checksum(
+                &self,
+                _file_path: &std::path::Path,
+                _expected_sha: &str,
+                signature_bytes: &[u8],
+                _public_key_str: &str,
+            ) -> crate::error::CResult<()> {
+                self.called.store(true, std::sync::atomic::Ordering::Relaxed);
+                if signature_bytes != self.expected_sig {
+                    return Err(crate::error::Error::Unknown("Invalid signature in mock".into()));
+                }
+                Ok(())
+            }
+        }
+
+        let verifier = Arc::new(MockCliVerifier {
+            expected_sig: b"mock_sig".to_vec(),
+            called: std::sync::atomic::AtomicBool::new(false),
+        });
+
         handle.manage(AppState {
             db: db.clone(),
             log_dir: temp.path().join("logs"),
@@ -596,10 +734,12 @@ mod tests {
             download_manager,
             job_manager: JobManager::new(db),
             watcher_manager: WatcherManager::new(),
+            cli_verifier: verifier.clone(),
         });
 
         let result = CliMgmtService::install_cli(handle.clone()).await;
         assert!(result.is_ok());
+        assert!(verifier.called.load(std::sync::atomic::Ordering::Relaxed));
 
         // Verify file was written to target path
         let cli_path = CliMgmtService::get_cli_path()?;
@@ -660,6 +800,7 @@ mod tests {
             download_manager,
             job_manager: JobManager::new(db),
             watcher_manager: WatcherManager::new(),
+            cli_verifier: Arc::new(crate::services::cli_update_service::RealCliVerifier),
         });
 
         let result = CliMgmtService::install_cli(handle.clone()).await;
@@ -767,6 +908,7 @@ mod tests {
             download_manager,
             job_manager: JobManager::new(db.clone()),
             watcher_manager: WatcherManager::new(),
+            cli_verifier: Arc::new(crate::services::cli_update_service::RealCliVerifier),
         });
 
         let result = CliMgmtService::install_cli(handle.clone()).await;
@@ -899,6 +1041,7 @@ mod tests {
             download_manager,
             job_manager: JobManager::new(db),
             watcher_manager: WatcherManager::new(),
+            cli_verifier: Arc::new(crate::services::cli_update_service::RealCliVerifier),
         });
 
         let result = CliMgmtService::install_cli(handle.clone()).await;

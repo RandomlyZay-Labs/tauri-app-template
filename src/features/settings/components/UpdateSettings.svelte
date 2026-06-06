@@ -151,22 +151,32 @@ async function handleTranslateToggle() {
 	isTranslating = false;
 }
 
+function isUnknownArray(value: unknown): value is unknown[] {
+	return Array.isArray(value);
+}
+
 async function translateText(text: string, lang: string): Promise<string> {
 	const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`;
 	const response = await fetch(url);
 	if (!response.ok) {
 		throw new Error(`Translation request failed: ${response.status}`);
 	}
-	const data = await response.json();
-	if (Array.isArray(data) && Array.isArray(data[0])) {
-		return data[0].map((segment) => {
-			if (Array.isArray(segment) && typeof segment[0] === 'string') {
+	const data: unknown = await response.json();
+	if (!isUnknownArray(data) || data.length === 0) {
+		throw new Error('Invalid translation response format');
+	}
+	const firstItem = data[0];
+	if (!isUnknownArray(firstItem)) {
+		throw new Error('Invalid translation response format');
+	}
+	return firstItem
+		.map((segment) => {
+			if (isUnknownArray(segment) && segment.length > 0 && typeof segment[0] === 'string') {
 				return segment[0];
 			}
 			return '';
-		}).join('');
-	}
-	throw new Error('Invalid translation response format');
+		})
+		.join('');
 }
 
 const parsedMarkdown = $derived.by(() => {
@@ -376,7 +386,7 @@ $effect(() => {
 					</div>
 					<Button
 						variant="outline"
-						onclick={() => executeSafeAction(() => updateStore.checkForUpdates(true))}
+						onclick={() => updateStore.checkForUpdates(true)}
 						disabled={networkStore.isOffline || updateStore.status === 'checking' || updateStore.status === 'downloading'}
 					>
 						<RefreshCw class={cn("mr-2 size-4", { 'animate-spin': updateStore.status === 'checking' })} />
@@ -504,12 +514,12 @@ $effect(() => {
 						{:else}
 							<div class="flex justify-end gap-2">
 								{#if updateStore.status === 'available' || updateStore.status === 'error'}
-									<Button size="sm" onclick={() => executeSafeAction(() => updateStore.downloadAndInstallUpdate())}>
+									<Button size="sm" onclick={() => updateStore.downloadAndInstallUpdate()}>
 										<Download class="mr-2 size-4" />
 										{t('updateSettings.downloadAndInstall')}
 									</Button>
 								{:else if updateStore.status === 'downloaded'}
-									<Button size="sm" onclick={() => executeSafeAction(() => updateStore.applyUpdate())} disabled={updateStore.cliUpdateStatus === 'updating'}>
+									<Button size="sm" onclick={() => updateStore.applyUpdate()} disabled={updateStore.cliUpdateStatus === 'updating'}>
 										<RefreshCw class="mr-2 size-4" />
 										{t('updateSettings.relaunchToApply')}
 									</Button>
@@ -705,7 +715,7 @@ $effect(() => {
 		</Dialog.Header>
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (relaunchDialogOpen = false)}>{t('appearanceSettings.later')}</Button>
-			<Button onclick={() => executeSafeAction(() => updateStore.applyUpdate())}>{t('appearanceSettings.restartNow')}</Button>
+			<Button onclick={() => updateStore.applyUpdate()}>{t('appearanceSettings.restartNow')}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

@@ -6791,6 +6791,7 @@ dependencies = [
  "keyring",
  "keyring-core",
  "log",
+ "minisign-verify",
  "mockito",
  "notify",
  "notify-debouncer-mini",

@@ -72,6 +72,7 @@ async-trait = "0.1.89"
 bytes = "1.11.1"
 wait-timeout = "0.2.1"
 sha2 = "0.11"
+minisign-verify = "0.2"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

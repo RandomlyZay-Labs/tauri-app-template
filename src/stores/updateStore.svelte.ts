@@ -32,6 +32,7 @@ class UpdateStore {
 	activeUpdate = $state<Update | null>(null);
 	installType = $state<string>('unknown');
 	installTypeInitialized = $state<boolean>(false);
+	installTypePromise: Promise<void>;
 
 	hasUnseenUpdate = $state<boolean>(false);
 	cliUpdateStatus = $state<'idle' | 'updating' | 'done' | 'error'>('idle');
@@ -41,7 +42,7 @@ class UpdateStore {
 	);
 
 	constructor() {
-		this.initInstallType();
+		this.installTypePromise = this.initInstallType();
 	}
 
 	private async initInstallType() {
@@ -162,6 +163,7 @@ class UpdateStore {
 				});
 
 				// Bundled installs auto-update the CLI afterwards
+				await this.installTypePromise;
 				if (!this.isPackageManaged) {
 					await this.updateCliAfterAppUpdate();
 				}
