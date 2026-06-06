@@ -107,6 +107,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                 download_manager: services::download_service::DownloadManager::new(3),
                 job_manager: services::job_service::JobManager::new(db_pool),
                 watcher_manager: services::watcher_service::WatcherManager::new(),
+                cli_verifier: std::sync::Arc::new(services::cli_update_service::RealCliVerifier),
             });
 
             // 7. Webview Window Setup
@@ -292,6 +293,7 @@ mod tests {
             download_manager: services::download_service::DownloadManager::new(1),
             job_manager: services::job_service::JobManager::new(db),
             watcher_manager: services::watcher_service::WatcherManager::new(),
+            cli_verifier: std::sync::Arc::new(services::cli_update_service::RealCliVerifier),
         });
 
         let _window = tauri::WebviewWindowBuilder::new(
@@ -326,6 +328,7 @@ mod tests {
             download_manager: services::download_service::DownloadManager::new(1),
             job_manager: services::job_service::JobManager::new(db),
             watcher_manager: services::watcher_service::WatcherManager::new(),
+            cli_verifier: std::sync::Arc::new(services::cli_update_service::RealCliVerifier),
         });
 
         let _window = tauri::WebviewWindowBuilder::new(

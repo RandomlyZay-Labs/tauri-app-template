@@ -84,6 +84,31 @@ async fn get_expected_sha_from_base(
     })
 }
 
+pub trait CliVerifier: Send + Sync {
+    fn verify_checksum(
+        &self,
+        file_path: &Path,
+        expected_sha: &str,
+        signature_bytes: &[u8],
+        public_key_str: &str,
+    ) -> CResult<()>;
+}
+
+#[derive(Debug, Clone)]
+pub struct RealCliVerifier;
+
+impl CliVerifier for RealCliVerifier {
+    fn verify_checksum(
+        &self,
+        file_path: &Path,
+        expected_sha: &str,
+        signature_bytes: &[u8],
+        public_key_str: &str,
+    ) -> CResult<()> {
+        verify_checksum(file_path, expected_sha, signature_bytes, public_key_str)
+    }
+}
+
 pub fn verify_checksum(
     file_path: &Path,
     expected_sha: &str,
@@ -141,7 +166,7 @@ pub fn verify_checksum(
     Ok(())
 }
 
-pub fn install_binary_file(tmp_path: &Path, target_path: &Path) -> CResult<()> {
+pub fn install_binary_file(tmp_path: &Path, target_path: &Path, _wait_for_self: bool) -> CResult<()> {
     #[cfg(test)]
     {
         if let Err(e) = std::fs::rename(tmp_path, target_path) {
@@ -188,13 +213,55 @@ pub fn install_binary_file(tmp_path: &Path, target_path: &Path) -> CResult<()> {
 
     #[cfg(not(test))]
     {
-        let pid = std::process::id();
+        if !_wait_for_self {
+            if let Err(e) = std::fs::rename(tmp_path, target_path) {
+                let is_already_exists = e.kind() == std::io::ErrorKind::AlreadyExists;
+                let mut retry_success = false;
+                let mut secondary_error = None;
 
-        #[cfg(target_os = "windows")]
-        {
-            let script_path = tmp_path.parent().unwrap_or(Path::new(".")).join("update_helper.bat");
-            let script_content = format!(
-                r#"@echo off
+                if is_already_exists {
+                    if let Err(rm_err) = std::fs::remove_file(target_path) {
+                        secondary_error =
+                            Some(format!("Failed to remove existing target file: {}", rm_err));
+                    } else if let Err(rename_err) = std::fs::rename(tmp_path, target_path) {
+                        secondary_error = Some(format!("Failed to rename binary on retry: {}", rename_err));
+                    } else {
+                        retry_success = true;
+                    }
+                }
+
+                if !retry_success {
+                    let msg = if let Some(sec_err) = secondary_error {
+                        format!(
+                            "Failed to rename binary: {}. Secondary error: {}",
+                            e, sec_err
+                        )
+                    } else {
+                        format!("Failed to rename binary: {}", e)
+                    };
+                    return Err(Error::Io(msg));
+                }
+            }
+
+            // Set executable permissions on Unix
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let metadata = std::fs::metadata(target_path)?;
+                let mut perms = metadata.permissions();
+                perms.set_mode(0o755);
+                std::fs::set_permissions(target_path, perms)?;
+            }
+
+            Ok(())
+        } else {
+            let pid = std::process::id();
+
+            #[cfg(target_os = "windows")]
+            {
+                let script_path = tmp_path.parent().unwrap_or(Path::new(".")).join("update_helper.bat");
+                let script_content = format!(
+                    r#"@echo off
 :loop
 tasklist /fi "pid eq {pid}" 2>nul | find "{pid}" >nul
 if %errorlevel% equ 0 (
@@ -204,21 +271,21 @@ if %errorlevel% equ 0 (
 move /y "{}" "{}"
 del "%~f0"
 "#,
-                tmp_path.to_string_lossy(),
-                target_path.to_string_lossy()
-            );
-            std::fs::write(&script_path, script_content)?;
-            
-            std::process::Command::new("cmd")
-                .args(&["/c", &script_path.to_string_lossy()])
-                .spawn()?;
-        }
+                    tmp_path.to_string_lossy(),
+                    target_path.to_string_lossy()
+                );
+                std::fs::write(&script_path, script_content)?;
+                
+                std::process::Command::new("cmd")
+                    .args(&["/c", &script_path.to_string_lossy()])
+                    .spawn()?;
+            }
 
-        #[cfg(not(target_os = "windows"))]
-        {
-            let script_path = tmp_path.parent().unwrap_or(Path::new(".")).join("update_helper.sh");
-            let script_content = format!(
-                r#"#!/bin/sh
+            #[cfg(not(target_os = "windows"))]
+            {
+                let script_path = tmp_path.parent().unwrap_or(Path::new(".")).join("update_helper.sh");
+                let script_content = format!(
+                    r#"#!/bin/sh
 while kill -0 {pid} 2>/dev/null; do
   sleep 0.1
 done
@@ -226,24 +293,25 @@ mv -f "{}" "{}"
 chmod +x "{}"
 rm -f "$0"
 "#,
-                tmp_path.to_string_lossy(),
-                target_path.to_string_lossy(),
-                target_path.to_string_lossy()
-            );
-            std::fs::write(&script_path, script_content)?;
-            
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755))?;
+                    tmp_path.to_string_lossy(),
+                    target_path.to_string_lossy(),
+                    target_path.to_string_lossy()
+                );
+                std::fs::write(&script_path, script_content)?;
+                
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755))?;
+                }
+                
+                std::process::Command::new("/bin/sh")
+                    .arg(&script_path)
+                    .spawn()?;
             }
-            
-            std::process::Command::new("/bin/sh")
-                .arg(&script_path)
-                .spawn()?;
-        }
 
-        Ok(())
+            Ok(())
+        }
     }
 }
 
@@ -326,7 +394,7 @@ pub async fn update_cli_standalone(target_version: &str, target_path: &Path) -> 
     }
 
     println!("Installing CLI binary...");
-    if let Err(e) = install_binary_file(&tmp_path, target_path) {
+    if let Err(e) = install_binary_file(&tmp_path, target_path, true) {
         let _ = std::fs::remove_file(&tmp_path);
         return Err(e);
     }
@@ -454,7 +522,7 @@ mod tests {
             file.write_all(b"binary_content")?;
         }
 
-        let install_res = install_binary_file(&tmp_path, &target_path);
+        let install_res = install_binary_file(&tmp_path, &target_path, false);
         assert!(install_res.is_ok());
 
         // Assert target file exists

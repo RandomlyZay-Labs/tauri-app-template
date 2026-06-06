@@ -62,9 +62,15 @@ async fn main() -> std::process::ExitCode {
                 );
                 print!("Would you like to update the CLI? [Y/n]: ");
                 use std::io::{Write, stdin, stdout};
-                stdout().flush().ok();
+                if let Err(e) = stdout().flush() {
+                    eprintln!("Error: Failed to flush stdout: {e}");
+                    return std::process::ExitCode::from(1);
+                }
                 let mut input = String::new();
-                stdin().read_line(&mut input).ok();
+                if let Err(e) = stdin().read_line(&mut input) {
+                    eprintln!("Error: Failed to read stdin: {e}");
+                    return std::process::ExitCode::from(1);
+                }
                 let input = input.trim().to_lowercase();
                 if input == "y" || input == "yes" || input.is_empty() {
                     should_update = true;

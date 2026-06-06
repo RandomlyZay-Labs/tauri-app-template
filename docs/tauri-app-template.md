@@ -20,6 +20,6 @@
   - Update README template
   - Implement final tests
   - Update dependencies one last time
-    - Update Specta to its absolute latest version
+    - Update Specta stack to their absolute latest mutually compatible, tested versions
   - AI codebase audit
   - Create a release
