@@ -7,23 +7,18 @@ import { executeSafeAction } from '@/lib/async-utils';
 import { cn } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import { commands } from '@/lib/ipc';
-import {
-    exitApp,
-    relaunchApp,
-    showConfirmDialog,
-    triggerNotification,
-} from '@/lib/system-utils';
 import { toast } from '@/lib/toast';
-import { trayStore } from '@/stores/trayStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import {
-    Bell,
+    openDataDirectory,
+    openLogDirectory,
+} from '@/lib/system-utils';
+import {
     Download,
     Info,
-    MessageSquare,
-    Power,
-    RefreshCw,
     RotateCcw,
+    Database,
+    FolderOpen,
 } from '@lucide/svelte';
 
 let shouldCrash = $state(false);
@@ -36,51 +31,6 @@ $effect(() => {
 		throw new Error('This is a simulated crash to test the Error Boundary.');
 	}
 });
-
-function handleTestNotification() {
-	void executeSafeAction(
-		() =>
-			triggerNotification(
-				t('debugSettings.testNotificationTitle'),
-				t('debugSettings.testNotificationBody'),
-			),
-		{
-			successMessage: t('debugSettings.systemNotificationSent'),
-			errorMessage: t('debugSettings.failedToSendNotification'),
-		},
-	);
-}
-
-function handleTestNativeDialog() {
-	void executeSafeAction(
-		async () => {
-			const confirmed = await showConfirmDialog(
-				t('debugSettings.nativeDialogMessage'),
-				t('debugSettings.nativeDialogTitle'),
-			);
-			toast.info(
-				t('debugSettings.nativeDialogResult', {
-					result: confirmed
-						? t('debugSettings.resultYes')
-						: t('debugSettings.resultNo'),
-				}),
-			);
-		},
-		{ errorMessage: t('debugSettings.failedToOpenDialog') },
-	);
-}
-
-function handleRelaunch() {
-	void executeSafeAction(() => relaunchApp(), {
-		errorMessage: t('debugSettings.failedToRelaunch'),
-	});
-}
-
-function handleExit() {
-	void executeSafeAction(() => exitApp(), {
-		errorMessage: t('debugSettings.failedToExit'),
-	});
-}
 
 function handleExportLogs() {
 	void executeSafeAction(
@@ -95,6 +45,18 @@ function handleExportLogs() {
 		},
 	);
 }
+
+function handleOpenLogs() {
+	void executeSafeAction(() => openLogDirectory(), {
+		errorMessage: t('generalSettings.couldNotOpenLogDir'),
+	});
+}
+
+function handleOpenData() {
+	void executeSafeAction(() => openDataDirectory(), {
+		errorMessage: t('generalSettings.couldNotOpenDataDir'),
+	});
+}
 </script>
 
 <div class="space-y-6">
@@ -103,90 +65,7 @@ function handleExportLogs() {
 			<Card.Title>{t('debugSettings.title')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-6">
-			<!-- Minimize to Tray -->
-			<div class="space-y-4">
-				<div class="flex items-center justify-between">
-					<div class="space-y-0.5">
-						<Tooltip.Root>
-							<Tooltip.Trigger>
-								{#snippet child({ props })}
-									<span
-										{...props}
-										class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
-									>
-										{t('debugSettings.minimizeToTray')}
-										<Info class="size-3.5 text-muted-foreground/70" />
-									</span>
-								{/snippet}
-							</Tooltip.Trigger>
-							<Tooltip.Content side="top" align="center">
-								<p>{t('debugSettings.minimizeToTrayDescription')}</p>
-							</Tooltip.Content>
-						</Tooltip.Root>
-					</div>
-					<div class="flex items-center gap-2">
-						<Button
-							variant="ghost"
-							size="icon"
-							class={cn('size-8 text-muted-foreground', {
-								invisible: !trayStore.minimizeToTray,
-							})}
-							onclick={() => trayStore.setMinimizeToTray(false)}
-							title={t('common.reset')}
-							aria-hidden={!trayStore.minimizeToTray}
-							tabindex={!trayStore.minimizeToTray ? -1 : 0}
-						>
-							<RotateCcw class="size-4" />
-						</Button>
-						<Switch checked={trayStore.minimizeToTray} onCheckedChange={() => trayStore.setMinimizeToTray(!trayStore.minimizeToTray)} />
-					</div>
-				</div>
 
-				<div class="ml-6 flex items-center justify-between border-l pl-4">
-					<div class="space-y-0.5">
-						<Tooltip.Root>
-							<Tooltip.Trigger disabled={!trayStore.minimizeToTray}>
-								{#snippet child({ props })}
-									<span
-										{...props}
-										class={cn(
-											'text-sm font-medium inline-flex items-center gap-1.5 cursor-help',
-											{
-												'text-muted-foreground': !trayStore.minimizeToTray,
-											},
-										)}
-									>
-										{t('debugSettings.notifyWhenMinimized')}
-										<Info class="size-3.5 text-muted-foreground/70" />
-									</span>
-								{/snippet}
-							</Tooltip.Trigger>
-							<Tooltip.Content side="top" align="center">
-								<p>{t('debugSettings.notifyWhenMinimizedDescription')}</p>
-							</Tooltip.Content>
-						</Tooltip.Root>
-					</div>
-					<div class="flex items-center gap-2">
-						<Button
-							variant="ghost"
-							size="icon"
-							class={cn('size-8 text-muted-foreground', {
-								invisible: trayStore.notifyOnMinimize,
-							})}
-							onclick={() => trayStore.setNotifyOnMinimize(true)}
-							title={t('common.reset')}
-							disabled={!trayStore.minimizeToTray}
-							aria-hidden={trayStore.notifyOnMinimize}
-							tabindex={trayStore.notifyOnMinimize ? -1 : 0}
-						>
-							<RotateCcw class="size-4" />
-						</Button>
-						<Switch checked={trayStore.notifyOnMinimize} disabled={!trayStore.minimizeToTray} onCheckedChange={() => trayStore.setNotifyOnMinimize(!trayStore.notifyOnMinimize)} />
-					</div>
-				</div>
-			</div>
-
-			<div class="h-px bg-border"></div>
 
 			<!-- Developer Tools -->
 			<div class="flex items-center justify-between border-b pb-4">
@@ -267,68 +146,57 @@ function handleExportLogs() {
 				</div>
 			</div>
 
-			<!-- Native Features -->
+			<!-- Storage & Logs -->
 			<div class="flex items-center justify-between border-b pb-4">
 				<div class="space-y-0.5">
 					<Tooltip.Root>
 						<Tooltip.Trigger>
 							{#snippet child({ props })}
-								<span
+								<label
 									{...props}
+									for="storage-data-btn"
 									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
 								>
-									{t('debugSettings.nativeFeatures')}
+									{t('generalSettings.applicationData')}
 									<Info class="size-3.5 text-muted-foreground/70" />
-								</span>
+								</label>
 							{/snippet}
 						</Tooltip.Trigger>
 						<Tooltip.Content side="top" align="center">
-							<p>{t('debugSettings.nativeFeaturesDescription')}</p>
+							<p>{t('generalSettings.openDataFolder')}</p>
 						</Tooltip.Content>
 					</Tooltip.Root>
 				</div>
-				<div class="flex gap-2">
-					<Button variant="outline" onclick={handleTestNotification}>
-						<Bell class="mr-2 size-4" />
-						{t('debugSettings.notification')}
-					</Button>
-					<Button variant="outline" onclick={handleTestNativeDialog}>
-						<MessageSquare class="mr-2 size-4" />
-						{t('debugSettings.nativeDialog')}
-					</Button>
-				</div>
+				<Button id="storage-data-btn" variant="outline" onclick={handleOpenData}>
+					<Database class="mr-2 size-4" />
+					{t('generalSettings.openData')}
+				</Button>
 			</div>
 
-			<!-- Process Control -->
 			<div class="flex items-center justify-between border-b pb-4">
 				<div class="space-y-0.5">
 					<Tooltip.Root>
 						<Tooltip.Trigger>
 							{#snippet child({ props })}
-								<span
+								<label
 									{...props}
+									for="storage-logs-btn"
 									class="text-sm font-medium inline-flex items-center gap-1.5 cursor-help"
 								>
-									{t('debugSettings.processControl')}
+									{t('generalSettings.systemLogs')}
 									<Info class="size-3.5 text-muted-foreground/70" />
-								</span>
+								</label>
 							{/snippet}
 						</Tooltip.Trigger>
 						<Tooltip.Content side="top" align="center">
-							<p>{t('debugSettings.processControlDescription')}</p>
+							<p>{t('generalSettings.viewLogs')}</p>
 						</Tooltip.Content>
 					</Tooltip.Root>
 				</div>
-				<div class="flex gap-2">
-					<Button variant="outline" onclick={handleRelaunch}>
-						<RefreshCw class="mr-2 size-4" />
-						{t('debugSettings.relaunch')}
-					</Button>
-					<Button variant="outline" onclick={handleExit}>
-						<Power class="mr-2 size-4" />
-						{t('debugSettings.exit')}
-					</Button>
-				</div>
+				<Button id="storage-logs-btn" variant="outline" onclick={handleOpenLogs}>
+					<FolderOpen class="mr-2 size-4" />
+					{t('generalSettings.openLogs')}
+				</Button>
 			</div>
 
 			<!-- Export Diagnostics -->

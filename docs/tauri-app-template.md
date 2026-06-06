@@ -1,9 +1,8 @@
 # Roadmap
 
-## ci/updater-plugin
+## chore/MIT-license
 
-- Test by making a change, pushing a new release, seeing if the app notifies me of an update, and having the app update
-- Test auto-update flow on AppImage and NSIS bundles
+- Switch to MIT license
 
 ## feat/github-pages
 

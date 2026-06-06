@@ -14,7 +14,7 @@ describe('ThemeStep', () => {
 	});
 
 	it('renders theme options', () => {
-		render(ThemeStep, { onNext: vi.fn(), onBack: vi.fn() });
+		render(ThemeStep);
 
 		expect(screen.getByText('themeStep.title')).toBeTruthy();
 		expect(screen.getByText('common.light')).toBeTruthy();
@@ -23,23 +23,11 @@ describe('ThemeStep', () => {
 	});
 
 	it('changes theme when an option is clicked', async () => {
-		render(ThemeStep, { onNext: vi.fn(), onBack: vi.fn() });
+		render(ThemeStep);
 
 		const darkBtn = screen.getByText('common.dark');
 		await fireEvent.click(darkBtn);
 
 		expect(themeStore.theme).toBe('dark');
-	});
-
-	it('calls navigation callbacks', async () => {
-		const onNext = vi.fn();
-		const onBack = vi.fn();
-		render(ThemeStep, { onNext, onBack });
-
-		await fireEvent.click(screen.getByText('common.next'));
-		expect(onNext).toHaveBeenCalled();
-
-		await fireEvent.click(screen.getByText('common.back'));
-		expect(onBack).toHaveBeenCalled();
 	});
 });

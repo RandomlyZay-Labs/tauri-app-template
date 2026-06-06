@@ -1,4 +1,5 @@
 import { listen } from '@tauri-apps/api/event';
+import { platform } from '@tauri-apps/plugin-os';
 import { commands } from '@/bindings';
 import { executeSafeAction } from '@/lib/async-utils';
 import {
@@ -89,7 +90,7 @@ class ThemeStore {
 			// On non-Windows platforms (like Linux), we need to explicitly lock the backend theme
 			// to ensure the window decorations (titlebar) update correctly.
 			// On Windows, we skip this to maintain the native theme tracking state (setTheme(null)).
-			const isWindows = navigator.userAgent.includes('Win');
+			const isWindows = platform() === 'windows';
 			if (!isWindows) {
 				void executeSafeAction(() =>
 					commands.setTheme(resolved === 'no-preference' ? null : resolved),
@@ -126,8 +127,7 @@ class ThemeStore {
 
 		// On Windows, passing null for the 'system' theme enables native tracking for the titlebar.
 		// On other platforms (like Linux), we explicitly set the theme to ensure decorations update.
-		const isWindows =
-			typeof window !== 'undefined' && navigator.userAgent.includes('Win');
+		const isWindows = typeof window !== 'undefined' && platform() === 'windows';
 		const backendTheme = theme === 'system' && isWindows ? null : resolvedTheme;
 		void executeSafeAction(() => commands.setTheme(backendTheme));
 	}

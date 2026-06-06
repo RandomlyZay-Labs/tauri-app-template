@@ -16,7 +16,11 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_notification::NotificationExt;
 
-fn handle_single_instance<R: tauri::Runtime>(app: &tauri::AppHandle<R>, _args: Vec<String>, _cwd: String) {
+fn handle_single_instance<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    _args: Vec<String>,
+    _cwd: String,
+) {
     // A duplicate GUI launch was attempted — bring the existing window to focus
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
@@ -39,6 +43,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
     });
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_better_posthog::init())
         .plugin(tauri_plugin_single_instance::init(handle_single_instance))
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -49,6 +54,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_os::init())
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app| {
             // 1. Resolve Data Directory
@@ -115,6 +121,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             )
             .title("Tauri App Template")
             .visible(false)
+            .decorations(false)
             .data_directory(webview_data_dir)
             .devtools(true)
             .on_page_load(|window, payload| {
@@ -232,7 +239,10 @@ fn handle_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: tauri:
     }
 }
 
-fn handle_tray_icon_event<R: tauri::Runtime>(tray: &tauri::tray::TrayIcon<R>, event: TrayIconEvent) {
+fn handle_tray_icon_event<R: tauri::Runtime>(
+    tray: &tauri::tray::TrayIcon<R>,
+    event: TrayIconEvent,
+) {
     if let TrayIconEvent::Click {
         button: MouseButton::Left,
         button_state: MouseButtonState::Up,
@@ -268,7 +278,7 @@ mod tests {
     async fn test_handle_menu_event_show() {
         let app = tauri::test::mock_app();
         let handle = app.handle();
-        
+
         // In tests, we need to manage our own AppState because mock_app doesn't run run_app()
         let db = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
         handle.manage(AppState {
@@ -284,15 +294,17 @@ mod tests {
             watcher_manager: services::watcher_service::WatcherManager::new(),
         });
 
-        let _window = tauri::WebviewWindowBuilder::new(handle, "main", tauri::WebviewUrl::App("index.html".into()))
-            .build()
-            .unwrap();
-        
+        let _window = tauri::WebviewWindowBuilder::new(
+            handle,
+            "main",
+            tauri::WebviewUrl::App("index.html".into()),
+        )
+        .build()
+        .unwrap();
+
         // On mock runtime, window visibility state might not be accurately reflected,
         // but we verify the command execution doesn't panic.
-        let event = tauri::menu::MenuEvent {
-            id: "show".into(),
-        };
+        let event = tauri::menu::MenuEvent { id: "show".into() };
 
         handle_menu_event(handle, event);
     }
@@ -301,7 +313,7 @@ mod tests {
     async fn test_handle_tray_icon_event_toggle() {
         let app = tauri::test::mock_app();
         let handle = app.handle();
-        
+
         let db = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
         handle.manage(AppState {
             db: db.clone(),
@@ -316,10 +328,14 @@ mod tests {
             watcher_manager: services::watcher_service::WatcherManager::new(),
         });
 
-        let _window = tauri::WebviewWindowBuilder::new(handle, "main", tauri::WebviewUrl::App("index.html".into()))
-            .build()
-            .unwrap();
-        
+        let _window = tauri::WebviewWindowBuilder::new(
+            handle,
+            "main",
+            tauri::WebviewUrl::App("index.html".into()),
+        )
+        .build()
+        .unwrap();
+
         let tray = TrayIconBuilder::with_id("main-tray").build(handle).unwrap();
 
         let event = TrayIconEvent::Click {
@@ -339,11 +355,15 @@ mod tests {
     async fn test_handle_single_instance_logic() {
         let app = tauri::test::mock_app();
         let handle = app.handle();
-        
-        let _window = tauri::WebviewWindowBuilder::new(handle, "main", tauri::WebviewUrl::App("index.html".into()))
-            .build()
-            .unwrap();
-        
+
+        let _window = tauri::WebviewWindowBuilder::new(
+            handle,
+            "main",
+            tauri::WebviewUrl::App("index.html".into()),
+        )
+        .build()
+        .unwrap();
+
         // This confirms the logic correctly finds the "main" window and calls show/focus without panicking.
         handle_single_instance(handle, vec![], "".into());
     }

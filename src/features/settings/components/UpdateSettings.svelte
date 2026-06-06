@@ -9,12 +9,12 @@ import * as Dialog from '@/components/ui/dialog';
 import { getAppVersion } from '@/lib/app-version.svelte';
 import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
+import i18n from 'i18next';
 import { getCliStatus, installCli, openExternalLink } from '@/lib/system-utils';
 import { cn } from '@/lib/utils';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
 import { networkStore } from '@/stores/networkStore.svelte';
-import { toast } from '@/lib/toast';
 import {
 	AlertCircle,
 	Check,
@@ -31,12 +31,37 @@ import {
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { onMount } from 'svelte';
 import { slide } from 'svelte/transition';
+import { createBackup } from '@/lib/backups';
+import { Spinner } from '@/components/ui/spinner';
+import { Archive } from '@lucide/svelte';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 let cliStatus = $state<{ installed: boolean; version: string | null } | null>(null);
 let isCliLoading = $state(false);
 let cliCopied = $state(false);
 let packageCommandCopied = $state(false);
 let relaunchDialogOpen = $state(false);
+let isPreUpdateBackupCreating = $state(false);
+
+async function handleCreatePreUpdateBackup() {
+	isPreUpdateBackupCreating = true;
+	await executeSafeAction(
+		async () => {
+			await createBackup(`pre-update-${updateStore.version}`, false);
+		},
+		{
+			successMessage: t('updateSettings.preUpdateBackupSuccess'),
+			errorMessage: t('updateSettings.preUpdateBackupFailed'),
+			onSuccess: () => {
+				isPreUpdateBackupCreating = false;
+			},
+			onError: () => {
+				isPreUpdateBackupCreating = false;
+			}
+		}
+	);
+}
 
 const appVersion = $derived(getAppVersion());
 const commandText = 'tauri-app-template-cli --help';
@@ -65,16 +90,8 @@ let showTranslated = $state(false);
 let githubChangelog = $state<string | null>(null);
 let isFetchingChangelog = $state(false);
 
-const isNotEnglish = $derived(
-	typeof navigator !== 'undefined' &&
-	navigator.language?.split('-')[0] !== 'en'
-);
-
-const targetLang = $derived(
-	typeof navigator !== 'undefined'
-		? navigator.language?.split('-')[0] || 'en'
-		: 'en'
-);
+const isNotEnglish = $derived(i18n.language !== 'en');
+const targetLang = $derived(i18n.language || 'en');
 
 async function fetchGithubChangelog(version: string) {
 	isFetchingChangelog = true;
@@ -290,7 +307,6 @@ $effect(() => {
 						class={cn("size-8 text-muted-foreground", { 'invisible': uiStore.autoCheckUpdates === defaultAutoCheck })}
 						onclick={() => {
 							uiStore.setAutoCheckUpdates(defaultAutoCheck);
-							toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
 						}}
 						aria-label={t('updateSettings.resetAutoCheck')}
 						aria-hidden={uiStore.autoCheckUpdates === defaultAutoCheck}
@@ -303,7 +319,6 @@ $effect(() => {
 						checked={uiStore.autoCheckUpdates}
 						onCheckedChange={(enabled) => {
 							uiStore.setAutoCheckUpdates(enabled);
-							toast.success(t('appearanceSettings.settingUpdated', { label: t('updateSettings.autoCheck') }));
 						}}
 					/>
 				</div>
@@ -318,44 +333,44 @@ $effect(() => {
 						<span class="text-sm font-medium leading-none">{t('updateSettings.status')}</span>
 						<div class="flex items-center gap-2 mt-1">
 							{#if networkStore.isOffline}
-								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+								<Badge variant="outline" class="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
 									<AlertCircle class="size-3 mr-1" />
 									{t('updateSettings.statusOffline')}
-								</span>
+								</Badge>
 							{:else if updateStore.status === 'idle'}
-								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+								<Badge variant="secondary">
 									{t('updateSettings.statusIdle')}
-								</span>
+								</Badge>
 							{:else if updateStore.status === 'checking'}
-								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+								<Badge variant="outline" class="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
 									<RefreshCw class="animate-spin size-3 mr-1" />
 									{t('updateSettings.statusChecking')}
-								</span>
+								</Badge>
 							{:else if updateStore.status === 'available'}
-								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+								<Badge variant="outline" class="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
 									<Info class="size-3 mr-1" />
 									{t('updateSettings.statusAvailable', { version: updateStore.version })}
-								</span>
+								</Badge>
 							{:else if updateStore.status === 'no-update'}
-								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+								<Badge variant="outline" class="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
 									<CheckCircle2 class="size-3 mr-1" />
 									{t('updateSettings.statusNoUpdate')}
-								</span>
+								</Badge>
 							{:else if updateStore.status === 'downloading'}
-								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+								<Badge variant="outline" class="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
 									<RefreshCw class="animate-spin size-3 mr-1" />
-									{t('updateSettings.statusDownloading', { progress: updateStore.percentage })}
-								</span>
+									{t('updateSettings.statusDownloading')}
+								</Badge>
 							{:else if updateStore.status === 'downloaded'}
-								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+								<Badge variant="outline" class="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
 									<CheckCircle2 class="size-3 mr-1" />
 									{t('updateSettings.statusDownloaded')}
-								</span>
+								</Badge>
 							{:else if updateStore.status === 'error'}
-								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+								<Badge variant="destructive">
 									<AlertCircle class="size-3 mr-1" />
 									{t('updateSettings.statusError')}
-								</span>
+								</Badge>
 							{/if}
 						</div>
 					</div>
@@ -427,9 +442,7 @@ $effect(() => {
 										<span>{Math.round(updateStore.downloadedBytes / 1024 / 1024 * 100) / 100}{t('settings.sizeUnit')} / {Math.round(updateStore.contentLength / 1024 / 1024 * 100) / 100}{t('settings.sizeUnit')}</span>
 									{/if}
 								</div>
-								<div class="w-full bg-secondary dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
-									<div class="bg-primary h-full rounded-full transition-all duration-200" style="width: {updateStore.percentage}%"></div>
-								</div>
+								<Progress value={updateStore.percentage} class="h-2 bg-secondary dark:bg-zinc-800 [&>[data-slot=progress-indicator]]:transition-none" />
 							</div>
 						{/if}
 
@@ -466,6 +479,24 @@ $effect(() => {
 											{t('common.copied')}
 										{:else}
 											{t('updateSettings.copyCommand')}
+										{/if}
+									</Button>
+								</div>
+								<div class="pt-2 border-t border-border/40 space-y-3">
+									<p class="text-xs text-muted-foreground">{t('updateSettings.preUpdateBackupRecommend')}</p>
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={handleCreatePreUpdateBackup}
+										disabled={isPreUpdateBackupCreating}
+										class="w-full sm:w-auto"
+									>
+										{#if isPreUpdateBackupCreating}
+											<Spinner class="mr-2" />
+											{t('backupSettings.creating')}
+										{:else}
+											<Archive class="mr-2 size-4" />
+											{t('updateSettings.createPreUpdateBackup')}
 										{/if}
 									</Button>
 								</div>
@@ -597,10 +628,10 @@ $effect(() => {
 							{/if}
 						</Button>
 					{:else if cliStatus?.installed}
-						<span class="text-xs text-muted-foreground px-3 py-1.5 rounded-md bg-secondary/50 border flex items-center gap-1.5">
+						<Badge variant="outline" class="bg-secondary/50 text-muted-foreground gap-1.5 py-1.5 px-3 rounded-md h-auto">
 							<Check class="size-3.5 text-green-500" />
 							{t('cliSettings.installed')}
-						</span>
+						</Badge>
 					{/if}
 				{/if}
 			</div>

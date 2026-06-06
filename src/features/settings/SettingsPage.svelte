@@ -5,6 +5,7 @@ import * as Tooltip from '@/components/ui/tooltip';
 import { t } from '@/lib/i18n';
 import { animationStore } from '@/stores/animationStore.svelte';
 import { uiStore, validateSettingsTab, type SettingsTab } from '@/stores/uiStore.svelte';
+import { updateStore } from '@/stores/updateStore.svelte';
 import { quintOut } from 'svelte/easing';
 import { crossfade } from 'svelte/transition';
 import { untrack } from 'svelte';
@@ -39,6 +40,12 @@ $effect(() => {
 $effect(() => {
 	if (uiStore && untrack(() => uiStore.activeSettingsTab) !== activeTab) {
 		uiStore.setActiveSettingsTab(validateSettingsTab(activeTab));
+	}
+});
+
+$effect(() => {
+	if (activeTab === 'updates') {
+		updateStore.hasUnseenUpdate = false;
 	}
 });
 </script>

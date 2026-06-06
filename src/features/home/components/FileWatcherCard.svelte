@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { Input } from '@/components/ui/input';
 import { executeSafeAction } from '@/lib/async-utils';
 import { t } from '@/lib/i18n';
@@ -68,26 +69,29 @@ function handleUnwatch(p: string) {
 		<Card.Description>{t('debugSettings.fileWatcherDescription')}</Card.Description>
 	</Card.Header>
 	<Card.Content class="space-y-4">
-		<div class="flex gap-2">
+		<div class="flex gap-2 w-full">
 			<Input
 				readonly
 				placeholder={t('debugSettings.watchPathPlaceholder')}
 				value={watchInput}
+				class="flex-1"
 			/>
-			<Button
-				variant="outline"
-				onclick={() => void handleBrowseFile()}
-			>
-				<FileSearch class="mr-1.5 size-4" />
-				{t('debugSettings.browseFile')}
-			</Button>
-			<Button
-				variant="outline"
-				onclick={() => void handleBrowseFolder()}
-			>
-				<FileSearch class="mr-1.5 size-4" />
-				{t('debugSettings.browseFolder')}
-			</Button>
+			<ButtonGroup>
+				<Button
+					variant="outline"
+					onclick={() => void handleBrowseFile()}
+				>
+					<FileSearch class="mr-1.5 size-4" />
+					{t('debugSettings.browseFile')}
+				</Button>
+				<Button
+					variant="outline"
+					onclick={() => void handleBrowseFolder()}
+				>
+					<FileSearch class="mr-1.5 size-4" />
+					{t('debugSettings.browseFolder')}
+				</Button>
+			</ButtonGroup>
 		</div>
 
 		<Button

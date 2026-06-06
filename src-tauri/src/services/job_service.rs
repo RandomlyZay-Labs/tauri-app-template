@@ -1,3 +1,5 @@
+use super::download_service::ProgressCallback;
+use super::events::{AppEmitter, emit};
 use crate::error::{CResult, Error};
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -6,8 +8,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
-use super::events::{AppEmitter, emit};
-use super::download_service::ProgressCallback;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -277,7 +277,10 @@ pub async fn spawn_download_job(
     dm: &crate::services::download_service::DownloadManager,
     request: crate::services::download_service::DownloadRequest,
 ) -> CResult<JobRow> {
-    log::debug!("[JobService] Spawning download job for url: {}", request.url);
+    log::debug!(
+        "[JobService] Spawning download job for url: {}",
+        request.url
+    );
     let metadata_json = serde_json::to_string(&request).ok();
     let job = jm.create_job(JobKind::Download, metadata_json).await?;
 
@@ -307,35 +310,37 @@ pub async fn spawn_download_job(
 
         let emitter_for_progress = Arc::clone(&emitter_clone);
         let job_id_clone = job_id.clone();
-        let on_progress = Some(Box::new(move |bytes: u64, total: Option<u64>, speed: Option<u64>, eta: Option<u64>| {
-            let percent = total.and_then(|t| {
-                if t > 0 {
-                    Some((bytes as f64 / t as f64) * 100.0)
-                } else {
-                    None
-                }
-            });
-            let msg = match total {
-                Some(t) => format!(
-                    "Downloaded {} / {}",
-                    crate::util::format_bytes(bytes),
-                    crate::util::format_bytes(t)
-                ),
-                None => format!("Downloaded {}", crate::util::format_bytes(bytes)),
-            };
-            emit_job_progress(
-                &*emitter_for_progress,
-                EmitJobProgressArgs {
-                    job_id: &job_id_clone,
-                    kind: &JobKind::Download,
-                    status: JobStatus::Running,
-                    percent,
-                    speed_bps: speed,
-                    eta_secs: eta,
-                    message: Some(&msg),
-                },
-            );
-        }) as ProgressCallback);
+        let on_progress = Some(Box::new(
+            move |bytes: u64, total: Option<u64>, speed: Option<u64>, eta: Option<u64>| {
+                let percent = total.and_then(|t| {
+                    if t > 0 {
+                        Some((bytes as f64 / t as f64) * 100.0)
+                    } else {
+                        None
+                    }
+                });
+                let msg = match total {
+                    Some(t) => format!(
+                        "Downloaded {} / {}",
+                        crate::util::format_bytes(bytes),
+                        crate::util::format_bytes(t)
+                    ),
+                    None => format!("Downloaded {}", crate::util::format_bytes(bytes)),
+                };
+                emit_job_progress(
+                    &*emitter_for_progress,
+                    EmitJobProgressArgs {
+                        job_id: &job_id_clone,
+                        kind: &JobKind::Download,
+                        status: JobStatus::Running,
+                        percent,
+                        speed_bps: speed,
+                        eta_secs: eta,
+                        message: Some(&msg),
+                    },
+                );
+            },
+        ) as ProgressCallback);
 
         let result = dm
             .start_download_tracked(emitter_clone.clone(), request, &token, on_progress)
@@ -402,22 +407,22 @@ mod tests {
 
     async fn setup_db() -> CResult<SqlitePool> {
         use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
-        
+
         let options = SqliteConnectOptions::new()
             .filename(":memory:")
             .journal_mode(SqliteJournalMode::Wal);
-            
+
         let pool = SqlitePoolOptions::new()
             .max_connections(1) // Keep it single-connection for in-memory to ensure migrations stick
             .connect_with(options)
             .await?;
-            
+
         // Run migrations
         sqlx::migrate!("./migrations")
             .run(&pool)
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
-        
+
         Ok(pool)
     }
 
@@ -426,7 +431,9 @@ mod tests {
         let pool = setup_db().await?;
         let mgr = JobManager::new(pool);
 
-        let job = mgr.create_job(JobKind::Download, Some("{\"test\":1}".into())).await?;
+        let job = mgr
+            .create_job(JobKind::Download, Some("{\"test\":1}".into()))
+            .await?;
         assert_eq!(job.kind, JobKind::Download);
         assert_eq!(job.status, JobStatus::Pending);
 

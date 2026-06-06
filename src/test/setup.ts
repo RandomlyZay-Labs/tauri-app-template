@@ -52,6 +52,21 @@ vi.mock('@tauri-apps/plugin-clipboard-manager', () => ({
 	writeText: vi.fn(),
 }));
 
+interface MockOsGlobal {
+	__mockPlatform?: string;
+	__mockLocale?: string;
+}
+const g = globalThis as unknown as MockOsGlobal;
+
+vi.mock('@tauri-apps/plugin-os', () => ({
+	platform: () => g.__mockPlatform || 'linux',
+	locale: () => Promise.resolve(g.__mockLocale || 'en-US'),
+	arch: () => 'x86_64',
+	type: () => 'Linux',
+	version: () => Promise.resolve('6.8.0'),
+	eol: () => '\n',
+}));
+
 afterEach(async () => {
 	// Flush any pending microtasks (Svelte updates)
 	await tick();

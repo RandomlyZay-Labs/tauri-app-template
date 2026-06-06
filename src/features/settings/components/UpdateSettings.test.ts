@@ -5,6 +5,7 @@ import * as systemUtils from '@/lib/system-utils';
 import { networkStore } from '@/stores/networkStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
 import { updateStore } from '@/stores/updateStore.svelte';
+import TestWrapper from '@/test/TestWrapper.svelte';
 import UpdateSettings from './UpdateSettings.svelte';
 
 vi.unmock('@tauri-apps/plugin-clipboard-manager');
@@ -69,7 +70,7 @@ describe('UpdateSettings', () => {
 	});
 
 	it('renders update settings controls', { timeout: 10000 }, () => {
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		expect(screen.getByText('updateSettings.title')).toBeTruthy();
 		expect(screen.getByText('updateSettings.autoCheck')).toBeTruthy();
@@ -80,7 +81,7 @@ describe('UpdateSettings', () => {
 	it('toggles autoCheckUpdates when its switch is clicked', {
 		timeout: 10000,
 	}, async () => {
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		const initialValue = uiStore.autoCheckUpdates;
 		const switches = screen.getAllByRole('switch');
@@ -98,7 +99,7 @@ describe('UpdateSettings', () => {
 		timeout: 10000,
 	}, async () => {
 		uiStore.autoCheckUpdates = false;
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		const resetBtn = screen.getByRole('button', {
 			name: 'updateSettings.resetAutoCheck',
@@ -114,7 +115,7 @@ describe('UpdateSettings', () => {
 		const spy = vi
 			.spyOn(updateStore, 'checkForUpdates')
 			.mockResolvedValue(undefined);
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		const btn = screen.getByText('updateSettings.checkUpdates');
 		await fireEvent.click(btn);
@@ -134,7 +135,7 @@ describe('UpdateSettings', () => {
 			.spyOn(updateStore, 'downloadAndInstallUpdate')
 			.mockResolvedValue(undefined);
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		expect(
 			screen.getByText('updateSettings.updateAvailableTitle'),
@@ -162,7 +163,7 @@ describe('UpdateSettings', () => {
 			.spyOn(updateStore, 'applyUpdate')
 			.mockResolvedValue(undefined);
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		const relaunchBtn = screen.getByRole('button', {
 			name: 'updateSettings.relaunchToApply',
@@ -176,7 +177,7 @@ describe('UpdateSettings', () => {
 		timeout: 10000,
 	}, async () => {
 		networkStore.isOffline = true;
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		expect(screen.getByText('updateSettings.statusOffline')).toBeTruthy();
 
@@ -193,7 +194,7 @@ describe('UpdateSettings', () => {
 		updateStore.error = 'Could not fetch a valid release JSON from the remote';
 		updateStore.activeUpdate = null;
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		// The detailed update available container should NOT render
 		expect(
@@ -224,7 +225,7 @@ describe('UpdateSettings', () => {
 		updateStore.installTypeInitialized = true;
 		updateStore.activeUpdate = {} as unknown as Update;
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		// Assert package manager notice text appears
 		expect(screen.getByText('updateSettings.packageManagedTitle')).toBeTruthy();
@@ -257,7 +258,7 @@ describe('UpdateSettings', () => {
 		updateStore.installTypeInitialized = true;
 		updateStore.activeUpdate = {} as unknown as Update;
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		// Assert package manager notice text appears
 		expect(screen.getByText('updateSettings.packageManagedTitle')).toBeTruthy();
@@ -284,7 +285,7 @@ describe('UpdateSettings', () => {
 				return { installed: true, version: '1.0.0' };
 		});
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		await vi.waitFor(() => {
 			expect(screen.getByText('updateSettings.cliManagedByApp')).toBeTruthy();
@@ -302,7 +303,7 @@ describe('UpdateSettings', () => {
 				return { installed: true, version: '1.0.0' };
 		});
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		await vi.waitFor(() => {
 			expect(screen.getByText('updateSettings.cliManagedByApp')).toBeTruthy();
@@ -321,7 +322,7 @@ describe('UpdateSettings', () => {
 			if (cmd === 'install_cli') return null;
 		});
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		await vi.waitFor(() => {
 			expect(screen.getByText('cliSettings.updateCli')).toBeTruthy();
@@ -340,7 +341,7 @@ describe('UpdateSettings', () => {
 					return { installed: true, version: '1.0.0' };
 			});
 
-			render(UpdateSettings);
+			render(TestWrapper, { props: { component: UpdateSettings } });
 
 			await vi.waitFor(() => {
 				expect(screen.queryByText('updateSettings.cliManagedByApp')).toBeNull();
@@ -358,7 +359,7 @@ describe('UpdateSettings', () => {
 			.spyOn(systemUtils, 'openExternalLink')
 			.mockResolvedValue(undefined);
 
-		render(UpdateSettings);
+		render(TestWrapper, { props: { component: UpdateSettings } });
 
 		// Wait for changelog with link to render
 		let link: HTMLAnchorElement | null = null;

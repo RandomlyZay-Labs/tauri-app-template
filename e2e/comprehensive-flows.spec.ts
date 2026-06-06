@@ -115,8 +115,13 @@ test.describe('Comprehensive User Flows', () => {
 
 		// Toggle telemetry
 		const telemetrySwitch = page.locator('#telemetry-switch');
+		const isTelemetryChecked =
+			(await telemetrySwitch.getAttribute('aria-checked')) === 'true';
 		await telemetrySwitch.click();
-		await expect(page.getByText(/Telemetry updated/i)).toBeVisible();
+		await expect(telemetrySwitch).toHaveAttribute(
+			'aria-checked',
+			isTelemetryChecked ? 'false' : 'true',
+		);
 
 		// CLI Management (Mock not installed)
 		await injectMockIpc(page, {
@@ -149,9 +154,7 @@ test.describe('Comprehensive User Flows', () => {
 		await expect(page.getByText(/v0\.1\.0/)).toBeVisible();
 	});
 
-	test('Debug Settings - tray, notifications, dialogs, logs, crash', async ({
-		page,
-	}) => {
+	test('Debug Settings - tray, logs, crash', async ({ page }) => {
 		await page.goto('/#/settings');
 		await page.getByTestId('tab-trigger-debug').click();
 		// Wait for Debug content to be visible
@@ -163,19 +166,6 @@ test.describe('Comprehensive User Flows', () => {
 			.filter({ visible: true })
 			.first();
 		await traySwitch.click();
-
-		// Test notifications
-		await page
-			.getByRole('button', { name: 'Notification', exact: true })
-			.click();
-		await expect(page.getByText(/System notification sent/i)).toBeVisible();
-
-		// Test dialogs
-		await page
-			.getByRole('button', { name: 'Native Dialog', exact: true })
-			.click();
-		// Native dialog is mocked to return true
-		await expect(page.getByText(/Native dialog result: Yes/i)).toBeVisible();
 
 		// Export logs
 		await page

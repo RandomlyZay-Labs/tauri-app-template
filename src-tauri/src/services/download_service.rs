@@ -1,3 +1,5 @@
+use super::events::{AppEmitter, emit};
+use super::network::{NetworkClient, RealNetworkClient};
 use crate::error::{CResult, Error};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -8,8 +10,6 @@ use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::{Mutex, Semaphore};
 use tokio_util::sync::CancellationToken;
-use super::network::{NetworkClient, RealNetworkClient};
-use super::events::{AppEmitter, emit};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,7 +55,8 @@ pub struct DownloadResult {
     pub total_bytes: u64,
 }
 
-pub type ProgressCallback = Box<dyn Fn(u64, Option<u64>, Option<u64>, Option<u64>) + Send + Sync + 'static>;
+pub type ProgressCallback =
+    Box<dyn Fn(u64, Option<u64>, Option<u64>, Option<u64>) + Send + Sync + 'static>;
 
 struct EmitProgressArgs<'a> {
     download_id: &'a str,
@@ -132,7 +133,10 @@ impl DownloadManager {
         emitter: Arc<dyn AppEmitter>,
         request: DownloadRequest,
     ) -> CResult<DownloadResult> {
-        log::debug!("[DownloadService] Starting download for url: {}", request.url);
+        log::debug!(
+            "[DownloadService] Starting download for url: {}",
+            request.url
+        );
         validate_url(&request.url)?;
 
         let download_id = uuid::Uuid::new_v4().to_string();
@@ -237,7 +241,9 @@ impl DownloadManager {
             .await
             .map_err(|e| Error::Unknown(format!("Semaphore closed: {e}")))?;
 
-        let result = self.run_download(emitter.clone(), &download_id, &request, token, on_progress).await;
+        let result = self
+            .run_download(emitter.clone(), &download_id, &request, token, on_progress)
+            .await;
 
         drop(permit);
 
@@ -292,7 +298,11 @@ impl DownloadManager {
         token: &CancellationToken,
         on_progress: Option<ProgressCallback>,
     ) -> CResult<DownloadResult> {
-        log::debug!("[DownloadService] Running download {} for url: {}", download_id, request.url);
+        log::debug!(
+            "[DownloadService] Running download {} for url: {}",
+            download_id,
+            request.url
+        );
         let dest_dir = PathBuf::from(&request.dest_dir);
         validate_directory(&dest_dir)?;
         self.fs.create_dir_all(&dest_dir).await?;
@@ -319,12 +329,12 @@ impl DownloadManager {
         } else {
             None
         };
- 
+
         let response = self.network.send_request(&request.url, range).await?;
- 
+
         let is_partial = response.status == reqwest::StatusCode::PARTIAL_CONTENT;
         let content_length = response.content_length;
- 
+
         let total_bytes = content_length.map(|cl| if is_partial { cl + existing_len } else { cl });
 
         let mut bytes_downloaded: u64 = if is_partial { existing_len } else { 0 };
@@ -481,9 +491,12 @@ fn validate_directory(path: &Path) -> CResult<()> {
             Component::ParentDir => {
                 return Err(Error::Validation(
                     "Destination directory cannot contain traversal components (..)".into(),
-                ))
+                ));
             }
-            Component::Prefix(_) | Component::RootDir | Component::Normal(_) | Component::CurDir => {
+            Component::Prefix(_)
+            | Component::RootDir
+            | Component::Normal(_)
+            | Component::CurDir => {
                 // These are fine for absolute paths or ignored
             }
         }
@@ -510,13 +523,17 @@ fn filename_from_url(url: &str) -> Option<String> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use crate::services::network::NetworkResponse;
+    use async_trait::async_trait;
 
     struct MockSuccessNetwork;
     #[async_trait]
     impl NetworkClient for MockSuccessNetwork {
-        async fn send_request(&self, _url: &str, _range: Option<String>) -> CResult<NetworkResponse> {
+        async fn send_request(
+            &self,
+            _url: &str,
+            _range: Option<String>,
+        ) -> CResult<NetworkResponse> {
             Ok(NetworkResponse {
                 status: reqwest::StatusCode::OK,
                 content_length: Some(0),
@@ -643,8 +660,8 @@ mod tests {
     }
 
     async fn spawn_test_server() -> String {
-        use tokio::net::TcpListener;
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -662,8 +679,8 @@ mod tests {
     }
 
     async fn spawn_slow_test_server() -> String {
-        use tokio::net::TcpListener;
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -682,8 +699,8 @@ mod tests {
     }
 
     async fn spawn_range_test_server() -> String {
-        use tokio::net::TcpListener;
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -693,7 +710,7 @@ mod tests {
                 let mut buf = [0; 1024];
                 let n = stream.read(&mut buf).await.unwrap();
                 let request = String::from_utf8_lossy(&buf[..n]);
-                
+
                 if request.contains("Range: bytes=5-") {
                     let response = "HTTP/1.1 206 Partial Content\r\nContent-Length: 5\r\n\r\n56789";
                     let _ = stream.write_all(response.as_bytes()).await;
@@ -708,8 +725,8 @@ mod tests {
     }
 
     async fn spawn_disconnecting_test_server() -> String {
-        use tokio::net::TcpListener;
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -755,7 +772,7 @@ mod tests {
 
         let result = dm.start_download(emitter, req).await?;
         assert_eq!(result.total_bytes, 10);
-        
+
         let content = tokio::fs::read_to_string(&result.file_path).await?;
         assert_eq!(content, "0123456789");
 
@@ -780,7 +797,7 @@ mod tests {
 
         let result = dm.start_download(emitter, req).await;
         assert!(result.is_err());
-        
+
         // Verify that some data was flushed to disk before failure
         let file_path = test_dir.join("drop_test.bin");
         if file_path.exists() {
@@ -809,7 +826,7 @@ mod tests {
 
         let result = dm.start_download(emitter, req).await?;
         assert_eq!(result.total_bytes, 10);
-        
+
         let content = tokio::fs::read_to_string(&result.file_path).await?;
         assert_eq!(content, "0123456789");
 
@@ -840,7 +857,7 @@ mod tests {
     #[tokio::test]
     async fn test_cancellation_behavior() -> Result<(), Box<dyn std::error::Error>> {
         let url = spawn_slow_test_server().await;
-        
+
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
@@ -856,13 +873,11 @@ mod tests {
 
         let dm_clone = dm.clone_inner();
         let e_clone = Arc::clone(&emitter);
-        let handle = tokio::spawn(async move {
-            dm_clone.start_download(e_clone, req).await
-        });
+        let handle = tokio::spawn(async move { dm_clone.start_download(e_clone, req).await });
 
         // wait lightly to ensure it starts
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-        
+
         let active = dm.list_active().await;
         if !active.is_empty() {
             let id_to_cancel = active[0].clone();
@@ -871,19 +886,22 @@ mod tests {
 
         let result = handle.await?;
         assert!(result.is_err());
-        
+
         if let Err(crate::error::Error::Network(msg)) = result {
             assert_eq!(msg, "Download cancelled");
         } else {
-            panic!("Expected Network error due to cancellation, got: {:?}", result);
+            panic!(
+                "Expected Network error due to cancellation, got: {:?}",
+                result
+            );
         }
 
         Ok(())
     }
 
     async fn spawn_timeout_test_server() -> String {
-        use tokio::net::TcpListener;
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -913,8 +931,12 @@ mod tests {
             .timeout(std::time::Duration::from_millis(100))
             .build()
             .unwrap();
-        let dm = DownloadManager::with_mocks(1, Arc::new(RealNetworkClient::new(client)), Arc::new(RealFileSystem));
-        
+        let dm = DownloadManager::with_mocks(
+            1,
+            Arc::new(RealNetworkClient::new(client)),
+            Arc::new(RealFileSystem),
+        );
+
         let app = tauri::test::mock_app().handle().clone();
         let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
 
@@ -926,7 +948,7 @@ mod tests {
 
         let result = dm.start_download(emitter, req).await;
         assert!(result.is_err());
-        
+
         if let Err(crate::error::Error::Network(msg)) = result {
             // Check for timeout-related error message
             assert!(msg.to_lowercase().contains("timeout") || msg.to_lowercase().contains("error"));
@@ -940,19 +962,35 @@ mod tests {
     #[tokio::test]
     async fn test_download_disk_full_simulation() -> Result<(), Box<dyn std::error::Error>> {
         let url = spawn_test_server().await;
-        
+
         struct FullFs;
         #[async_trait]
         impl FileSystem for FullFs {
-            async fn create_dir_all(&self, _path: &Path) -> std::io::Result<()> { Ok(()) }
-            async fn exists(&self, _path: &Path) -> bool { false }
-            async fn metadata_len(&self, _path: &Path) -> std::io::Result<u64> { Ok(0) }
-            async fn remove_file(&self, _path: &Path) -> std::io::Result<()> { Ok(()) }
-            async fn copy(&self, _from: &Path, _to: &Path) -> std::io::Result<u64> { Ok(0) }
-            async fn create(&self, _path: &Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            async fn create_dir_all(&self, _path: &Path) -> std::io::Result<()> {
+                Ok(())
+            }
+            async fn exists(&self, _path: &Path) -> bool {
+                false
+            }
+            async fn metadata_len(&self, _path: &Path) -> std::io::Result<u64> {
+                Ok(0)
+            }
+            async fn remove_file(&self, _path: &Path) -> std::io::Result<()> {
+                Ok(())
+            }
+            async fn copy(&self, _from: &Path, _to: &Path) -> std::io::Result<u64> {
+                Ok(0)
+            }
+            async fn create(
+                &self,
+                _path: &Path,
+            ) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
                 Err(std::io::Error::from_raw_os_error(28)) // ENOSPC
             }
-            async fn open_append(&self, _path: &Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            async fn open_append(
+                &self,
+                _path: &Path,
+            ) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
                 Err(std::io::Error::from_raw_os_error(28)) // ENOSPC
             }
         }
@@ -972,15 +1010,15 @@ mod tests {
 
         let result = dm.start_download(emitter, req).await;
         assert!(result.is_err());
-        
+
         // On Linux/Unix, it should be an IO error with ENOSPC
         if let Err(crate::error::Error::Io(msg)) = result {
             assert!(msg.contains("No space left on device") || msg.contains("28"));
         } else if let Err(crate::error::Error::Unknown(msg)) = result {
-             // Depending on how CResult converts IO errors, it might be Unknown
-             assert!(msg.contains("No space left on device") || msg.contains("28"));
+            // Depending on how CResult converts IO errors, it might be Unknown
+            assert!(msg.contains("No space left on device") || msg.contains("28"));
         }
-        
+
         Ok(())
     }
 
@@ -1006,9 +1044,9 @@ mod tests {
 
         let result = dm.start_download(emitter, req).await?;
         assert_eq!(result.total_bytes, 10);
-        
+
         let content = tokio::fs::read_to_string(&result.file_path).await?;
-        // If server returns 200, we should have the full 10 bytes from server, 
+        // If server returns 200, we should have the full 10 bytes from server,
         // overwriting the "partial data..." since we used File::create
         assert_eq!(content, "0123456789");
 
@@ -1049,15 +1087,19 @@ mod tests {
         };
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-        let on_progress = Box::new(move |bytes: u64, total: Option<u64>, _speed: Option<u64>, _eta: Option<u64>| {
-            if bytes > 0 {
-                let _ = tx.send((bytes, total));
-            }
-        });
+        let on_progress = Box::new(
+            move |bytes: u64, total: Option<u64>, _speed: Option<u64>, _eta: Option<u64>| {
+                if bytes > 0 {
+                    let _ = tx.send((bytes, total));
+                }
+            },
+        );
 
-        let result = dm.start_download_tracked(emitter, req, &token, Some(on_progress)).await?;
+        let result = dm
+            .start_download_tracked(emitter, req, &token, Some(on_progress))
+            .await?;
         assert_eq!(result.total_bytes, 10);
-        
+
         // Verify progress callback was called
         let (bytes, total) = rx.recv().await.unwrap();
         assert!(bytes > 0);
@@ -1068,9 +1110,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_progress_percentage() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::{Listener};
         use std::sync::atomic::{AtomicBool, Ordering};
-        
+        use tauri::Listener;
+
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
         let url = format!("http://127.0.0.1:{}", port);
@@ -1099,7 +1141,9 @@ mod tests {
         app.listen(EVENT_NAME, move |event: tauri::Event| {
             let payload: DownloadProgress = serde_json::from_str(event.payload()).unwrap();
             if let Some(percent) = payload.percent
-                && percent > 0.0 && percent < 100.0 {
+                && percent > 0.0
+                && percent < 100.0
+            {
                 p_clone.store(true, Ordering::SeqCst);
             }
         });
@@ -1113,7 +1157,10 @@ mod tests {
         let emitter = Arc::new(app) as Arc<dyn AppEmitter>;
         dm.start_download(emitter, req).await?;
 
-        assert!(progress_seen.load(Ordering::SeqCst), "Should have seen intermediate progress percentage");
+        assert!(
+            progress_seen.load(Ordering::SeqCst),
+            "Should have seen intermediate progress percentage"
+        );
 
         Ok(())
     }
@@ -1121,14 +1168,14 @@ mod tests {
     #[tokio::test]
     async fn test_download_concurrency_limit() -> Result<(), Box<dyn std::error::Error>> {
         use std::sync::atomic::{AtomicUsize, Ordering};
-        
+
         let url = spawn_slow_test_server().await;
         let tmp = tempfile::tempdir()?;
         let test_dir = tmp.path();
 
         let dm = DownloadManager::new(2); // Limit to 2 concurrent
         let app = tauri::test::mock_app().handle().clone();
-        
+
         let active_count = Arc::new(AtomicUsize::new(0));
         let max_seen = Arc::new(AtomicUsize::new(0));
 
@@ -1149,14 +1196,17 @@ mod tests {
                 loop {
                     let prev = m_clone.load(Ordering::SeqCst);
                     if current > prev {
-                        if m_clone.compare_exchange(prev, current, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                        if m_clone
+                            .compare_exchange(prev, current, Ordering::SeqCst, Ordering::SeqCst)
+                            .is_ok()
+                        {
                             break;
                         }
                     } else {
                         break;
                     }
                 }
-                
+
                 let res = dm_clone.start_download(emitter, req).await;
                 a_clone.fetch_sub(1, Ordering::SeqCst);
                 res
@@ -1165,15 +1215,19 @@ mod tests {
 
         // Wait a bit and check semaphore permits
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-        assert_eq!(dm.semaphore.available_permits(), 0, "All permits should be taken");
-        
+        assert_eq!(
+            dm.semaphore.available_permits(),
+            0,
+            "All permits should be taken"
+        );
+
         let mut completed = 0;
         for h in handles {
             let _ = h.await;
             completed += 1;
         }
         assert_eq!(completed, 5);
-        
+
         Ok(())
     }
 
@@ -1200,10 +1254,16 @@ mod tests {
             async fn copy(&self, _from: &Path, _to: &Path) -> std::io::Result<u64> {
                 Ok(0)
             }
-            async fn create(&self, _path: &Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            async fn create(
+                &self,
+                _path: &Path,
+            ) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
                 Ok(Box::new(std::io::Cursor::new(Vec::new())))
             }
-            async fn open_append(&self, _path: &Path) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
+            async fn open_append(
+                &self,
+                _path: &Path,
+            ) -> std::io::Result<Box<dyn tokio::io::AsyncWrite + Unpin + Send>> {
                 Ok(Box::new(std::io::Cursor::new(Vec::new())))
             }
         }

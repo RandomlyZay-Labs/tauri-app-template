@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+interface MockOsGlobal {
+	__mockPlatform?: string;
+}
+const mockOs = globalThis as unknown as MockOsGlobal;
+
 const mockLoadPersistedState = vi.fn().mockResolvedValue({});
 const mockSavePersistedState = vi.fn().mockResolvedValue(undefined);
 
@@ -30,7 +35,7 @@ describe('themeStore', () => {
 		mockLoadPersistedState.mockResolvedValue({});
 		mockGetSystemTheme.mockResolvedValue(null);
 		mockSetTheme.mockClear();
-		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		mockOs.__mockPlatform = 'linux';
 		document.documentElement.classList.remove('light', 'dark');
 	});
 
@@ -171,8 +176,7 @@ describe('themeStore', () => {
 		});
 		expect(document.documentElement.classList.contains('light')).toBe(false);
 
-		vi.unstubAllGlobals();
-		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		mockOs.__mockPlatform = 'linux';
 	});
 
 	it('uses portal theme when matchMedia is unreliable', async () => {
@@ -210,7 +214,7 @@ describe('themeStore', () => {
 	});
 
 	it('calls setTheme(null) when system theme is applied on Windows', async () => {
-		vi.stubGlobal('navigator', { userAgent: 'Windows' });
+		mockOs.__mockPlatform = 'windows';
 		const store = await freshStore();
 		mockSetTheme.mockClear();
 
@@ -218,11 +222,11 @@ describe('themeStore', () => {
 		await vi.waitFor(() => {
 			expect(mockSetTheme).toHaveBeenCalledWith(null);
 		});
-		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		mockOs.__mockPlatform = 'linux';
 	});
 
 	it('calls setTheme(resolved) when system theme is applied on non-Windows', async () => {
-		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		mockOs.__mockPlatform = 'linux';
 		const store = await freshStore();
 		mockSetTheme.mockClear();
 
@@ -235,7 +239,7 @@ describe('themeStore', () => {
 	});
 
 	it('updates class and calls setTheme when system-theme-changed fires on non-Windows', async () => {
-		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		mockOs.__mockPlatform = 'linux';
 		await freshStore();
 		mockSetTheme.mockClear();
 
@@ -253,7 +257,7 @@ describe('themeStore', () => {
 	});
 
 	it('updates class but does NOT call setTheme when system-theme-changed fires on Windows', async () => {
-		vi.stubGlobal('navigator', { userAgent: 'Windows' });
+		mockOs.__mockPlatform = 'windows';
 		await freshStore();
 		mockSetTheme.mockClear();
 
@@ -268,11 +272,11 @@ describe('themeStore', () => {
 			expect(document.documentElement.classList.contains('dark')).toBe(true);
 			expect(mockSetTheme).not.toHaveBeenCalled();
 		});
-		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		mockOs.__mockPlatform = 'linux';
 	});
 
 	it('updates class to light and calls setTheme(null) when system-theme-changed fires with no-preference on non-Windows', async () => {
-		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		mockOs.__mockPlatform = 'linux';
 		await freshStore();
 		mockSetTheme.mockClear();
 
@@ -290,7 +294,7 @@ describe('themeStore', () => {
 	});
 
 	it('updates class to light but does NOT call setTheme when system-theme-changed fires with no-preference on Windows', async () => {
-		vi.stubGlobal('navigator', { userAgent: 'Windows' });
+		mockOs.__mockPlatform = 'windows';
 		await freshStore();
 		mockSetTheme.mockClear();
 
@@ -305,7 +309,7 @@ describe('themeStore', () => {
 			expect(document.documentElement.classList.contains('light')).toBe(true);
 			expect(mockSetTheme).not.toHaveBeenCalled();
 		});
-		vi.stubGlobal('navigator', { userAgent: 'Linux' });
+		mockOs.__mockPlatform = 'linux';
 	});
 
 	it('ignores stale applyTheme runs when theme changes rapidly', async () => {

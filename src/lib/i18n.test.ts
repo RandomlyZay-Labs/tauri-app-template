@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
 import en from '@/locales/en.json';
 import es from '@/locales/es.json';
+import { syncLocaleWithSystem, t } from './i18n';
 
 /**
  * Recursively extracts all keys from a nested object,
@@ -162,5 +164,37 @@ describe('i18n translation files', () => {
 		});
 
 		expect(unusedKeys).toEqual([]);
+	});
+});
+
+describe('i18n functions', () => {
+	it('translates keys with t()', () => {
+		expect(t('common.cancel')).toBe('Cancel');
+	});
+
+	it('syncLocaleWithSystem updates language when supported', async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test helper
+		const g = globalThis as any;
+		const originalLocale = g.__mockLocale;
+
+		try {
+			// Test Spanish
+			g.__mockLocale = 'es-ES';
+			await syncLocaleWithSystem();
+			expect(i18n.language).toBe('es');
+
+			// Test English
+			g.__mockLocale = 'en-US';
+			await syncLocaleWithSystem();
+			expect(i18n.language).toBe('en');
+
+			// Test unsupported locale (should not change from english)
+			g.__mockLocale = 'fr-FR';
+			await syncLocaleWithSystem();
+			expect(i18n.language).toBe('en');
+		} finally {
+			g.__mockLocale = originalLocale;
+			await i18n.changeLanguage('en');
+		}
 	});
 });

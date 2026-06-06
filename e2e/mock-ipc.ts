@@ -124,6 +124,15 @@ export async function injectMockIpc(
 		// We implement the core Tauri IPC bridge protocol to intercept all invoke calls.
 
 		window.__TAURI_INTERNALS__ = window.__TAURI_INTERNALS__ || {};
+		window.__TAURI_OS_PLUGIN_INTERNALS__ = {
+			platform: 'linux',
+			version: '6.8.0',
+			family: 'unix',
+			os_type: 'linux',
+			arch: 'x86_64',
+			exe_extension: '',
+			eol: '\n',
+		};
 
 		const listeners = new Map<string, number[]>();
 		const callbacks = new Map<number, (data: unknown) => void>();
@@ -206,6 +215,8 @@ export async function injectMockIpc(
 			getSystemTheme: () => null,
 			setTheme: () => null,
 			getInstallType: () => 'nsis',
+			platform: () => 'linux',
+			locale: () => 'en-US',
 		};
 
 		// Expose for runtime overrides by tests via standard DOM events

@@ -2,6 +2,7 @@
 import AppLayout from '@/components/layout/AppLayout.svelte';
 import { t } from '@/lib/i18n';
 import { Command } from '@lucide/svelte';
+import { Kbd } from '@/components/ui/kbd';
 import FileWatcherCard from './components/FileWatcherCard.svelte';
 import SecureStorageCard from './components/SecureStorageCard.svelte';
 
@@ -12,7 +13,9 @@ function getGreetingKey(): string {
 	return 'home.greetingEvening';
 }
 
-const isMac = navigator.userAgent.includes('Mac');
+import { platform } from '@tauri-apps/plugin-os';
+
+const isMac = platform() === 'macos';
 const shortcutLabel = isMac ? t('home.shortcutMac') : t('home.shortcutWindows');
 </script>
 
@@ -23,11 +26,13 @@ const shortcutLabel = isMac ? t('home.shortcutMac') : t('home.shortcutWindows');
 			<div class="flex items-center gap-3">
 				<p class="text-muted-foreground">{t('home.title')}</p>
 				<button
-					class="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/50 px-2.5 py-1 text-muted-foreground/60 text-xs transition-colors hover:bg-muted hover:text-muted-foreground"
+					class="inline-flex transition-transform hover:scale-105 active:scale-95"
 					onclick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: !isMac, metaKey: isMac }))}
 				>
-					<Command class="size-3" />
-					<span class="font-medium">{shortcutLabel}</span>
+					<Kbd class="h-6 gap-1.5 border border-border/50 bg-muted/50 px-2.5 py-1 text-muted-foreground/60 hover:bg-muted hover:text-muted-foreground transition-colors cursor-pointer">
+						<Command class="size-3" />
+						<span class="font-medium">{shortcutLabel}</span>
+					</Kbd>
 				</button>
 			</div>
 		</div>

@@ -18,6 +18,9 @@ vi.mock('@/stores/uiStore.svelte', () => {
 			get onboardingCompleted() {
 				return true;
 			},
+			get toastPosition() {
+				return 'top-right';
+			},
 		},
 	};
 });
@@ -27,14 +30,6 @@ vi.mock('@/stores/activityStore.svelte', () => ({
 		get sortedActivities() {
 			return [];
 		},
-		get isOpen() {
-			return false;
-		},
-	},
-}));
-
-vi.mock('@/stores/notificationStore.svelte', () => ({
-	notificationStore: {
 		get isOpen() {
 			return false;
 		},

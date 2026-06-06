@@ -44,7 +44,22 @@ describe('backups utility', () => {
 
 		const result = await createBackup('new');
 
-		expect(commands.createBackup).toHaveBeenCalledWith('new');
+		expect(commands.createBackup).toHaveBeenCalledWith('new', null);
+		expect(result).toBe(mockBackup);
+	});
+
+	it('createBackup calls commands.createBackup with label and isManual', async () => {
+		const mockBackup = {
+			id: '2',
+			label: 'new',
+			size: 200,
+			createdAt: '2023-01-02',
+		};
+		vi.mocked(commands.createBackup).mockResolvedValue(mockBackup);
+
+		const result = await createBackup('new', false);
+
+		expect(commands.createBackup).toHaveBeenCalledWith('new', false);
 		expect(result).toBe(mockBackup);
 	});
 

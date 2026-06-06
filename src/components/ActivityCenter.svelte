@@ -15,7 +15,6 @@ import {
     Ban,
     CheckCircle2,
     Clock,
-    Loader2,
     Trash2,
     Unplug,
     X,
@@ -23,6 +22,8 @@ import {
 } from '@lucide/svelte';
 import { formatDistanceToNow } from 'date-fns';
 import { flip } from 'svelte/animate';
+import { Progress } from '@/components/ui/progress';
+import { Spinner } from '@/components/ui/spinner';
 import { quintOut } from 'svelte/easing';
 import { fade, fly } from 'svelte/transition';
 
@@ -37,8 +38,8 @@ const STATUS_CONFIG: Record<
 		i18nKey: 'activityCenter.statusPending',
 	},
 	running: {
-		icon: Loader2,
-		className: 'text-blue-500 animate-spin',
+		icon: Spinner,
+		className: 'text-blue-500',
 		i18nKey: 'activityCenter.statusRunning',
 	},
 	completed: {
@@ -88,9 +89,8 @@ let hasTerminal = $derived(
 			<div class="flex shrink-0 items-center gap-2">
 				{#if hasTerminal}
 					<Button
-						variant="link"
-						size="sm"
-						class="h-auto p-0 px-2 text-primary text-xs"
+						variant="outline"
+						size="xs"
 						onclick={() => activityStore.clearCompleted()}
 					>
 						{t('activityCenter.clearCompleted')}
@@ -146,13 +146,7 @@ let hasTerminal = $derived(
 									<p class="truncate text-muted-foreground text-xs">{activity.message}</p>
 								{/if}
 								{#if activity.status === 'running' && activity.progress !== null}
-									<div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-										<div
-											class="h-full rounded-full bg-primary transition-all duration-200 ease-out"
-											class:animate-pulse={activity.progress < 100}
-											style="width: {activity.progress}%"
-										></div>
-									</div>
+									<Progress value={activity.progress} class="mt-1.5 h-1.5 bg-muted [&>[data-slot=progress-indicator]]:transition-none" />
 									<div class="flex items-center justify-between mt-1.5 text-[10px] font-medium text-muted-foreground/80 tabular-nums">
 										<div class="flex items-center gap-2">
 											{#if activity.speedBps !== null}

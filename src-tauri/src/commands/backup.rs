@@ -8,13 +8,14 @@ use tauri::State;
 pub async fn create_backup(
     state: State<'_, AppState>,
     label: Option<String>,
+    is_manual: Option<bool>,
 ) -> CResult<BackupMetadata> {
-    log::debug!("[Command] create_backup called with label: {:?}", label);
+    log::debug!("[Command] create_backup called with label: {:?}, is_manual: {:?}", label, is_manual);
     let data_dir = state
         .app_data_dir
         .as_ref()
         .ok_or_else(|| crate::error::Error::Unknown("Data directory not initialized".into()))?;
-    backup_service::create_backup(&state.db, data_dir, label).await
+    backup_service::create_backup(&state.db, data_dir, label, is_manual).await
 }
 
 #[tauri::command]
@@ -34,7 +35,10 @@ pub async fn restore_backup(
     state: State<'_, AppState>,
     backup_id: String,
 ) -> CResult<()> {
-    log::debug!("[Command] restore_backup called with backup_id: {}", backup_id);
+    log::debug!(
+        "[Command] restore_backup called with backup_id: {}",
+        backup_id
+    );
     let data_dir = state
         .app_data_dir
         .as_ref()

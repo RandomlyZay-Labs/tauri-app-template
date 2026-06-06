@@ -53,6 +53,17 @@ describe('updateStore', () => {
 			if (cmd === 'install_cli') {
 				return Promise.resolve();
 			}
+			if (cmd === 'create_backup') {
+				return Promise.resolve({
+					id: 'mock_backup.db',
+					name: 'mock_backup.db',
+					path: 'mock_path',
+					size_bytes: 0n,
+					created_at: new Date().toISOString(),
+					is_manual: false,
+					label: null,
+				});
+			}
 		});
 
 		// Reset updater status to idle/defaults
@@ -281,10 +292,26 @@ describe('updateStore', () => {
 		store.installType = 'nsis'; // Bundled
 
 		let installCliCalled = false;
-		mockIPC((cmd) => {
+		let createBackupCalled = false;
+		let backupLabel: string | null = null;
+		mockIPC((cmd, args) => {
 			if (cmd === 'install_cli') {
 				installCliCalled = true;
 				return Promise.resolve();
+			}
+			if (cmd === 'create_backup') {
+				createBackupCalled = true;
+				backupLabel = (args as Record<string, unknown>).label as string;
+				expect((args as Record<string, unknown>).isManual).toBe(false);
+				return Promise.resolve({
+					id: 'mock_backup.db',
+					name: 'mock_backup.db',
+					path: 'mock_path',
+					size_bytes: 0n,
+					created_at: new Date().toISOString(),
+					is_manual: false,
+					label: null,
+				});
 			}
 		});
 
@@ -296,6 +323,8 @@ describe('updateStore', () => {
 		expect(store.downloadedBytes).toBe(750);
 		expect(store.percentage).toBe(75);
 		expect(installCliCalled).toBe(true);
+		expect(createBackupCalled).toBe(true);
+		expect(backupLabel).toBe('pre-update-2.0.0');
 		expect(store.cliUpdateStatus).toBe('done');
 		expect(mockToastSuccess).toHaveBeenCalledWith(
 			'updateSettings.downloadSuccessTitle',
@@ -319,10 +348,26 @@ describe('updateStore', () => {
 		store.installType = 'deb'; // Package-managed
 
 		let installCliCalled = false;
-		mockIPC((cmd) => {
+		let createBackupCalled = false;
+		let backupLabel: string | null = null;
+		mockIPC((cmd, args) => {
 			if (cmd === 'install_cli') {
 				installCliCalled = true;
 				return Promise.resolve();
+			}
+			if (cmd === 'create_backup') {
+				createBackupCalled = true;
+				backupLabel = (args as Record<string, unknown>).label as string;
+				expect((args as Record<string, unknown>).isManual).toBe(false);
+				return Promise.resolve({
+					id: 'mock_backup.db',
+					name: 'mock_backup.db',
+					path: 'mock_path',
+					size_bytes: 0n,
+					created_at: new Date().toISOString(),
+					is_manual: false,
+					label: null,
+				});
 			}
 		});
 
@@ -330,6 +375,8 @@ describe('updateStore', () => {
 
 		expect(store.status).toBe('downloaded');
 		expect(installCliCalled).toBe(false);
+		expect(createBackupCalled).toBe(true);
+		expect(backupLabel).toBe('pre-update-2.0.0');
 		expect(store.cliUpdateStatus).toBe('idle');
 	});
 

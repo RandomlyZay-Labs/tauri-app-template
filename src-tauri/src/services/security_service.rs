@@ -5,7 +5,8 @@ const SERVICE_NAME: &str = "io.github.randomlyzay-labs.tauri-app-template";
 
 pub fn set_secret(key: &str, value: &str) -> CResult<()> {
     log::debug!("[SecurityService] Setting secret");
-    let entry = Entry::new(SERVICE_NAME, key).map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
+    let entry = Entry::new(SERVICE_NAME, key)
+        .map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
     entry
         .set_password(value)
         .map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
@@ -14,7 +15,8 @@ pub fn set_secret(key: &str, value: &str) -> CResult<()> {
 
 pub fn get_secret(key: &str) -> CResult<String> {
     log::debug!("[SecurityService] Getting secret");
-    let entry = Entry::new(SERVICE_NAME, key).map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
+    let entry = Entry::new(SERVICE_NAME, key)
+        .map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
     let secret = entry
         .get_password()
         .map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
@@ -23,7 +25,8 @@ pub fn get_secret(key: &str) -> CResult<String> {
 
 pub fn delete_secret(key: &str) -> CResult<()> {
     log::debug!("[SecurityService] Deleting secret");
-    let entry = Entry::new(SERVICE_NAME, key).map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
+    let entry = Entry::new(SERVICE_NAME, key)
+        .map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
     entry
         .delete_credential()
         .map_err(|e: keyring_core::Error| Error::Unknown(e.to_string()))?;
@@ -35,16 +38,15 @@ pub fn delete_secret(key: &str) -> CResult<()> {
 mod tests {
     use super::*;
 
-    use std::sync::{Arc, Mutex, LazyLock};
-    use std::collections::HashMap;
     use keyring_core::api::{CredentialApi, CredentialStoreApi};
+    use std::collections::HashMap;
+    use std::sync::{Arc, LazyLock, Mutex};
 
     type MockStore = Arc<Mutex<HashMap<(String, String), Vec<u8>>>>;
 
-    static STORE: LazyLock<MockStore> = 
-        LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
+    static STORE: LazyLock<MockStore> = LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
 
-    static INJECTED_ERROR: LazyLock<Mutex<Option<keyring_core::Error>>> = 
+    static INJECTED_ERROR: LazyLock<Mutex<Option<keyring_core::Error>>> =
         LazyLock::new(|| Mutex::new(None));
 
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
@@ -68,9 +70,18 @@ mod tests {
     }
 
     impl CredentialStoreApi for MyMockBuilder {
-        fn vendor(&self) -> String { "mock".to_string() }
-        fn id(&self) -> String { "mock-id".to_string() }
-        fn build(&self, service: &str, user: &str, _modifiers: Option<&HashMap<&str, &str>>) -> keyring_core::Result<Entry> {
+        fn vendor(&self) -> String {
+            "mock".to_string()
+        }
+        fn id(&self) -> String {
+            "mock-id".to_string()
+        }
+        fn build(
+            &self,
+            service: &str,
+            user: &str,
+            _modifiers: Option<&HashMap<&str, &str>>,
+        ) -> keyring_core::Result<Entry> {
             let cred = MyMockCredential {
                 service: service.to_string(),
                 user: user.to_string(),
@@ -88,14 +99,20 @@ mod tests {
             if let Some(err) = INJECTED_ERROR.lock().unwrap().take() {
                 return Err(err);
             }
-            self.store.lock().unwrap().insert((self.service.clone(), self.user.clone()), secret.to_vec());
+            self.store
+                .lock()
+                .unwrap()
+                .insert((self.service.clone(), self.user.clone()), secret.to_vec());
             Ok(())
         }
         fn get_secret(&self) -> keyring_core::error::Result<Vec<u8>> {
             if let Some(err) = INJECTED_ERROR.lock().unwrap().take() {
                 return Err(err);
             }
-            self.store.lock().unwrap().get(&(self.service.clone(), self.user.clone()))
+            self.store
+                .lock()
+                .unwrap()
+                .get(&(self.service.clone(), self.user.clone()))
                 .cloned()
                 .ok_or(keyring_core::Error::NoEntry)
         }
@@ -103,11 +120,17 @@ mod tests {
             if let Some(err) = INJECTED_ERROR.lock().unwrap().take() {
                 return Err(err);
             }
-            self.store.lock().unwrap().remove(&(self.service.clone(), self.user.clone()))
+            self.store
+                .lock()
+                .unwrap()
+                .remove(&(self.service.clone(), self.user.clone()))
                 .map(|_| ())
                 .ok_or(keyring_core::Error::NoEntry)
         }
-        fn get_credential(&self) -> std::result::Result<Option<Arc<dyn CredentialApi + Send + Sync>>, keyring_core::Error> {
+        fn get_credential(
+            &self,
+        ) -> std::result::Result<Option<Arc<dyn CredentialApi + Send + Sync>>, keyring_core::Error>
+        {
             Ok(None)
         }
         fn get_specifiers(&self) -> Option<(String, String)> {
@@ -121,7 +144,7 @@ mod tests {
     /// Installs a persistent mock credential builder so that all Entry instances
     /// share the same in-memory store. This allows testing persistence across
     /// set_secret and get_secret calls.
-    /// 
+    ///
     /// Returns a MutexGuard to ensure tests using the mock keyring run sequentially
     /// and don't interfere with each other's state.
     fn use_mock_keyring() -> std::sync::MutexGuard<'static, ()> {
@@ -131,11 +154,11 @@ mod tests {
         INIT.call_once(|| {
             // Initialize the default global store with our mock builder exactly once,
             // so that all test runs share the same mock registry during unit testing.
-            keyring_core::set_default_store(Arc::new(MyMockBuilder { 
-                store: Arc::clone(&STORE) 
+            keyring_core::set_default_store(Arc::new(MyMockBuilder {
+                store: Arc::clone(&STORE),
             }));
         });
-        
+
         // Ensure we can lock the store. If poisoned, we try to clear it anyway.
         match STORE.lock() {
             Ok(mut s) => s.clear(),
@@ -144,7 +167,7 @@ mod tests {
                 s.clear();
             }
         }
-        
+
         clear_mock_error();
         guard
     }
@@ -159,15 +182,24 @@ mod tests {
 
         // Set and retrieve
         entry.set_password("initial-secret").expect("set_password");
-        assert_eq!(entry.get_password().expect("get_password"), "initial-secret");
+        assert_eq!(
+            entry.get_password().expect("get_password"),
+            "initial-secret"
+        );
 
         // Overwrite and retrieve
         entry.set_password("updated-secret").expect("overwrite");
-        assert_eq!(entry.get_password().expect("get after overwrite"), "updated-secret");
+        assert_eq!(
+            entry.get_password().expect("get after overwrite"),
+            "updated-secret"
+        );
 
         // Delete and verify absence
         entry.delete_credential().expect("delete");
-        assert!(entry.get_password().is_err(), "password should be gone after delete");
+        assert!(
+            entry.get_password().is_err(),
+            "password should be gone after delete"
+        );
     }
 
     #[test]
@@ -193,7 +225,10 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         match err {
-            Error::Unknown(msg) => assert!(msg.contains("No matching entry") || msg.contains("No matching credential"), "unexpected: {msg}"),
+            Error::Unknown(msg) => assert!(
+                msg.contains("No matching entry") || msg.contains("No matching credential"),
+                "unexpected: {msg}"
+            ),
             other => panic!("expected Error::Unknown, got: {other:?}"),
         }
     }
@@ -205,7 +240,10 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         match err {
-            Error::Unknown(msg) => assert!(msg.contains("No matching entry") || msg.contains("No matching credential"), "unexpected: {msg}"),
+            Error::Unknown(msg) => assert!(
+                msg.contains("No matching entry") || msg.contains("No matching credential"),
+                "unexpected: {msg}"
+            ),
             other => panic!("expected Error::Unknown, got: {other:?}"),
         }
     }
@@ -216,7 +254,10 @@ mod tests {
     fn set_secret_succeeds_with_mock() {
         let _guard = use_mock_keyring();
         let result = set_secret("mock_set_test", "some-value");
-        assert!(result.is_ok(), "set_secret should succeed with mock backend");
+        assert!(
+            result.is_ok(),
+            "set_secret should succeed with mock backend"
+        );
     }
 
     #[test]
@@ -230,7 +271,10 @@ mod tests {
 
         // 2. Retrieve the secret using public API (different Entry instance internally)
         let retrieved = get_secret(key).expect("failed to get secret");
-        assert_eq!(retrieved, secret, "retrieved secret does not match set secret");
+        assert_eq!(
+            retrieved, secret,
+            "retrieved secret does not match set secret"
+        );
 
         // 3. Update the secret
         let new_secret = "updated-secret-456";
@@ -244,19 +288,24 @@ mod tests {
         delete_secret(key).expect("failed to delete secret");
 
         // 6. Verify deletion
-        assert!(get_secret(key).is_err(), "secret should be gone after delete_secret");
+        assert!(
+            get_secret(key).is_err(),
+            "secret should be gone after delete_secret"
+        );
     }
 
     #[test]
     fn test_error_propagation_platform_failure() {
         let _guard = use_mock_keyring();
-        inject_mock_error(keyring_core::Error::PlatformFailure(Box::new(std::io::Error::other("OS Keychain Locked"))));
-        
+        inject_mock_error(keyring_core::Error::PlatformFailure(Box::new(
+            std::io::Error::other("OS Keychain Locked"),
+        )));
+
         let result = get_secret("any_key");
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("OS Keychain Locked"));
-        
+
         clear_mock_error();
     }
 
@@ -264,13 +313,13 @@ mod tests {
     fn test_service_isolation_in_mock() {
         let _guard = use_mock_keyring();
         let key = "shared_key";
-        
+
         let entry1 = Entry::new("service.one", key).expect("entry 1");
         let entry2 = Entry::new("service.two", key).expect("entry 2");
-        
+
         entry1.set_password("secret-one").expect("set 1");
         entry2.set_password("secret-two").expect("set 2");
-        
+
         assert_eq!(entry1.get_password().expect("get 1"), "secret-one");
         assert_eq!(entry2.get_password().expect("get 2"), "secret-two");
     }

@@ -26,7 +26,11 @@ impl WatcherManager {
         }
     }
 
-    pub fn watch<R: tauri::Runtime>(&self, app: tauri::AppHandle<R>, path_str: String) -> Result<(), String> {
+    pub fn watch<R: tauri::Runtime>(
+        &self,
+        app: tauri::AppHandle<R>,
+        path_str: String,
+    ) -> Result<(), String> {
         let path = crate::util::resolve_path(&path_str).map_err(|e| e.to_string())?;
         let resolved_key = path.to_string_lossy().to_string();
 
@@ -34,8 +38,11 @@ impl WatcherManager {
             return Err("Path does not exist".to_string());
         }
 
-        let mut debouncers = self.debouncers.lock().map_err(|e| format!("Mutex poisoned: {}", e))?;
-        
+        let mut debouncers = self
+            .debouncers
+            .lock()
+            .map_err(|e| format!("Mutex poisoned: {}", e))?;
+
         if debouncers.len() >= 10 {
             return Err("Too many active watchers".to_string());
         }
@@ -95,7 +102,10 @@ impl WatcherManager {
         let path = crate::util::resolve_path(&path_str).map_err(|e| e.to_string())?;
         let resolved_key = path.to_string_lossy().to_string();
 
-        let mut debouncers = self.debouncers.lock().map_err(|e| format!("Mutex poisoned: {}", e))?;
+        let mut debouncers = self
+            .debouncers
+            .lock()
+            .map_err(|e| format!("Mutex poisoned: {}", e))?;
         debouncers.remove(&resolved_key);
         Ok(())
     }
@@ -167,7 +177,7 @@ mod tests {
     fn watch_and_unwatch_lifecycle() {
         let mgr = WatcherManager::new();
         let app = tauri::test::mock_app();
-        
+
         // Create a temp file to watch
         let temp_dir = tempfile::tempdir().unwrap();
         let file_path = temp_dir.path().join("test.txt");
@@ -175,11 +185,13 @@ mod tests {
         let path_str = file_path.to_string_lossy().to_string();
 
         // 1. Watch
-        mgr.watch(app.handle().clone(), path_str.clone()).expect("watch failed");
+        mgr.watch(app.handle().clone(), path_str.clone())
+            .expect("watch failed");
         assert_eq!(mgr.active_count(), 1);
 
         // 2. Watch same path again (should be no-op)
-        mgr.watch(app.handle().clone(), path_str.clone()).expect("watch again failed");
+        mgr.watch(app.handle().clone(), path_str.clone())
+            .expect("watch again failed");
         assert_eq!(mgr.active_count(), 1);
 
         // 3. Unwatch
@@ -198,7 +210,8 @@ mod tests {
             let file_path = temp_dir.path().join(format!("test{}.txt", i));
             std::fs::write(&file_path, "content").unwrap();
             let path_str = file_path.to_string_lossy().to_string();
-            mgr.watch(app.handle().clone(), path_str).expect("watch should succeed for first 10");
+            mgr.watch(app.handle().clone(), path_str)
+                .expect("watch should succeed for first 10");
         }
 
         assert_eq!(mgr.active_count(), 10);
@@ -215,8 +228,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_watcher_emits_event_on_change() -> Result<(), Box<dyn std::error::Error>> {
-        use tauri::Listener;
         use std::sync::atomic::{AtomicBool, Ordering};
+        use tauri::Listener;
 
         let mgr = WatcherManager::new();
         let app = tauri::test::mock_app();
@@ -236,7 +249,8 @@ mod tests {
         });
 
         // Start watching
-        mgr.watch(handle.clone(), path_str.clone()).expect("watch failed");
+        mgr.watch(handle.clone(), path_str.clone())
+            .expect("watch failed");
 
         // Modify the file to trigger an event
         std::fs::write(&file_path, "updated content").unwrap();
@@ -251,7 +265,10 @@ mod tests {
             }
         }
 
-        assert!(found, "Should have received fs://change event after file modification");
+        assert!(
+            found,
+            "Should have received fs://change event after file modification"
+        );
 
         // Cleanup
         mgr.unwatch(path_str).expect("unwatch failed");

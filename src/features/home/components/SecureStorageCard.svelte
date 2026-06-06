@@ -35,7 +35,7 @@ function handleGetSecret() {
 	void executeSafeAction(
 		async () => {
 			const value = await commands.getSecret(secretKey.trim());
-			toast.info(t('debugSettings.secretValue_result', { value }));
+			toast.info(t('debugSettings.secretValue_result', { value }), { shouldCopy: true });
 		},
 		{ errorMessage: t('debugSettings.failedSecretOp') },
 	);

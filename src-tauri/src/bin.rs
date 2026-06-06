@@ -1,11 +1,11 @@
 use clap::Parser;
-use tauri_app_template_lib::cli::{CliArgs, StandaloneContext, CliResult, run_cli};
+use tauri_app_template_lib::cli::{CliArgs, CliResult, StandaloneContext, run_cli};
 use tauri_app_template_lib::services::job_service::JobManager;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
     let args = CliArgs::parse();
-    
+
     // Resolve data dir (mirrors Tauri's default logic for the app identifier)
     let data_dir = if let Ok(val) = std::env::var("TAURI_APP_TEMPLATE_DATA_DIR") {
         tauri_app_template_lib::util::resolve_dev_data_dir(val)
@@ -31,7 +31,9 @@ async fn main() -> std::process::ExitCode {
     };
 
     if let Err(err) = keyring::use_native_store(true) {
-        eprintln!("Warning: Failed to initialize native keyring store: {err}. Keyring-dependent features will not be available.");
+        eprintln!(
+            "Warning: Failed to initialize native keyring store: {err}. Keyring-dependent features will not be available."
+        );
     }
 
     let ctx = StandaloneContext {
@@ -49,9 +51,12 @@ async fn main() -> std::process::ExitCode {
         let app_version = app_version.trim();
         let cli_version = env!("CARGO_PKG_VERSION");
         if app_version != cli_version {
-            println!("CLI version ({}) does not match the installed app version ({}).", cli_version, app_version);
+            println!(
+                "CLI version ({}) does not match the installed app version ({}).",
+                cli_version, app_version
+            );
             print!("Would you like to update the CLI? [Y/n]: ");
-            use std::io::{stdin, stdout, Write};
+            use std::io::{Write, stdin, stdout};
             stdout().flush().ok();
             let mut input = String::new();
             stdin().read_line(&mut input).ok();
@@ -64,7 +69,12 @@ async fn main() -> std::process::ExitCode {
                         return std::process::ExitCode::from(1);
                     }
                 };
-                match tauri_app_template_lib::services::cli_update_service::update_cli_standalone(app_version, &cli_path).await {
+                match tauri_app_template_lib::services::cli_update_service::update_cli_standalone(
+                    app_version,
+                    &cli_path,
+                )
+                .await
+                {
                     Ok(_) => {
                         println!("CLI updated successfully! Please re-run your command.");
                         return std::process::ExitCode::SUCCESS;
@@ -89,4 +99,3 @@ async fn main() -> std::process::ExitCode {
         }
     }
 }
-

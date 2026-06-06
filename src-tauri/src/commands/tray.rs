@@ -9,7 +9,10 @@ pub async fn set_tray_settings(
     minimize_to_tray: bool,
     notify_on_minimize: bool,
 ) -> CResult<()> {
-    let mut settings = state.tray_settings.lock().map_err(|e| crate::error::Error::Unknown(format!("Mutex poisoned: {}", e)))?;
+    let mut settings = state
+        .tray_settings
+        .lock()
+        .map_err(|e| crate::error::Error::Unknown(format!("Mutex poisoned: {}", e)))?;
     settings.minimize_to_tray = minimize_to_tray;
     settings.notify_on_minimize = notify_on_minimize;
     Ok(())
@@ -26,7 +29,7 @@ mod tests {
     async fn test_set_tray_settings() {
         let app = tauri::test::mock_app();
         let handle = app.handle();
-        
+
         let db = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
         let log_dir = std::path::PathBuf::from("/tmp/logs");
 
@@ -44,7 +47,7 @@ mod tests {
         });
 
         let state = handle.state::<AppState>();
-        
+
         // Update settings
         let result = set_tray_settings(state.clone(), true, false).await;
         assert!(result.is_ok());
@@ -59,7 +62,7 @@ mod tests {
     async fn test_set_tray_settings_poisoned_mutex() {
         let app = tauri::test::mock_app();
         let handle = app.handle();
-        
+
         let db = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
         let log_dir = std::path::PathBuf::from("/tmp/logs");
 
@@ -88,7 +91,7 @@ mod tests {
         });
 
         let state = handle.state::<AppState>();
-        
+
         let result = set_tray_settings(state, true, true).await;
         assert!(result.is_err());
         if let Err(crate::error::Error::Unknown(msg)) = result {

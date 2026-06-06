@@ -1,6 +1,6 @@
 use crate::error::CResult;
-use tauri::Manager;
 use async_trait::async_trait;
+use tauri::Manager;
 
 #[async_trait]
 pub trait NotificationService: Send + Sync {
@@ -20,10 +20,17 @@ impl<R: tauri::Runtime> RealNotificationService<R> {
 #[async_trait]
 impl<R: tauri::Runtime> NotificationService for RealNotificationService<R> {
     async fn show(&self, title: &str, body: &str) -> CResult<()> {
-        log::info!("[Backend] RealNotificationService::show: {} - {}", title, body);
+        log::info!(
+            "[Backend] RealNotificationService::show: {} - {}",
+            title,
+            body
+        );
 
         // 1. Tauri Plugin attempt
-        if let Some(n) = self.app.try_state::<tauri_plugin_notification::Notification<R>>() {
+        if let Some(n) = self
+            .app
+            .try_state::<tauri_plugin_notification::Notification<R>>()
+        {
             match n.inner().builder().title(title).body(body).show() {
                 Ok(_) => {
                     log::debug!("[Backend] Notification delivered via plugin");
@@ -39,8 +46,14 @@ impl<R: tauri::Runtime> NotificationService for RealNotificationService<R> {
         #[cfg(target_os = "linux")]
         {
             log::info!("[Backend] Linux Strategy: Dual Dispatch fallback via notify-send");
-            let t = title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-            let b = body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+            let t = title
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+            let b = body
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
 
             tauri::async_runtime::spawn_blocking(move || {
                 match std::process::Command::new("notify-send")
@@ -55,7 +68,10 @@ impl<R: tauri::Runtime> NotificationService for RealNotificationService<R> {
                         log::debug!("[Backend] notify-send fallback succeeded");
                     }
                     Ok(status) => {
-                        log::warn!("[Backend] notify-send fallback exited with error: {}", status);
+                        log::warn!(
+                            "[Backend] notify-send fallback exited with error: {}",
+                            status
+                        );
                     }
                     Err(e) => {
                         log::error!("[Backend] Failed to execute notify-send fallback: {}", e);
@@ -72,7 +88,9 @@ impl<R: tauri::Runtime> NotificationService for RealNotificationService<R> {
 #[specta::specta]
 pub async fn notify(app: tauri::AppHandle, title: String, body: String) -> CResult<()> {
     if title.len() > 256 || body.len() > 1024 {
-        return Err(crate::error::Error::Validation("Notification content too long".into()));
+        return Err(crate::error::Error::Validation(
+            "Notification content too long".into(),
+        ));
     }
     let service = RealNotificationService::new(app);
     service.show(&title, &body).await
@@ -82,8 +100,8 @@ pub async fn notify(app: tauri::AppHandle, title: String, body: String) -> CResu
 #[allow(unsafe_code, clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
     use std::sync::Arc;
+    use std::sync::Mutex;
 
     struct MockNotificationService {
         calls: Arc<Mutex<Vec<(String, String)>>>,
@@ -101,10 +119,12 @@ mod tests {
     #[tokio::test]
     async fn test_notify_success() {
         let calls = Arc::new(Mutex::new(Vec::new()));
-        let service = MockNotificationService { calls: calls.clone() };
-        
+        let service = MockNotificationService {
+            calls: calls.clone(),
+        };
+
         let result = service.show("Test Title", "Test Body").await;
-        
+
         assert!(result.is_ok());
         let calls = calls.lock().unwrap();
         assert_eq!(calls.len(), 1);

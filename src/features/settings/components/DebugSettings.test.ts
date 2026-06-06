@@ -7,8 +7,8 @@ import {
 	waitFor,
 } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { trayStore } from '@/stores/trayStore.svelte';
 import { uiStore } from '@/stores/uiStore.svelte';
+import TestWrapper from '@/test/TestWrapper.svelte';
 import DebugSettings from './DebugSettings.svelte';
 
 // Mock i18n
@@ -29,14 +29,6 @@ describe('DebugSettings', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		uiStore.setLogLevel('error');
-		trayStore.setMinimizeToTray(false);
-
-		// Mock window.Notification for Tauri 2 plugin-notification
-		// @ts-expect-error
-		window.Notification = {
-			permission: 'granted',
-			requestPermission: vi.fn(() => Promise.resolve('granted')),
-		};
 
 		mockIPC((cmd) => {
 			if (cmd === 'plugin:dialog|message') return Promise.resolve('Yes');
@@ -44,10 +36,9 @@ describe('DebugSettings', () => {
 				return Promise.resolve('/path/to/logs.txt');
 			if (cmd === 'plugin:process|restart') return Promise.resolve(null);
 			if (cmd === 'plugin:process|exit') return Promise.resolve(null);
-			if (cmd === 'plugin:notification|is_permission_granted')
-				return Promise.resolve(true);
-			if (cmd === 'notify') return Promise.resolve(null);
 			if (cmd === 'export_diagnostics') return Promise.resolve(true);
+			if (cmd === 'open_log_dir') return null;
+			if (cmd === 'open_data_dir') return null;
 		});
 	});
 
@@ -56,112 +47,55 @@ describe('DebugSettings', () => {
 	});
 
 	it('renders debug settings controls', () => {
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		expect(screen.getByText('debugSettings.title')).toBeTruthy();
-		expect(screen.getByText('debugSettings.minimizeToTray')).toBeTruthy();
+		expect(screen.getByText('generalSettings.applicationData')).toBeTruthy();
+		expect(screen.getByText('generalSettings.systemLogs')).toBeTruthy();
 	});
 
-	it('toggles minimize to tray when switch is clicked', async () => {
-		render(DebugSettings);
+	it('opens log directory when button is clicked', async () => {
+		let capturedCmd: string | null = null;
+		mockIPC((cmd) => {
+			if (cmd === 'open_log_dir') {
+				capturedCmd = cmd;
+				return null;
+			}
+		});
 
-		const switches = screen.getAllByRole('switch');
-		// First switch is minimizeToTray
-		await fireEvent.click(switches[0]);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
-		expect(trayStore.minimizeToTray).toBe(true);
+		const btn = screen.getByText('generalSettings.openLogs');
+		await fireEvent.click(btn);
+
+		expect(capturedCmd).toBe('open_log_dir');
 	});
 
-	it('resets notify when minimized when reset button is clicked', async () => {
-		trayStore.setMinimizeToTray(true);
-		trayStore.setNotifyOnMinimize(false);
-		render(DebugSettings);
+	it('opens data directory when button is clicked', async () => {
+		let capturedCmd: string | null = null;
+		mockIPC((cmd) => {
+			if (cmd === 'open_data_dir') {
+				capturedCmd = cmd;
+				return null;
+			}
+		});
 
-		const resetButtons = screen.getAllByTitle('common.reset');
-		// Second reset button is for notifyOnMinimize
-		await fireEvent.click(resetButtons[1]);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
-		expect(trayStore.notifyOnMinimize).toBe(true);
+		const btn = screen.getByText('generalSettings.openData');
+		await fireEvent.click(btn);
+
+		expect(capturedCmd).toBe('open_data_dir');
 	});
 
 	it('toggles debug mode when switch is clicked', async () => {
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 
 		const switches = screen.getAllByRole('switch');
-		// Fourth switch is debug mode
-		await fireEvent.click(switches[3]);
+		// Second switch is debug mode (index 1)
+		await fireEvent.click(switches[1]);
 
 		expect(uiStore.logLevel).toBe('debug');
-	});
-
-	it('triggers test notification when button is clicked', async () => {
-		let capturedNotify = false;
-		mockIPC((cmd) => {
-			if (cmd === 'notify') {
-				capturedNotify = true;
-				return Promise.resolve(null);
-			}
-			if (cmd === 'plugin:notification|is_permission_granted')
-				return Promise.resolve(true);
-		});
-
-		render(DebugSettings);
-
-		const btn = screen.getByText('debugSettings.notification');
-		await fireEvent.click(btn);
-
-		expect(capturedNotify).toBe(true);
-	});
-
-	it('triggers native dialog test when button is clicked', async () => {
-		let capturedAsk = false;
-		mockIPC((cmd) => {
-			if (cmd === 'plugin:dialog|message') {
-				capturedAsk = true;
-				return Promise.resolve('Yes');
-			}
-		});
-
-		render(DebugSettings);
-
-		const btn = screen.getByText('debugSettings.nativeDialog');
-		await fireEvent.click(btn);
-
-		expect(capturedAsk).toBe(true);
-	});
-
-	it('triggers relaunch when button is clicked', async () => {
-		let capturedRelaunch = false;
-		mockIPC((cmd) => {
-			if (cmd === 'plugin:process|restart') {
-				capturedRelaunch = true;
-				return Promise.resolve(null);
-			}
-		});
-
-		render(DebugSettings);
-
-		const btn = screen.getByText('debugSettings.relaunch');
-		await fireEvent.click(btn);
-
-		expect(capturedRelaunch).toBe(true);
-	});
-
-	it('triggers exit when button is clicked', async () => {
-		let capturedExit = false;
-		mockIPC((cmd) => {
-			if (cmd === 'plugin:process|exit') {
-				capturedExit = true;
-				return Promise.resolve(null);
-			}
-		});
-
-		render(DebugSettings);
-
-		const btn = screen.getByText('debugSettings.exit');
-		await fireEvent.click(btn);
-
-		expect(capturedExit).toBe(true);
 	});
 
 	it('exports diagnostics when button is clicked', async () => {
@@ -176,7 +110,7 @@ describe('DebugSettings', () => {
 				return Promise.resolve('/path/to/logs.txt');
 		});
 
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 		const btn = screen.getByText('debugSettings.exportLogs');
 		await fireEvent.click(btn);
 
@@ -197,7 +131,7 @@ describe('DebugSettings', () => {
 				return Promise.resolve('/path/to/logs.txt');
 		});
 
-		render(DebugSettings);
+		render(TestWrapper, { props: { component: DebugSettings } });
 		const btn = screen.getByText('debugSettings.exportLogs');
 		await fireEvent.click(btn);
 	});

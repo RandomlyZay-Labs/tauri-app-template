@@ -1,6 +1,6 @@
 use crate::error::CResult;
-use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use std::fs;
 use std::path::PathBuf;
 
@@ -21,9 +21,7 @@ pub async fn init(custom_data_dir: Option<&PathBuf>) -> CResult<SqlitePool> {
         .create_if_missing(true)
         .journal_mode(SqliteJournalMode::Wal);
 
-    let pool = SqlitePoolOptions::new()
-        .connect_with(options)
-        .await?;
+    let pool = SqlitePoolOptions::new().connect_with(options).await?;
 
     // Embed and run migrations from the migrations folder
     // Path is relative to CARGO_MANIFEST_DIR (src-tauri)
@@ -45,12 +43,14 @@ mod tests {
     async fn test_db_init() {
         let tmp = tempdir().expect("Failed to create temp dir");
         let data_dir = tmp.path().to_path_buf();
-        
-        let pool = init(Some(&data_dir)).await.expect("Failed to init database");
-        
+
+        let pool = init(Some(&data_dir))
+            .await
+            .expect("Failed to init database");
+
         // Verify file exists
         assert!(data_dir.join("tauri_app_template.db").exists());
-        
+
         // Verify we can query it
         let row: (i32,) = sqlx::query_as("SELECT 1")
             .fetch_one(&pool)
