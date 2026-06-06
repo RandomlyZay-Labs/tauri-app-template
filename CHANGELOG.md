@@ -1,3 +1,13 @@
+## [0.8.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.7.0...v0.8.0) (2026-06-06)
+
+### Features
+
+* enhance CLI update process with signature verification and improve error handling ([#53](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/53)) ([842ba84](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/842ba84324fc668eb4c6ed526e588130904e786e))
+
+### Bug Fixes
+
+* enhance CLI update process with signature verification and error handling ([#55](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/55)) ([c43cc27](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/c43cc27f0c2c562a0eabc5bf3cc28a88ef20cfb7))
+
 ## [0.7.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.6.3...v0.7.0) (2026-06-06)
 
 ### Features
