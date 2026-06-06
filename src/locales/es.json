@@ -333,7 +333,7 @@
 		"statusChecking": "Buscando...",
 		"statusAvailable": "Actualización disponible: {{version}}",
 		"statusNoUpdate": "Al día",
-		"statusDownloading": "Descargando... {{progress}}%",
+		"statusDownloading": "Descargando...",
 		"statusDownloaded": "Lista para instalar",
 		"statusError": "Error de actualización",
 		"statusOffline": "Sin conexión",

@@ -359,7 +359,7 @@ $effect(() => {
 							{:else if updateStore.status === 'downloading'}
 								<Badge variant="outline" class="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
 									<RefreshCw class="animate-spin size-3 mr-1" />
-									{t('updateSettings.statusDownloading', { progress: updateStore.percentage })}
+									{t('updateSettings.statusDownloading')}
 								</Badge>
 							{:else if updateStore.status === 'downloaded'}
 								<Badge variant="outline" class="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">

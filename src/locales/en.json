@@ -333,7 +333,7 @@
 		"statusChecking": "Checking...",
 		"statusAvailable": "Update available: {{version}}",
 		"statusNoUpdate": "Up to date",
-		"statusDownloading": "Downloading... {{progress}}%",
+		"statusDownloading": "Downloading...",
 		"statusDownloaded": "Ready to install",
 		"statusError": "Update error",
 		"statusOffline": "Offline",
