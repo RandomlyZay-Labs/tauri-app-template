@@ -44,6 +44,7 @@ mod tests {
             download_manager: crate::services::download_service::DownloadManager::new(1),
             job_manager: crate::services::job_service::JobManager::new(db),
             watcher_manager: crate::services::watcher_service::WatcherManager::new(),
+            cli_verifier: std::sync::Arc::new(crate::services::cli_update_service::RealCliVerifier),
         });
 
         let state = handle.state::<AppState>();
@@ -88,6 +89,7 @@ mod tests {
             download_manager: crate::services::download_service::DownloadManager::new(1),
             job_manager: crate::services::job_service::JobManager::new(db),
             watcher_manager: crate::services::watcher_service::WatcherManager::new(),
+            cli_verifier: std::sync::Arc::new(crate::services::cli_update_service::RealCliVerifier),
         });
 
         let state = handle.state::<AppState>();

@@ -108,7 +108,6 @@ function handleOpenData() {
 			<!-- Debug Mode -->
 			<div class="flex items-center justify-between border-b pb-4">
 				<div>
-					<div class="hidden">Debug Mode</div>
 					<Tooltip.Root>
 						<Tooltip.Trigger>
 							{#snippet child({ props })}

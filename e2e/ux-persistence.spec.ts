@@ -119,12 +119,10 @@ test.describe('Expanded Features E2E', () => {
 		await page.goto('/#/settings');
 		await page.getByTestId('tab-trigger-debug').click();
 
-		// Find the switch near "Debug Mode" text
-		const debugModeRow = page
-			.locator('div')
-			.filter({ hasText: /^Debug Mode$/ })
-			.first();
-		const debugSwitch = debugModeRow.locator('xpath=../..').getByRole('switch');
+		const debugSwitch = page
+			.locator('div.border-b')
+			.filter({ hasText: 'Debug Mode' })
+			.getByRole('switch');
 
 		// Wait for initial state to be stable
 		await expect(debugSwitch).toBeVisible();

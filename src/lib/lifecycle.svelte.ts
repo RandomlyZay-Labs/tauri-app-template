@@ -84,7 +84,11 @@ class LifecycleManager {
 				.replace(/_/g, ' ')
 				.replace(/\b\w/g, (c) => c.toUpperCase());
 
-			if (p.status === 'failed' && existing?.status !== 'failed') {
+			if (
+				p.status === 'failed' &&
+				existing?.status !== 'failed' &&
+				p.kind !== 'download'
+			) {
 				toast.error(t('activityCenter.jobFailed', { job: labelCap }), {
 					description: p.message || t('errors.unknownError'),
 				});
