@@ -150,13 +150,13 @@ function handleTelemetryToggle(enabled: boolean) {
 							variant="ghost"
 							size="icon"
 							class={cn('size-8 text-muted-foreground', {
-								invisible: trayStore.notifyOnMinimize,
+								invisible: trayStore.notifyOnMinimize || !trayStore.minimizeToTray,
 							})}
 							onclick={() => trayStore.setNotifyOnMinimize(true)}
 							title={t('common.reset')}
 							disabled={!trayStore.minimizeToTray}
-							aria-hidden={trayStore.notifyOnMinimize}
-							tabindex={trayStore.notifyOnMinimize ? -1 : 0}
+							aria-hidden={trayStore.notifyOnMinimize || !trayStore.minimizeToTray}
+							tabindex={trayStore.notifyOnMinimize || !trayStore.minimizeToTray ? -1 : 0}
 						>
 							<RotateCcw class="size-4" />
 						</Button>

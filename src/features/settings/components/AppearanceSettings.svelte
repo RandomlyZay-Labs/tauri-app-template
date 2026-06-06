@@ -415,15 +415,15 @@ const _unusedKeysDummy = [
 							variant="ghost"
 							size="icon"
 							class={cn('size-8 text-muted-foreground', {
-								invisible: uiStore.controlsAlignment === 'system',
+								invisible: uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom',
 							})}
 							onclick={() => {
 								handleSettingChange(() => uiStore.setControlsAlignment('system'));
 							}}
 							aria-label={t('appearanceSettings.resetControlsAlignment')}
 							disabled={uiStore.titlebarStyle !== 'custom'}
-							aria-hidden={uiStore.controlsAlignment === 'system'}
-							tabindex={uiStore.controlsAlignment === 'system' ? -1 : 0}
+							aria-hidden={uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom'}
+							tabindex={uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom' ? -1 : 0}
 						>
 							<RotateCcw class="size-4" />
 						</Button>
@@ -482,15 +482,15 @@ const _unusedKeysDummy = [
 							variant="ghost"
 							size="icon"
 							class={cn('size-8 text-muted-foreground', {
-								invisible: uiStore.controlsStyle === 'system',
+								invisible: uiStore.controlsStyle === 'system' || uiStore.titlebarStyle !== 'custom',
 							})}
 							onclick={() => {
 								handleSettingChange(() => uiStore.setControlsStyle('system'));
 							}}
 							aria-label={t('appearanceSettings.resetControlsStyle')}
 							disabled={uiStore.titlebarStyle !== 'custom'}
-							aria-hidden={uiStore.controlsStyle === 'system'}
-							tabindex={uiStore.controlsStyle === 'system' ? -1 : 0}
+							aria-hidden={uiStore.controlsStyle === 'system' || uiStore.titlebarStyle !== 'custom'}
+							tabindex={uiStore.controlsStyle === 'system' || uiStore.titlebarStyle !== 'custom' ? -1 : 0}
 						>
 							<RotateCcw class="size-4" />
 						</Button>
