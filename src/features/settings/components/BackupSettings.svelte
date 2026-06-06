@@ -268,14 +268,18 @@ function handleRestore() {
 				<ScrollArea class="h-75 w-full pr-4">
 					<div class="space-y-2">
 						{#each backups as backup (backup.id)}
-							{@const isManual = backup.is_manual || !!backup.label}
+							{@const isManual = backup.is_manual}
 							<div data-testid="backup-row" class="flex items-center justify-between rounded-lg border p-3 transition-colors {isManual ? 'border-primary/20 bg-primary/5' : 'bg-muted/20'}">
 								<div class="space-y-1">
 									<div class="flex items-center gap-2">
 										<span class="font-medium text-sm">{format(new Date(backup.created_at), 'PPP p')}</span>
-										{#if isManual}
+										{#if backup.label}
 											<Badge variant="outline" class="h-5 px-1.5 text-[10px] font-normal bg-background/50">
-												{backup.label || t('common.manual')}
+												{backup.label}
+											</Badge>
+										{:else if isManual}
+											<Badge variant="outline" class="h-5 px-1.5 text-[10px] font-normal bg-background/50">
+												{t('common.manual')}
 											</Badge>
 										{/if}
 									</div>

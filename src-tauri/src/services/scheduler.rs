@@ -148,7 +148,7 @@ async fn check_and_perform_backup_internal(
         log::info!("[Scheduler] Triggering scheduled backup...");
 
         // 1. Create Backup
-        backup_service::create_backup(db, data_dir, None).await?;
+        backup_service::create_backup(db, data_dir, None, None).await?;
 
         // 2. Prune old backups
         let pruned = backup_service::prune_backups(data_dir, settings.max_backups).await?;

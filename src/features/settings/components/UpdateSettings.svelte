@@ -31,6 +31,9 @@ import {
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { onMount } from 'svelte';
 import { slide } from 'svelte/transition';
+import { createBackup } from '@/lib/backups';
+import { Spinner } from '@/components/ui/spinner';
+import { Archive } from '@lucide/svelte';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
@@ -39,6 +42,26 @@ let isCliLoading = $state(false);
 let cliCopied = $state(false);
 let packageCommandCopied = $state(false);
 let relaunchDialogOpen = $state(false);
+let isPreUpdateBackupCreating = $state(false);
+
+async function handleCreatePreUpdateBackup() {
+	isPreUpdateBackupCreating = true;
+	await executeSafeAction(
+		async () => {
+			await createBackup(`pre-update-${updateStore.version}`, false);
+		},
+		{
+			successMessage: t('updateSettings.preUpdateBackupSuccess'),
+			errorMessage: t('updateSettings.preUpdateBackupFailed'),
+			onSuccess: () => {
+				isPreUpdateBackupCreating = false;
+			},
+			onError: () => {
+				isPreUpdateBackupCreating = false;
+			}
+		}
+	);
+}
 
 const appVersion = $derived(getAppVersion());
 const commandText = 'tauri-app-template-cli --help';
@@ -456,6 +479,24 @@ $effect(() => {
 											{t('common.copied')}
 										{:else}
 											{t('updateSettings.copyCommand')}
+										{/if}
+									</Button>
+								</div>
+								<div class="pt-2 border-t border-border/40 space-y-3">
+									<p class="text-xs text-muted-foreground">{t('updateSettings.preUpdateBackupRecommend')}</p>
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={handleCreatePreUpdateBackup}
+										disabled={isPreUpdateBackupCreating}
+										class="w-full sm:w-auto"
+									>
+										{#if isPreUpdateBackupCreating}
+											<Spinner class="mr-2" />
+											{t('backupSettings.creating')}
+										{:else}
+											<Archive class="mr-2 size-4" />
+											{t('updateSettings.createPreUpdateBackup')}
 										{/if}
 									</Button>
 								</div>

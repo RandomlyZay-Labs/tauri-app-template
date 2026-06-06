@@ -212,6 +212,7 @@ impl CliContext for StandaloneContext {
             &self.db,
             &self.data_dir,
             label.map(|s| s.to_string()),
+            None,
         )
         .await
     }

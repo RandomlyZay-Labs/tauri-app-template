@@ -302,6 +302,7 @@ describe('updateStore', () => {
 			if (cmd === 'create_backup') {
 				createBackupCalled = true;
 				backupLabel = (args as Record<string, unknown>).label as string;
+				expect((args as Record<string, unknown>).isManual).toBe(false);
 				return Promise.resolve({
 					id: 'mock_backup.db',
 					name: 'mock_backup.db',
@@ -357,6 +358,7 @@ describe('updateStore', () => {
 			if (cmd === 'create_backup') {
 				createBackupCalled = true;
 				backupLabel = (args as Record<string, unknown>).label as string;
+				expect((args as Record<string, unknown>).isManual).toBe(false);
 				return Promise.resolve({
 					id: 'mock_backup.db',
 					name: 'mock_backup.db',

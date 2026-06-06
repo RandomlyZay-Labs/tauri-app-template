@@ -89,9 +89,8 @@ let hasTerminal = $derived(
 			<div class="flex shrink-0 items-center gap-2">
 				{#if hasTerminal}
 					<Button
-						variant="link"
-						size="sm"
-						class="h-auto p-0 px-2 text-primary text-xs"
+						variant="outline"
+						size="xs"
 						onclick={() => activityStore.clearCompleted()}
 					>
 						{t('activityCenter.clearCompleted')}

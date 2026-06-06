@@ -137,7 +137,7 @@ class UpdateStore {
 			async () => {
 				// Automatically create a backup first before updating
 				try {
-					await commands.createBackup(`pre-update-${update.version}`);
+					await commands.createBackup(`pre-update-${update.version}`, false);
 				} catch (backupErr) {
 					console.error('Failed to create pre-update backup:', backupErr);
 				}

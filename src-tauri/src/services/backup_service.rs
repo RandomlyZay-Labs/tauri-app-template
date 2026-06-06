@@ -36,17 +36,20 @@ pub async fn create_backup(
     pool: &SqlitePool,
     app_data_dir: &Path,
     label: Option<String>,
+    is_manual: Option<bool>,
 ) -> CResult<BackupMetadata> {
-    log::debug!("[BackupService] Creating backup. Label: {:?}", label);
+    log::debug!("[BackupService] Creating backup. Label: {:?}, is_manual: {:?}", label, is_manual);
     let backup_dir = get_backup_dir(app_data_dir).await?;
     // Use %f (nanoseconds) to guarantee uniqueness even in tight loops
     let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S_%f");
+
+    let is_manual_resolved = is_manual.unwrap_or_else(|| label.is_none());
 
     // Sanitize and determine filename structure
     let (prefix, safe_label) = if let Some(l) = label {
         let sanitized: String = l
             .chars()
-            .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == ' ')
+            .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == ' ' || *c == '.')
             .collect();
 
         let sanitized = sanitized.trim().replace(' ', "_");
@@ -56,7 +59,11 @@ pub async fn create_backup(
                 "Backup name cannot be empty or contain only invalid characters".into(),
             ));
         }
-        ("manual_backup", Some(sanitized))
+        if is_manual_resolved {
+            ("manual_backup", Some(sanitized))
+        } else {
+            ("backup", Some(sanitized))
+        }
     } else {
         ("backup", None)
     };
@@ -84,13 +91,15 @@ pub async fn create_backup(
     let metadata = tokio::fs::metadata(&file_path).await?;
     let created: DateTime<Local> = SystemTime::now().into();
 
+    let is_manual = safe_label.is_some() && is_manual_resolved;
+
     Ok(BackupMetadata {
         id: file_name.clone(),
         name: file_name,
         path: path_str,
         size_bytes: metadata.len(),
         created_at: created.to_rfc3339(),
-        is_manual: safe_label.is_some(),
+        is_manual,
         label: safe_label,
     })
 }
@@ -124,7 +133,7 @@ pub async fn list_backups(app_data_dir: &Path) -> CResult<Vec<BackupMetadata>> {
 
                 // Parse metadata from filename
                 let is_manual = file_name.starts_with("manual_backup");
-                let label = if is_manual {
+                let label = if is_manual || file_name.contains("___") {
                     // Split once by the triple underscore separator to safely capture the full label
                     file_name
                         .split_once("___")
@@ -307,7 +316,7 @@ mod tests {
 
         let label = Some("my_first_backup".to_string());
 
-        let metadata = create_backup(&pool, test_dir, label).await?;
+        let metadata = create_backup(&pool, test_dir, label, None).await?;
 
         let backup_dir = test_dir.join(BACKUP_DIR_NAME);
         let file_path = backup_dir.join(&metadata.id);
@@ -329,6 +338,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_create_backup_with_dots() -> Result<(), Box<dyn std::error::Error>> {
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        let tmp = tempfile::tempdir()?;
+        let test_dir = tmp.path();
+
+        let source_db_path = test_dir.join("source.db");
+        tokio::fs::File::create(&source_db_path).await?;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&format!("sqlite://{}", source_db_path.to_string_lossy()))
+            .await?;
+
+        let label = Some("pre-update-0.6.3".to_string());
+        let metadata = create_backup(&pool, test_dir, label.clone(), None).await?;
+
+        assert_eq!(metadata.label, label);
+
+        Ok(())
+    }
+
+
+    #[tokio::test]
     async fn test_create_backup_invalid_label() -> Result<(), Box<dyn std::error::Error>> {
         use sqlx::sqlite::SqlitePoolOptions;
 
@@ -346,7 +379,7 @@ mod tests {
         // Label with only special characters should be sanitized to empty and fail
         let label = Some("!!! @#$".to_string());
 
-        let result = create_backup(&pool, test_dir, label).await;
+        let result = create_backup(&pool, test_dir, label, None).await;
 
         assert!(result.is_err());
         if let Err(e) = result {
@@ -397,6 +430,33 @@ mod tests {
 
         let remaining = list_backups(test_dir).await?;
         assert_eq!(remaining.len(), 1);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_prune_pre_update_backups() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = tempfile::tempdir()?;
+        let test_dir = tmp.path();
+
+        let backup_dir = test_dir.join(BACKUP_DIR_NAME);
+        tokio::fs::create_dir_all(&backup_dir).await?;
+
+        tokio::fs::write(backup_dir.join("backup_1.db"), "data").await?;
+        tokio::fs::write(backup_dir.join("backup_2.db"), "data").await?;
+        tokio::fs::write(backup_dir.join("manual_backup_3___my_manual.db"), "data").await?;
+        tokio::fs::write(backup_dir.join("manual_backup_4___my_manual_2.db"), "data").await?;
+        tokio::fs::write(backup_dir.join("backup_5___pre-update-1.0.0.db"), "data").await?;
+        tokio::fs::write(backup_dir.join("backup_6___pre-update-2.0.0.db"), "data").await?;
+
+        let count = prune_backups(test_dir, 1).await?;
+        assert_eq!(count, 3);
+
+        let remaining = list_backups(test_dir).await?;
+        assert_eq!(remaining.len(), 3);
+
+        assert!(remaining.iter().any(|b| b.label.as_deref() == Some("my_manual")));
+        assert!(remaining.iter().any(|b| b.label.as_deref() == Some("my_manual_2")));
 
         Ok(())
     }
