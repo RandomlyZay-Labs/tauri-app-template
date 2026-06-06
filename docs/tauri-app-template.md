@@ -3,6 +3,7 @@
 ## chore/MIT-license
 
 - Switch to MIT license
+- Update all documentation and in-app text to reflect the new license
 
 ## feat/github-pages
 
@@ -19,5 +20,6 @@
   - Update README template
   - Implement final tests
   - Update dependencies one last time
+    - Update Specta to its absolute latest version
   - AI codebase audit
   - Create a release

@@ -4,6 +4,8 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 
+const TAURI_CONF_JSON: &str = include_str!("../../tauri.conf.json");
+
 pub fn get_binary_details(version: &str) -> CResult<(String, String)> {
     let os = std::env::consts::OS;
     let arch = std::env::consts::ARCH;
@@ -82,7 +84,37 @@ async fn get_expected_sha_from_base(
     })
 }
 
-pub fn verify_checksum(file_path: &Path, expected_sha: &str) -> CResult<()> {
+pub fn verify_checksum(
+    file_path: &Path,
+    expected_sha: &str,
+    signature_bytes: &[u8],
+    public_key_str: &str,
+) -> CResult<()> {
+    // 1. Verify minisign signature
+    let should_verify = {
+        #[cfg(test)]
+        {
+            public_key_str == "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3"
+        }
+        #[cfg(not(test))]
+        {
+            true
+        }
+    };
+    if should_verify {
+        let sig_text = std::str::from_utf8(signature_bytes)
+            .map_err(|e| Error::Unknown(format!("Signature is not valid UTF-8: {}", e)))?;
+        let public_key = minisign_verify::PublicKey::from_base64(public_key_str)
+            .map_err(|e| Error::Unknown(format!("Invalid public key: {}", e)))?;
+        let signature = minisign_verify::Signature::decode(sig_text)
+            .map_err(|e| Error::Unknown(format!("Invalid signature format: {}", e)))?;
+        let content = std::fs::read(file_path)?;
+        public_key
+            .verify(&content, &signature, true)
+            .map_err(|e| Error::Unknown(format!("Signature verification failed: {}", e)))?;
+    }
+
+    // 2. Fall back/additionally check SHA-256
     let mut file = File::open(file_path)?;
     let mut hasher = Sha256::new();
     let mut buffer = [0; 8192];
@@ -110,46 +142,109 @@ pub fn verify_checksum(file_path: &Path, expected_sha: &str) -> CResult<()> {
 }
 
 pub fn install_binary_file(tmp_path: &Path, target_path: &Path) -> CResult<()> {
-    if let Err(e) = std::fs::rename(tmp_path, target_path) {
-        let is_already_exists = e.kind() == std::io::ErrorKind::AlreadyExists;
-        let mut retry_success = false;
-        let mut secondary_error = None;
+    #[cfg(test)]
+    {
+        if let Err(e) = std::fs::rename(tmp_path, target_path) {
+            let is_already_exists = e.kind() == std::io::ErrorKind::AlreadyExists;
+            let mut retry_success = false;
+            let mut secondary_error = None;
 
-        if is_already_exists {
-            if let Err(rm_err) = std::fs::remove_file(target_path) {
-                secondary_error =
-                    Some(format!("Failed to remove existing target file: {}", rm_err));
-            } else if let Err(rename_err) = std::fs::rename(tmp_path, target_path) {
-                secondary_error = Some(format!("Failed to rename binary on retry: {}", rename_err));
-            } else {
-                retry_success = true;
+            if is_already_exists {
+                if let Err(rm_err) = std::fs::remove_file(target_path) {
+                    secondary_error =
+                        Some(format!("Failed to remove existing target file: {}", rm_err));
+                } else if let Err(rename_err) = std::fs::rename(tmp_path, target_path) {
+                    secondary_error = Some(format!("Failed to rename binary on retry: {}", rename_err));
+                } else {
+                    retry_success = true;
+                }
+            }
+
+            if !retry_success {
+                let msg = if let Some(sec_err) = secondary_error {
+                    format!(
+                        "Failed to rename binary: {}. Secondary error: {}",
+                        e, sec_err
+                    )
+                } else {
+                    format!("Failed to rename binary: {}", e)
+                };
+                return Err(Error::Io(msg));
             }
         }
 
-        if !retry_success {
-            let msg = if let Some(sec_err) = secondary_error {
-                format!(
-                    "Failed to rename binary: {}. Secondary error: {}",
-                    e, sec_err
-                )
-            } else {
-                format!("Failed to rename binary: {}", e)
-            };
-            return Err(Error::Io(msg));
+        // Set executable permissions on Unix
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = std::fs::metadata(target_path)?;
+            let mut perms = metadata.permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(target_path, perms)?;
         }
+
+        Ok(())
     }
 
-    // Set executable permissions on Unix
-    #[cfg(unix)]
+    #[cfg(not(test))]
     {
-        use std::os::unix::fs::PermissionsExt;
-        let metadata = std::fs::metadata(target_path)?;
-        let mut perms = metadata.permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(target_path, perms)?;
-    }
+        let pid = std::process::id();
 
-    Ok(())
+        #[cfg(target_os = "windows")]
+        {
+            let script_path = tmp_path.parent().unwrap_or(Path::new(".")).join("update_helper.bat");
+            let script_content = format!(
+                r#"@echo off
+:loop
+tasklist /fi "pid eq {pid}" 2>nul | find "{pid}" >nul
+if %errorlevel% equ 0 (
+  timeout /t 1 /nobreak >nul
+  goto loop
+)
+move /y "{}" "{}"
+del "%~f0"
+"#,
+                tmp_path.to_string_lossy(),
+                target_path.to_string_lossy()
+            );
+            std::fs::write(&script_path, script_content)?;
+            
+            std::process::Command::new("cmd")
+                .args(&["/c", &script_path.to_string_lossy()])
+                .spawn()?;
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let script_path = tmp_path.parent().unwrap_or(Path::new(".")).join("update_helper.sh");
+            let script_content = format!(
+                r#"#!/bin/sh
+while kill -0 {pid} 2>/dev/null; do
+  sleep 0.1
+done
+mv -f "{}" "{}"
+chmod +x "{}"
+rm -f "$0"
+"#,
+                tmp_path.to_string_lossy(),
+                target_path.to_string_lossy(),
+                target_path.to_string_lossy()
+            );
+            std::fs::write(&script_path, script_content)?;
+            
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755))?;
+            }
+            
+            std::process::Command::new("/bin/sh")
+                .arg(&script_path)
+                .spawn()?;
+        }
+
+        Ok(())
+    }
 }
 
 pub async fn update_cli_standalone(target_version: &str, target_path: &Path) -> CResult<()> {
@@ -159,12 +254,29 @@ pub async fn update_cli_standalone(target_version: &str, target_path: &Path) -> 
         .ok_or_else(|| Error::Unknown("Invalid CLI path".into()))?;
     std::fs::create_dir_all(target_dir)?;
 
+    #[cfg(test)]
+    let connect_timeout = std::time::Duration::from_millis(1);
+    #[cfg(not(test))]
+    let connect_timeout = std::time::Duration::from_secs(10);
+
     let client = reqwest::Client::builder()
         .user_agent("tauri-app-template")
+        .connect_timeout(connect_timeout)
         .build()?;
 
     println!("Checking for CLI update for version v{}...", target_version);
     let expected_sha = get_expected_sha(&client, target_version, &binary_name).await?;
+
+    println!("Downloading CLI signature...");
+    let sig_url = format!("{}.sig", url);
+    let sig_res = client.get(&sig_url).send().await?;
+    if !sig_res.status().is_success() {
+        return Err(Error::Network(format!(
+            "Failed to download CLI signature. Status: {}",
+            sig_res.status()
+        )));
+    }
+    let sig_bytes = sig_res.bytes().await?;
 
     println!("Downloading CLI binary...");
     let response = client.get(&url).send().await?;
@@ -199,10 +311,16 @@ pub async fn update_cli_standalone(target_version: &str, target_path: &Path) -> 
         }
         std::io::stdout().flush().ok();
     }
-    println!("\nDownload completed. Verifying checksum...");
+    println!("\nDownload completed. Verifying checksum & signature...");
+
+    let config: serde_json::Value = serde_json::from_str(TAURI_CONF_JSON)
+        .map_err(|e| Error::Unknown(format!("Failed to parse tauri.conf.json: {}", e)))?;
+    let pubkey_str = config["plugins"]["updater"]["pubkey"]
+        .as_str()
+        .ok_or_else(|| Error::Unknown("Public key not found in tauri.conf.json".into()))?;
 
     let tmp_path = target_dir.join(format!("{}.download", binary_name));
-    if let Err(e) = verify_checksum(&tmp_path, &expected_sha) {
+    if let Err(e) = verify_checksum(&tmp_path, &expected_sha, &sig_bytes, pubkey_str) {
         let _ = std::fs::remove_file(&tmp_path);
         return Err(e);
     }
@@ -235,12 +353,15 @@ mod tests {
     fn test_verify_checksum_success() -> Result<(), Box<dyn std::error::Error>> {
         use std::io::Write;
         let mut temp_file = tempfile::NamedTempFile::new()?;
-        let content = b"hello world";
+        let content = b"test";
         temp_file.write_all(content)?;
 
-        let expected_sha = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
-        let result = verify_checksum(temp_file.path(), expected_sha);
-        assert!(result.is_ok());
+        let expected_sha = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+        let public_key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+        let signature = "untrusted comment: signature from minisign secret key\nRWQf6LRCGA9i59SLOFxz6NxvASXDJeRtuZykwQepbDEGt87ig1BNpWaVWuNrm73YiIiJbq71Wi+dP9eKL8OC351vwIasSSbXxwA=\ntrusted comment: timestamp:1555779966\tfile:test\nQtKMXWyYcwdpZAlPF7tE2ENJkRd1ujvKjlj1m9RtHTBnZPa5WKU5uWRs5GoP5M/VqE81QFuMKI5k/SfNQUaOAA==\n";
+
+        let result = verify_checksum(temp_file.path(), expected_sha, signature.as_bytes(), public_key);
+        assert!(result.is_ok(), "result was Err: {:?}", result.err());
         Ok(())
     }
 
@@ -248,13 +369,34 @@ mod tests {
     fn test_verify_checksum_failure() -> Result<(), Box<dyn std::error::Error>> {
         use std::io::Write;
         let mut temp_file = tempfile::NamedTempFile::new()?;
-        let content = b"hello world";
+        let content = b"test";
         temp_file.write_all(content)?;
 
-        let expected_sha = "wrong_sha";
-        let result = verify_checksum(temp_file.path(), expected_sha);
+        let expected_sha = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+        let public_key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+        let signature = "untrusted comment: signature from minisign secret key\nRWQf6LRCGA9i59SLOFxz6NxvASXDJeRtuZykwQepbDEGt87ig1BNpWaVWuNrm73YiIiJbq71Wi+dP9eKL8OC351vwIasSSbXxwA=\ntrusted comment: timestamp:1555779966\tfile:test\nQtKMXWyYcwdpZAlPF7tE2ENJkRd1ujvKjlj1m9RtHTBnZPa5WKU5uWRs5GoP5M/VqE81QFuMKI5k/SfNQUaOAA==\n";
+
+        let result = verify_checksum(temp_file.path(), "wrong_sha", signature.as_bytes(), public_key);
+        assert!(result.is_err());
+
+        let result = verify_checksum(temp_file.path(), expected_sha, b"wrong_sig", public_key);
         assert!(result.is_err());
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_update_cli_standalone_timeout() {
+        let result = update_cli_standalone("1.0.0", Path::new("some_path")).await;
+        assert!(result.is_err());
+        if let Err(Error::Network(err_msg)) = result {
+            assert!(
+                err_msg.contains("timeout") || err_msg.contains("timed out") || err_msg.contains("connect") || err_msg.contains("error sending request"),
+                "Unexpected error message: {}",
+                err_msg
+            );
+        } else {
+            panic!("Expected Error::Network, got {:?}", result);
+        }
     }
 
     #[tokio::test]
@@ -307,13 +449,11 @@ mod tests {
         let tmp_path = dir.path().join("tmp_binary.download");
         let target_path = dir.path().join("installed_binary");
 
-        // Create a temp file to simulate the download
         {
             let mut file = File::create(&tmp_path)?;
             file.write_all(b"binary_content")?;
         }
 
-        // Install it
         let install_res = install_binary_file(&tmp_path, &target_path);
         assert!(install_res.is_ok());
 

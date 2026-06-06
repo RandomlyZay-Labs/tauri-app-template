@@ -295,7 +295,97 @@ impl CliMgmtService {
                     }
                 };
 
-                if let Err(e) = super::cli_update_service::verify_checksum(&tmp_path, &expected_sha)
+                let sig_url = format!("{}.sig", url);
+                let sig_bytes = match async {
+                    use futures_util::StreamExt;
+                    let sig_res = download_manager
+                        .network_client()
+                        .send_request(&sig_url, None)
+                        .await?;
+                    let mut sig_stream = sig_res.bytes_stream;
+                    let mut bytes = bytes::BytesMut::new();
+                    while let Some(chunk_res) = sig_stream.next().await {
+                        let chunk = chunk_res?;
+                        bytes.extend_from_slice(&chunk);
+                    }
+                    Ok(bytes.freeze())
+                }
+                .await
+                {
+                    Ok(b) => b,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = format!("Failed to fetch signature: {}", e);
+                        job_manager
+                            .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                            .await
+                            .ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(e);
+                    }
+                };
+
+                let config: serde_json::Value = match serde_json::from_str(include_str!("../../tauri.conf.json")) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = format!("Failed to parse config: {}", e);
+                        job_manager
+                            .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                            .await
+                            .ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(Error::Unknown(msg));
+                    }
+                };
+                let pubkey_str = match config["plugins"]["updater"]["pubkey"].as_str() {
+                    Some(s) => s,
+                    None => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        let msg = "Public key not found in config".to_string();
+                        job_manager
+                            .update_status(&job_id, JobStatus::Failed, None, Some(&msg))
+                            .await
+                            .ok();
+                        emit_job_progress(
+                            &*emitter,
+                            EmitJobProgressArgs {
+                                job_id: &job_id,
+                                kind: &JobKind::Download,
+                                status: JobStatus::Failed,
+                                percent: None,
+                                speed_bps: None,
+                                eta_secs: None,
+                                message: Some(&msg),
+                            },
+                        );
+                        return Err(Error::Unknown(msg));
+                    }
+                };
+
+                if let Err(e) = super::cli_update_service::verify_checksum(&tmp_path, &expected_sha, &sig_bytes, pubkey_str)
                 {
                     let _ = std::fs::remove_file(&tmp_path);
                     let msg = match e {
@@ -503,6 +593,13 @@ mod tests {
         ) -> crate::error::CResult<crate::services::network::NetworkResponse> {
             if url.contains("/releases/tags/") {
                 let bytes = bytes::Bytes::from(self.api_response.clone());
+                Ok(crate::services::network::NetworkResponse {
+                    status: reqwest::StatusCode::OK,
+                    content_length: Some(bytes.len() as u64),
+                    bytes_stream: Box::pin(futures_util::stream::once(async move { Ok(bytes) })),
+                })
+            } else if url.ends_with(".sig") {
+                let bytes = bytes::Bytes::from("mock_sig");
                 Ok(crate::services::network::NetworkResponse {
                     status: reqwest::StatusCode::OK,
                     content_length: Some(bytes.len() as u64),

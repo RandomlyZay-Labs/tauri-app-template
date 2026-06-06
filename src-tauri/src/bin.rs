@@ -51,21 +51,31 @@ async fn main() -> std::process::ExitCode {
         let app_version = app_version.trim();
         let cli_version = env!("CARGO_PKG_VERSION");
         if app_version != cli_version {
-            println!(
-                "CLI version ({}) does not match the installed app version ({}).",
-                cli_version, app_version
-            );
-            print!("Would you like to update the CLI? [Y/n]: ");
-            use std::io::{Write, stdin, stdout};
-            stdout().flush().ok();
-            let mut input = String::new();
-            stdin().read_line(&mut input).ok();
-            let input = input.trim().to_lowercase();
-            if input == "y" || input == "yes" || input.is_empty() {
+            use std::io::IsTerminal;
+            let is_interactive = std::io::stdin().is_terminal();
+            let mut should_update = false;
+
+            if is_interactive {
+                println!(
+                    "CLI version ({}) does not match the installed app version ({}).",
+                    cli_version, app_version
+                );
+                print!("Would you like to update the CLI? [Y/n]: ");
+                use std::io::{Write, stdin, stdout};
+                stdout().flush().ok();
+                let mut input = String::new();
+                stdin().read_line(&mut input).ok();
+                let input = input.trim().to_lowercase();
+                if input == "y" || input == "yes" || input.is_empty() {
+                    should_update = true;
+                }
+            }
+
+            if should_update {
                 let cli_path = match tauri_app_template_lib::services::cli_mgmt_service::CliMgmtService::get_cli_path() {
                     Ok(p) => p,
                     Err(e) => {
-                        eprintln!("Error resolving CLI path: {}", e);
+                        log::error!("Error resolving CLI path: {}", e);
                         return std::process::ExitCode::from(1);
                     }
                 };
@@ -76,11 +86,11 @@ async fn main() -> std::process::ExitCode {
                 .await
                 {
                     Ok(_) => {
-                        println!("CLI updated successfully! Please re-run your command.");
+                        log::info!("CLI updated successfully! Please re-run your command.");
                         return std::process::ExitCode::SUCCESS;
                     }
                     Err(e) => {
-                        eprintln!("Failed to update CLI: {}", e);
+                        log::error!("Failed to update CLI: {}", e);
                         return std::process::ExitCode::from(1);
                     }
                 }
