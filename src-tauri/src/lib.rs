@@ -54,6 +54,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_os::init())
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app| {
             // 1. Resolve Data Directory
@@ -120,6 +121,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             )
             .title("Tauri App Template")
             .visible(false)
+            .decorations(false)
             .data_directory(webview_data_dir)
             .devtools(true)
             .on_page_load(|window, payload| {

@@ -106,7 +106,7 @@ let hasRunning = $derived(
 
 <aside
 	class={cn(
-		'relative z-10 flex h-screen flex-col border-sidebar-border border-r bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground transition-all duration-150 ease-in-out',
+		'relative z-10 flex h-full flex-col border-sidebar-border border-r bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground transition-all duration-150 ease-in-out',
 		uiStore.sidebarOpen ? 'w-56' : 'w-16',
 	)}
 	aria-label={t('sidebar.sidebar')}

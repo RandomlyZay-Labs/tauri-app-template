@@ -214,14 +214,14 @@ test.describe('Expanded Features E2E', () => {
 		await expect(sidebar).toBeVisible();
 
 		// 1. Verify initial expanded state
-		await expect(page.getByText('Tauri App Template')).toBeVisible();
+		await expect(sidebar.getByText('Tauri App Template')).toBeVisible();
 
 		const initialBox = await sidebar.boundingBox();
 		expect(initialBox?.width).toBeGreaterThan(150);
 
 		// 2. Collapse Sidebar
 		await page.getByLabel('Collapse Sidebar').click();
-		await expect(page.getByText('Tauri App Template')).not.toBeVisible();
+		await expect(sidebar.getByText('Tauri App Template')).not.toBeVisible();
 
 		await expect
 			.poll(async () => {
@@ -235,13 +235,13 @@ test.describe('Expanded Features E2E', () => {
 		// Wait for sidebar to be ready/visible instead of hard timeout
 		await expect(sidebar).toBeVisible();
 
-		await expect(page.getByText('Tauri App Template')).not.toBeVisible();
+		await expect(sidebar.getByText('Tauri App Template')).not.toBeVisible();
 		const collapsedBox = await sidebar.boundingBox();
 		expect(collapsedBox?.width).toBeLessThan(100);
 
 		// 4. Expand again
 		await page.getByLabel('Expand Sidebar').click();
-		await expect(page.getByText('Tauri App Template')).toBeVisible();
+		await expect(sidebar.getByText('Tauri App Template')).toBeVisible();
 		const expandedBox = await sidebar.boundingBox();
 		expect(expandedBox?.width).toBeGreaterThan(150);
 	});

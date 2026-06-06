@@ -117,7 +117,8 @@
 		"pathNoteDescription": "El instalador intentará añadir la CLI al PATH de su sistema. Es posible que deba reiniciar su terminal o cerrar sesión para que los cambios surtan efecto."
 	},
 	"appearanceSettings": {
-		"title": "Apariencia",
+		"title": "Tema y estilo",
+		"toastNotifications": "Notificaciones flotantes",
 		"themeMode": "Modo de tema",
 		"selectTheme": "Selecciona tu tema de color preferido.",
 		"resetThemeMode": "Restablecer modo de tema",
@@ -137,7 +138,26 @@
 		"topRight": "Superior derecha",
 		"bottomLeft": "Inferior izquierda",
 		"bottomCenter": "Inferior centro",
-		"bottomRight": "Inferior derecha"
+		"bottomRight": "Inferior derecha",
+		"windowSettings": "Configuración de ventana",
+		"titlebarStyle": "Estilo de barra de título",
+		"selectTitlebarStyle": "Elige entre diseño sin bordes personalizado o bordes de ventana del sistema.",
+		"resetTitlebarStyle": "Restablecer estilo de barra de título",
+		"customTitlebar": "Personalizado",
+		"nativeTitlebar": "Nativo",
+		"controlsAlignment": "Alineación de controles de ventana",
+		"selectControlsAlignment": "Posiciona los botones de ventana a la izquierda o derecha.",
+		"resetControlsAlignment": "Restablecer alineación de controles",
+		"systemAlignment": "Predeterminado del sistema",
+		"leftAlignment": "Lado izquierdo",
+		"rightAlignment": "Lado derecho",
+		"controlsStyle": "Tema visual de controles",
+		"selectControlsStyle": "Anular el estilo visual de los botones de control de ventana.",
+		"resetControlsStyle": "Restablecer estilo de controles",
+		"matchSystem": "Coincidir con el sistema",
+		"windowsStyle": "Windows",
+		"macosStyle": "macOS",
+		"gnomeStyle": "GNOME"
 	},
 	"backupSettings": {
 		"automatedBackups": "Copias de seguridad automáticas",

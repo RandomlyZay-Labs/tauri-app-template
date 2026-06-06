@@ -39,12 +39,53 @@ $effect(() => {
 	}
 });
 
+let cleanups: (() => void)[] = [];
+
 onMount(async () => {
 	await lifecycleManager.init();
+
+	// Global F11 keydown listener for fullscreen
+	const handleKeyDown = async (e: KeyboardEvent) => {
+		if (e.key === 'F11') {
+			e.preventDefault();
+			try {
+				const { getCurrentWindow } = await import('@tauri-apps/api/window');
+				const currentWin = getCurrentWindow();
+				const fs = await currentWin.isFullscreen();
+				await currentWin.setFullscreen(!fs);
+				uiStore.setIsFullscreen(!fs);
+			} catch (err) {
+				console.error('Failed to toggle fullscreen:', err);
+			}
+		}
+	};
+	window.addEventListener('keydown', handleKeyDown);
+	cleanups.push(() => window.removeEventListener('keydown', handleKeyDown));
+
+	// Track window resize events to keep fullscreen state in sync
+	try {
+		const { getCurrentWindow } = await import('@tauri-apps/api/window');
+		const currentWin = getCurrentWindow();
+		const updateFullscreenState = async () => {
+			const fs = await currentWin.isFullscreen();
+			uiStore.setIsFullscreen(fs);
+		};
+		
+		await updateFullscreenState();
+		const unlisten = await currentWin.onResized(() => {
+			void updateFullscreenState();
+		});
+		cleanups.push(() => unlisten());
+	} catch (err) {
+		console.error('Failed to sync fullscreen state:', err);
+	}
 });
 
 onDestroy(() => {
 	lifecycleManager.destroy();
+	for (const cleanup of cleanups) {
+		cleanup();
+	}
 });
 
 async function handleExportDiagnostics() {

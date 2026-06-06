@@ -117,7 +117,8 @@
 		"pathNoteDescription": "The installer will attempt to add the CLI to your system's PATH. You may need to restart your terminal or log out for the changes to take effect."
 	},
 	"appearanceSettings": {
-		"title": "Appearance",
+		"title": "Theme & Styling",
+		"toastNotifications": "Toast Notifications",
 		"themeMode": "Theme Mode",
 		"selectTheme": "Select your preferred color theme.",
 		"resetThemeMode": "Reset Theme Mode to default",
@@ -137,7 +138,26 @@
 		"topRight": "Top Right",
 		"bottomLeft": "Bottom Left",
 		"bottomCenter": "Bottom Center",
-		"bottomRight": "Bottom Right"
+		"bottomRight": "Bottom Right",
+		"windowSettings": "Window Settings",
+		"titlebarStyle": "Window Titlebar Style",
+		"selectTitlebarStyle": "Choose between custom frameless design or native system borders.",
+		"resetTitlebarStyle": "Reset titlebar style to default",
+		"customTitlebar": "Custom",
+		"nativeTitlebar": "Native",
+		"controlsAlignment": "Window Controls Alignment",
+		"selectControlsAlignment": "Position window buttons (minimize, maximize, close) on left or right.",
+		"resetControlsAlignment": "Reset control alignment to default",
+		"systemAlignment": "System Default",
+		"leftAlignment": "Left Side",
+		"rightAlignment": "Right Side",
+		"controlsStyle": "Controls Visual Theme",
+		"selectControlsStyle": "Override visual styling of window control buttons.",
+		"resetControlsStyle": "Reset controls style to default",
+		"matchSystem": "Match System",
+		"windowsStyle": "Windows",
+		"macosStyle": "macOS",
+		"gnomeStyle": "GNOME"
 	},
 	"backupSettings": {
 		"automatedBackups": "Automated Backups",
