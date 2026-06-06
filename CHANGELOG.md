@@ -1,3 +1,9 @@
+## [0.9.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.8.0...v0.9.0) (2026-06-06)
+
+### Features
+
+* switch to MIT license and update related documentation ([#58](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/58)) ([8b69cd0](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/8b69cd0ca73a70ec46c54b294fc6f9f12d7817f4))
+
 ## [0.8.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.7.0...v0.8.0) (2026-06-06)
 
 ### Features
