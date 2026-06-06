@@ -1,3 +1,11 @@
+## [0.7.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.6.3...v0.7.0) (2026-06-06)
+
+### Features
+
+* overhaul updates and CLI integration flow, unify updates settings tab ([#50](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/50)) ([cf55758](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/cf557581ebe6eba16b1f6efd499858ea57e9ba5d))
+* overhaul updates and unify CLI integration flow ([#51](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/51)) ([fae89ac](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/fae89acfb7db1ca8a400a28670aefa6f6ec9ed3a))
+* UI Polish ([#52](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/52)) ([b8f44f3](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/b8f44f3119ad22641a21d76e7db0fc21beea5537))
+
 ## [0.6.3](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.6.2...v0.6.3) (2026-05-27)
 
 ### Bug Fixes
