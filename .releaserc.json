@@ -84,16 +84,32 @@
 						"name": "tauri-app-template-cli-windows-x64.exe"
 					},
 					{
+						"path": "artifacts/cli-windows-x64/tauri-app-template-cli.exe.sig",
+						"name": "tauri-app-template-cli-windows-x64.exe.sig"
+					},
+					{
 						"path": "artifacts/cli-windows-arm64/tauri-app-template-cli.exe",
 						"name": "tauri-app-template-cli-windows-arm64.exe"
+					},
+					{
+						"path": "artifacts/cli-windows-arm64/tauri-app-template-cli.exe.sig",
+						"name": "tauri-app-template-cli-windows-arm64.exe.sig"
 					},
 					{
 						"path": "artifacts/cli-linux-amd64/tauri-app-template-cli",
 						"name": "tauri-app-template-cli-linux-amd64"
 					},
 					{
+						"path": "artifacts/cli-linux-amd64/tauri-app-template-cli.sig",
+						"name": "tauri-app-template-cli-linux-amd64.sig"
+					},
+					{
 						"path": "artifacts/cli-linux-arm64/tauri-app-template-cli",
 						"name": "tauri-app-template-cli-linux-arm64"
+					},
+					{
+						"path": "artifacts/cli-linux-arm64/tauri-app-template-cli.sig",
+						"name": "tauri-app-template-cli-linux-arm64.sig"
 					},
 					{
 						"path": "artifacts/latest.json"

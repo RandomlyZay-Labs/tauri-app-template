@@ -1,12 +1,5 @@
 # Roadmap
 
-## fix/misc-issues
-
-- Titlebar doesn't appear during onboarding
-- Toasts weirdly spaced vertically in prod, but not in dev.
-- Swap ordering of "Window Controls Alignment" and "Controls Visual Theme" settings
-- Failed to install CLI: HTTP status client error (404 Not Found) for url (https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v0.9.0/tauri-app-template-cli-linux-amd64.sig)
-
 ## feat/github-pages
 
 - Set up GitHub Pages
