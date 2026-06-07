@@ -151,3 +151,9 @@ No version numbers in commands (let `pnpm`/`cargo` grab latest).
 ### E2E State
 
 *   **Issue**: Do not expose internal stores to `window` for testing. Use native DOM events or Playwright `context` APIs to trigger state changes to mimic user behavior.
+
+### Sonner / svelte-sonner Stacking & Spacing in Production
+
+*   **Issue**: Stacked toasts have much larger gaps or display as vertical lists in production, but behave correctly in development.
+*   **Fix**: Never override `position: relative;` globally on `[data-sonner-toast]` (e.g. in `index.css`). The library relies on absolute positioning for stacking calculations. In production, global CSS specificity can override the library's dynamic positioning styles, preventing them from stacking properly.
+

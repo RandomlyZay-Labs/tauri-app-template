@@ -304,7 +304,6 @@
 
 /* Toast Progress Bar */
 [data-sonner-toast] {
-	position: relative;
 	overflow: hidden;
 }
 

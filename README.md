@@ -103,7 +103,5 @@ If Linux AppImage users experience UI freezing, blank screens, or WebKitGTK rend
 This disables WebKitGTK's DMABUF renderer (`WEBKIT_DISABLE_DMABUF_RENDERER=1`) to bypass driver conflicts.
 
 ## 🤝 Contributing
-Want to make this template even better? PRs are welcome. 
 
-## 📄 License
-MIT. Check the [LICENSE](LICENSE) file.
+Want to make this template even better? PRs are welcome. 
