@@ -1,17 +1,23 @@
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { logger } from '@/lib/logger';
+import { logger, resetLoggerState } from '@/lib/logger';
 
 const ipcLogSpy = vi.fn();
+let shouldIpcReject = false;
 
 mockIPC((cmd, args) => {
 	if (cmd === 'plugin:log|log') {
 		ipcLogSpy(args);
+		if (shouldIpcReject) {
+			return Promise.reject(new Error('IPC Failure'));
+		}
 		return Promise.resolve();
 	}
 });
 
 beforeEach(() => {
+	shouldIpcReject = false;
+	resetLoggerState();
 	vi.clearAllMocks();
 	vi.spyOn(console, 'log').mockImplementation(() => {});
 	vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -221,6 +227,30 @@ describe('logger', () => {
 			expect(ipcLogSpy).toHaveBeenCalledWith(
 				expect.objectContaining({ message: 'normal log message' }),
 			);
+		});
+	});
+
+	describe('IPC error handling', () => {
+		it('recovers gracefully from IPC logging failure and falls back to console', async () => {
+			shouldIpcReject = true;
+
+			// Should resolve and not throw an unhandled promise rejection
+			await expect(logger.info('test failure')).resolves.toBeUndefined();
+
+			// Should still log to console
+			expect(console.log).toHaveBeenCalledWith('test failure');
+
+			// Should log a one-time console.warn
+			expect(console.warn).toHaveBeenCalledWith(
+				'IPC logging is unavailable; falling back to console-only logging.',
+				expect.any(Error),
+			);
+
+			// Subsequent logs should not call the IPC layer again
+			ipcLogSpy.mockClear();
+			await logger.info('another message');
+			expect(ipcLogSpy).not.toHaveBeenCalled();
+			expect(console.log).toHaveBeenCalledWith('another message');
 		});
 	});
 });

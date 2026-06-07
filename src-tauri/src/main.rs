@@ -2,13 +2,10 @@
 // DEBUG_VERSION: 1.0.1
 use std::env;
 
-use log::info;
 use tauri_app_template_lib::{run_app, util};
 
 #[allow(unsafe_code)]
 fn main() {
-    let _ = env_logger::try_init();
-
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|s| s == "--compat") {
         // SAFETY: The unsafe block wraps `std::env::set_var` to set "WEBKIT_DISABLE_DMABUF_RENDERER"
@@ -19,7 +16,6 @@ fn main() {
         unsafe {
             std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
         }
-        info!("compat mode enabled: WEBKIT_DISABLE_DMABUF_RENDERER=1");
     }
 
     let _ = fix_path_env::fix();
