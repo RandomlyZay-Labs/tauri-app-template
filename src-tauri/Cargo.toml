@@ -64,6 +64,7 @@ fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 keyring = "4"
 keyring-core = "1"
 log = "0.4"
+env_logger = "0.10"
 thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
 notify = "8"

@@ -110,6 +110,27 @@ jobs:
             fi
           done
 
+      - name: Sign CLI Binaries
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            for file in \
+              artifacts/cli-windows-x64/tauri-app-template-cli.exe \
+              artifacts/cli-windows-arm64/tauri-app-template-cli.exe \
+              artifacts/cli-linux-amd64/tauri-app-template-cli \
+              artifacts/cli-linux-arm64/tauri-app-template-cli; do
+              if [ -f "$file" ]; then
+                echo "Signing $file..."
+                pnpm tauri signer sign -p "" "$file"
+              else
+                echo "Warning: $file not found, skipping signature."
+              fi
+            done
+          else
+            echo "Warning: TAURI_SIGNING_PRIVATE_KEY is not set. CLI binaries will not be signed."
+          fi
+
       - name: Generate latest.json
         env:
           VERSION: ${{ needs.determine-version.outputs.version }}

@@ -14,6 +14,7 @@ import FinishStep from './components/FinishStep.svelte';
 import TelemetryStep from './components/TelemetryStep.svelte';
 import ThemeStep from './components/ThemeStep.svelte';
 import WelcomeStep from './components/WelcomeStep.svelte';
+import WindowTitlebar from '@/components/layout/titlebar/WindowTitlebar.svelte';
 
 let api = $state<CarouselAPI>();
 let current = $state(0);
@@ -53,59 +54,65 @@ function handleBack() {
 }
 </script>
 
-<div class="relative flex min-h-screen w-full items-center justify-center bg-background p-6">
-	<div class="pointer-events-none absolute inset-0 overflow-hidden">
-		<div class="absolute top-1/3 left-1/4 h-125 w-125 rounded-full bg-[oklch(0.67_0.18_275/6%)] blur-[120px]"></div>
-		<div class="absolute right-1/4 bottom-1/3 h-100 w-100 rounded-full bg-[oklch(0.55_0.22_290/5%)] blur-[100px]"></div>
-	</div>
-	<div class="relative flex h-150 w-full max-w-150 flex-col overflow-hidden rounded-xl border border-primary/10 bg-card shadow-2xl">
-		<!-- Progress -->
-		<div class="flex justify-center gap-3 pt-8 pb-2" role="img" aria-label={t('onboarding.stepOf', { current: current + 1, total: STEPS.length, title: t(STEPS[current]?.titleKey || '') })}>
-			{#each STEPS as s, index (s.id)}
-				<div
-					aria-hidden="true"
-					class={cn(
-						'h-2 rounded-full transition-all duration-150 ease-in-out',
-						index === current ? 'w-8 bg-primary shadow-[0_0_10px_2px] shadow-primary/40' : index < current ? 'w-2 bg-primary/40' : 'w-2 bg-muted-foreground/30',
-					)}
-				></div>
-			{/each}
+<div class="flex h-screen w-full flex-col overflow-hidden bg-background">
+	<WindowTitlebar>
+		<span class="text-xs font-semibold text-muted-foreground/80 tracking-wide">{t('sidebar.appName')}</span>
+	</WindowTitlebar>
+
+	<div class="relative flex-1 flex w-full items-center justify-center p-6 min-h-0 overflow-y-auto">
+		<div class="pointer-events-none absolute inset-0 overflow-hidden">
+			<div class="absolute top-1/3 left-1/4 h-125 w-125 rounded-full bg-[oklch(0.67_0.18_275/6%)] blur-[120px]"></div>
+			<div class="absolute right-1/4 bottom-1/3 h-100 w-100 rounded-full bg-[oklch(0.55_0.22_290/5%)] blur-[100px]"></div>
 		</div>
-
-		<!-- Content Carousel -->
-		<Carousel.Root setApi={(emblaApi) => (api = emblaApi)} opts={{ watchDrag: false }} class="flex-1 min-h-0 flex flex-col overflow-hidden">
-			<Carousel.Content class="flex-1 h-full">
+		<div class="relative flex h-150 w-full max-w-150 flex-col overflow-hidden rounded-xl border border-primary/10 bg-card shadow-2xl">
+			<!-- Progress -->
+			<div class="flex justify-center gap-3 pt-8 pb-2" role="img" aria-label={t('onboarding.stepOf', { current: current + 1, total: STEPS.length, title: t(STEPS[current]?.titleKey || '') })}>
 				{#each STEPS as s, index (s.id)}
-					{@const StepComponent = s.component}
-					<Carousel.Item class="h-full flex flex-col justify-center">
-						<StepComponent />
-					</Carousel.Item>
+					<div
+						aria-hidden="true"
+						class={cn(
+							'h-2 rounded-full transition-all duration-150 ease-in-out',
+							index === current ? 'w-8 bg-primary shadow-[0_0_10px_2px] shadow-primary/40' : index < current ? 'w-2 bg-primary/40' : 'w-2 bg-muted-foreground/30',
+						)}
+					></div>
 				{/each}
-			</Carousel.Content>
-		</Carousel.Root>
+			</div>
 
-		<!-- Navigation buttons -->
-		<div class="flex items-center justify-between px-12 pb-12 pt-4">
-			{#if current > 0}
-				<Button variant="ghost" size="lg" onclick={handleBack}>
-					<ArrowLeft class="size-4 mr-2" />
-					{t('common.back')}
-				</Button>
-			{:else}
-				<div></div>
-			{/if}
+			<!-- Content Carousel -->
+			<Carousel.Root setApi={(emblaApi) => (api = emblaApi)} opts={{ watchDrag: false }} class="flex-1 min-h-0 flex flex-col overflow-hidden">
+				<Carousel.Content class="flex-1 h-full">
+					{#each STEPS as s, index (s.id)}
+						{@const StepComponent = s.component}
+						<Carousel.Item class="h-full flex flex-col justify-center">
+							<StepComponent />
+						</Carousel.Item>
+					{/each}
+				</Carousel.Content>
+			</Carousel.Root>
 
-			<Button size="lg" class={cn("px-8 shadow-lg", current === 0 && "w-full sm:w-auto")} onclick={handleNext}>
-				{#if current === 0}
-					{t('welcomeStep.getStarted')}
-					<ArrowRight class="size-5 ml-2" />
-				{:else if current === STEPS.length - 1}
-					{t('common.done')}
+			<!-- Navigation buttons -->
+			<div class="flex items-center justify-between px-12 pb-12 pt-4">
+				{#if current > 0}
+					<Button variant="ghost" size="lg" onclick={handleBack}>
+						<ArrowLeft class="size-4 mr-2" />
+						{t('common.back')}
+					</Button>
 				{:else}
-					{t('common.next')}
-					<ArrowRight class="size-4 ml-2" />
+					<div></div>
 				{/if}
-			</Button>
+
+				<Button size="lg" class={cn("px-8 shadow-lg", current === 0 && "w-full sm:w-auto")} onclick={handleNext}>
+					{#if current === 0}
+						{t('welcomeStep.getStarted')}
+						<ArrowRight class="size-5 ml-2" />
+					{:else if current === STEPS.length - 1}
+						{t('common.done')}
+					{:else}
+						{t('common.next')}
+						<ArrowRight class="size-4 ml-2" />
+					{/if}
+				</Button>
+			</div>
 		</div>
 	</div>
 </div>

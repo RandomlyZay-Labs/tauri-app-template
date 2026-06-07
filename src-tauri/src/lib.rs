@@ -73,7 +73,13 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
 
             // 2b. Initialize Logging
             let log_plugin = setup::logging::init(&app_data_dir, &app_log_dir);
-            app.handle().plugin(log_plugin).expect("Failed to initialize log plugin");
+            if let Err(err) = app.handle().plugin(log_plugin) {
+                log::warn!("Failed to initialize log plugin: {err}");
+            }
+
+            if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").as_deref() == Ok("1") {
+                log::info!("compat mode enabled: WEBKIT_DISABLE_DMABUF_RENDERER=1");
+            }
 
             // 2c. Initialize Keyring Store
             if let Err(err) = keyring::use_native_store(true) {

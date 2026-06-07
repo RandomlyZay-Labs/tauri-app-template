@@ -26,5 +26,6 @@
     - Audit code for best practices
     - Audit tests for coverage and quality
     - Audit CI/CD pipeline
+  - Incorporate hard-won lessons in AGENTS.md
   - Create a release
   - Squash all commits

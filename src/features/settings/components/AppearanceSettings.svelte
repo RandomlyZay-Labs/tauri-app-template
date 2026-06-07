@@ -384,73 +384,6 @@ const _unusedKeysDummy = [
 					</div>
 				</div>
 
-				<!-- Controls Alignment -->
-				<div class="ml-6 flex items-center justify-between border-l pl-4">
-					<div class="space-y-0.5">
-						<Tooltip.Root>
-							<Tooltip.Trigger>
-								{#snippet child({ props })}
-									<label
-										{...props}
-										for="controls-alignment"
-										class={cn(
-											'text-sm font-medium inline-flex items-center gap-1.5 cursor-help',
-											{
-												'text-muted-foreground': uiStore.titlebarStyle !== 'custom',
-											},
-										)}
-									>
-										{t('appearanceSettings.controlsAlignment')}
-										<Info class="size-3.5 text-muted-foreground/70" />
-									</label>
-								{/snippet}
-							</Tooltip.Trigger>
-							<Tooltip.Content side="top" align="center">
-								<p>{t('appearanceSettings.selectControlsAlignment')}</p>
-							</Tooltip.Content>
-						</Tooltip.Root>
-					</div>
-					<div class="flex items-center gap-2">
-						<Button
-							variant="ghost"
-							size="icon"
-							class={cn('size-8 text-muted-foreground', {
-								invisible: uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom',
-							})}
-							onclick={() => {
-								handleSettingChange(() => uiStore.setControlsAlignment('system'));
-							}}
-							aria-label={t('appearanceSettings.resetControlsAlignment')}
-							disabled={uiStore.titlebarStyle !== 'custom'}
-							aria-hidden={uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom'}
-							tabindex={uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom' ? -1 : 0}
-						>
-							<RotateCcw class="size-4" />
-						</Button>
-						<Select.Root
-							type="single"
-							value={uiStore.controlsAlignment}
-							disabled={uiStore.titlebarStyle !== 'custom'}
-							onValueChange={(val) => {
-								handleSettingChange(() => uiStore.setControlsAlignment(val as 'system' | 'left' | 'right'));
-							}}
-						>
-							<Select.Trigger id="controls-alignment" class="h-9 w-40">
-								{#if uiStore.controlsAlignment === 'system'}
-									{t('appearanceSettings.systemAlignment')}
-								{:else}
-									{uiStore.controlsAlignment === 'left' ? t('appearanceSettings.leftAlignment') : t('appearanceSettings.rightAlignment')}
-								{/if}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Item value="system">{t('appearanceSettings.systemAlignment')}</Select.Item>
-								<Select.Item value="left">{t('appearanceSettings.leftAlignment')}</Select.Item>
-								<Select.Item value="right">{t('appearanceSettings.rightAlignment')}</Select.Item>
-							</Select.Content>
-						</Select.Root>
-					</div>
-				</div>
-
 				<!-- Controls Style Override -->
 				<div class="ml-6 flex items-center justify-between border-l pl-4">
 					<div class="space-y-0.5">
@@ -516,6 +449,73 @@ const _unusedKeysDummy = [
 								<Select.Item value="windows">{t('appearanceSettings.windowsStyle')}</Select.Item>
 								<Select.Item value="macos">{t('appearanceSettings.macosStyle')}</Select.Item>
 								<Select.Item value="gnome">{t('appearanceSettings.gnomeStyle')}</Select.Item>
+							</Select.Content>
+						</Select.Root>
+					</div>
+				</div>
+
+				<!-- Controls Alignment -->
+				<div class="ml-6 flex items-center justify-between border-l pl-4">
+					<div class="space-y-0.5">
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								{#snippet child({ props })}
+									<label
+										{...props}
+										for="controls-alignment"
+										class={cn(
+											'text-sm font-medium inline-flex items-center gap-1.5 cursor-help',
+											{
+												'text-muted-foreground': uiStore.titlebarStyle !== 'custom',
+											},
+										)}
+									>
+										{t('appearanceSettings.controlsAlignment')}
+										<Info class="size-3.5 text-muted-foreground/70" />
+									</label>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content side="top" align="center">
+								<p>{t('appearanceSettings.selectControlsAlignment')}</p>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					</div>
+					<div class="flex items-center gap-2">
+						<Button
+							variant="ghost"
+							size="icon"
+							class={cn('size-8 text-muted-foreground', {
+								invisible: uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom',
+							})}
+							onclick={() => {
+								handleSettingChange(() => uiStore.setControlsAlignment('system'));
+							}}
+							aria-label={t('appearanceSettings.resetControlsAlignment')}
+							disabled={uiStore.titlebarStyle !== 'custom'}
+							aria-hidden={uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom'}
+							tabindex={uiStore.controlsAlignment === 'system' || uiStore.titlebarStyle !== 'custom' ? -1 : 0}
+						>
+							<RotateCcw class="size-4" />
+						</Button>
+						<Select.Root
+							type="single"
+							value={uiStore.controlsAlignment}
+							disabled={uiStore.titlebarStyle !== 'custom'}
+							onValueChange={(val) => {
+								handleSettingChange(() => uiStore.setControlsAlignment(val as 'system' | 'left' | 'right'));
+							}}
+						>
+							<Select.Trigger id="controls-alignment" class="h-9 w-40">
+								{#if uiStore.controlsAlignment === 'system'}
+									{t('appearanceSettings.systemAlignment')}
+								{:else}
+									{uiStore.controlsAlignment === 'left' ? t('appearanceSettings.leftAlignment') : t('appearanceSettings.rightAlignment')}
+								{/if}
+							</Select.Trigger>
+							<Select.Content>
+								<Select.Item value="system">{t('appearanceSettings.systemAlignment')}</Select.Item>
+								<Select.Item value="left">{t('appearanceSettings.leftAlignment')}</Select.Item>
+								<Select.Item value="right">{t('appearanceSettings.rightAlignment')}</Select.Item>
 							</Select.Content>
 						</Select.Root>
 					</div>

@@ -1,5 +1,35 @@
 import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
 
+let isIpcLoggingAvailable = true;
+let warnedIpcUnavailable = false;
+
+export function resetLoggerState() {
+	isIpcLoggingAvailable = true;
+	warnedIpcUnavailable = false;
+}
+
+async function safeLog(
+	logFn: (msg: string) => Promise<void>,
+	message: string,
+	args: unknown[],
+) {
+	if (!isIpcLoggingAvailable) {
+		return;
+	}
+	try {
+		await logFn(formatMessage(message, args));
+	} catch (err) {
+		isIpcLoggingAvailable = false;
+		if (!warnedIpcUnavailable) {
+			warnedIpcUnavailable = true;
+			console.warn(
+				'IPC logging is unavailable; falling back to console-only logging.',
+				err,
+			);
+		}
+	}
+}
+
 /**
  * A wrapper around the Tauri Log plugin.
  * This ensures that logs are sent to the Rust backend and stored/printed according
@@ -8,23 +38,23 @@ import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
 export const logger = {
 	info: async (message: string, ...args: unknown[]) => {
 		console.log(message, ...args);
-		await info(formatMessage(message, args));
+		await safeLog(info, message, args);
 	},
 	warn: async (message: string, ...args: unknown[]) => {
 		console.warn(message, ...args);
-		await warn(formatMessage(message, args));
+		await safeLog(warn, message, args);
 	},
 	error: async (message: string, ...args: unknown[]) => {
 		console.error(message, ...args);
-		await error(formatMessage(message, args));
+		await safeLog(error, message, args);
 	},
 	debug: async (message: string, ...args: unknown[]) => {
 		console.debug(message, ...args);
-		await debug(formatMessage(message, args));
+		await safeLog(debug, message, args);
 	},
 	trace: async (message: string, ...args: unknown[]) => {
 		console.trace(message, ...args);
-		await trace(formatMessage(message, args));
+		await safeLog(trace, message, args);
 	},
 };
 
