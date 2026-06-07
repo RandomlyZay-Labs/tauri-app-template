@@ -2,15 +2,24 @@
 // DEBUG_VERSION: 1.0.1
 use std::env;
 
+use log::info;
 use tauri_app_template_lib::{run_app, util};
 
 #[allow(unsafe_code)]
 fn main() {
+    let _ = env_logger::try_init();
+
     let args: Vec<String> = std::env::args().collect();
-    if args.contains(&"--compat".to_string()) {
+    if args.iter().any(|s| s == "--compat") {
+        // SAFETY: The unsafe block wraps `std::env::set_var` to set "WEBKIT_DISABLE_DMABUF_RENDERER"
+        // to "1". This is safe because it occurs early in `main` before any threads are spawned
+        // and before any other global or FFI code may access the process environment, ensuring
+        // no data-race or undefined behavior can occur. This is particularly relevant on Linux/Unix
+        // systems where environment modifications after multi-threading are unsafe.
         unsafe {
             std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
         }
+        info!("compat mode enabled: WEBKIT_DISABLE_DMABUF_RENDERER=1");
     }
 
     let _ = fix_path_env::fix();

@@ -73,7 +73,9 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
 
             // 2b. Initialize Logging
             let log_plugin = setup::logging::init(&app_data_dir, &app_log_dir);
-            app.handle().plugin(log_plugin).expect("Failed to initialize log plugin");
+            if let Err(err) = app.handle().plugin(log_plugin) {
+                log::warn!("Failed to initialize log plugin: {err}");
+            }
 
             // 2c. Initialize Keyring Store
             if let Err(err) = keyring::use_native_store(true) {
