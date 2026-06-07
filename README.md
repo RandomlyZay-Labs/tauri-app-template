@@ -92,6 +92,16 @@ pnpm tauri build
 ```
 Or let the GitHub Actions pipeline do the heavy lifting. Pushing a release will automatically compile and spit out bundles for Windows and Linux (macOS coming soon).
 
+## 🐧 Linux AppImage Compatibility
+
+If Linux AppImage users experience UI freezing, blank screens, or WebKitGTK rendering issues, they can run the AppImage with the `--compat` flag:
+
+```bash
+./your-app.AppImage --compat
+```
+
+This disables WebKitGTK's DMABUF renderer (`WEBKIT_DISABLE_DMABUF_RENDERER=1`) to bypass driver conflicts.
+
 ## 🤝 Contributing
 Want to make this template even better? PRs are welcome. 
 
