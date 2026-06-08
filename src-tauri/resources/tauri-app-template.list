@@ -1,0 +1,1 @@
+deb [signed-by=/etc/apt/keyrings/tauri-app-template.gpg] https://randomlyzay-labs.github.io/tauri-app-template/debian/ ./
