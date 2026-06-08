@@ -162,9 +162,6 @@ jobs:
           SYNC_BRANCH="sync/main-to-dev-${{ github.run_id }}"
           git checkout -b "$SYNC_BRANCH"
           git push origin "$SYNC_BRANCH"
-          
-          # Ensure the label exists, or ignore if it already does
-          gh label create "skip-review" --color "FBCA04" --description "Skip PR Agent review" || true
 
           # Create pull request from the sync branch to dev
           gh pr create \
