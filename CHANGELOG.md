@@ -1,3 +1,9 @@
+## [0.10.2](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.10.1...v0.10.2) (2026-06-08)
+
+### Bug Fixes
+
+* **ci:** add parse_minisign_signature function and related tests ([93c6c2f](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/93c6c2fd1a5398df0435874c73d6c6be7717be72))
+
 ## [0.10.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.10.0...v0.10.1) (2026-06-08)
 
 ### Bug Fixes
