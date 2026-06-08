@@ -1,3 +1,14 @@
+## [0.10.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.10.0...v0.10.1) (2026-06-08)
+
+### Bug Fixes
+
+* add base64 encoding for minisign keys and patch AppImage signing ([#66](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/66)) ([89b9062](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/89b90623dd3c6f70198ca34bd0d0948b48a5ec50))
+* **ci:** Fix Linux AppImage re-signing in build pipeline ([#68](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/68)) ([f75ce23](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/f75ce23d65fe400184677a342c6cc52f19322d7d))
+* **ci:** remove unused AUTO_GDK_CORE_LIBS environment variable from build pipeline ([b0a8039](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/b0a80395ba6924ba218aa1458cc5ae6accd17a48))
+* **ci:** set APPIMAGE_EXTRACT_AND_RUN environment variable for Linux build ([3bcef76](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/3bcef762530fdd2e6b12ed860660a3de4ec46eb9))
+* **ci:** update PR Agent trigger to use workflow_dispatch instead of pull_request ([367ada7](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/367ada7b77ef78ba52f730173bb6ce3bef605df5))
+* enhance release workflow and fix AppImage signing issues ([#67](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/67)) ([993a376](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/993a376d9b85172b4a2b37c0a0794bb923a35ff6))
+
 ## [0.10.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.9.0...v0.10.0) (2026-06-08)
 
 ### Features
