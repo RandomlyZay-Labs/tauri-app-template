@@ -49,6 +49,10 @@
             box-sizing: border-box;
         }
 
+        html {
+            scrollbar-gutter: stable;
+        }
+
         body {
             background: var(--bg);
             color: var(--text);
@@ -318,8 +322,8 @@
     <div class="section hidden repo-section" id="repo-section">
         <h2>Linux Package Repositories</h2>
         <div class="tabs">
-            <button type="button" class="repo-tab active" onclick="switchRepo('debian')">Debian / Ubuntu</button>
-            <button type="button" class="repo-tab" onclick="switchRepo('fedora')">Fedora / RHEL</button>
+            <button type="button" id="repo-tab-debian" class="repo-tab active" onclick="switchRepo('debian')">Debian / Ubuntu</button>
+            <button type="button" id="repo-tab-fedora" class="repo-tab" onclick="switchRepo('fedora')">Fedora / RHEL</button>
         </div>
         <div id="code-debian" class="code-container">
             <button type="button" class="copy-btn" onclick="copyCode('code-debian')">Copy</button>
@@ -420,9 +424,7 @@ sudo dnf install tauri-app-template</pre>
 
         // Platform Detection
         const userAgent = navigator.userAgent.toLowerCase();
-        const platform = navigator.userAgentData?.platform
-            ? navigator.userAgentData.platform.toLowerCase() 
-            : userAgent;
+        const platform = (navigator.userAgentData?.platform || navigator.platform || userAgent).toLowerCase();
         const titleEl = document.getElementById('detected-os-title');
         const linksEl = document.getElementById('detected-links');
         const repoSection = document.getElementById('repo-section');
@@ -475,11 +477,11 @@ sudo dnf install tauri-app-template</pre>
                 btn.classList.remove('active');
             });
             if (type === 'debian') {
-                document.querySelector('.repo-tab[onclick*="debian"]').classList.add('active');
+                document.getElementById('repo-tab-debian').classList.add('active');
                 document.getElementById('code-debian').classList.remove('hidden');
                 document.getElementById('code-fedora').classList.add('hidden');
             } else {
-                document.querySelector('.repo-tab[onclick*="fedora"]').classList.add('active');
+                document.getElementById('repo-tab-fedora').classList.add('active');
                 document.getElementById('code-debian').classList.add('hidden');
                 document.getElementById('code-fedora').classList.remove('hidden');
             }
@@ -506,11 +508,11 @@ sudo dnf install tauri-app-template</pre>
             document.querySelectorAll('.template-link').forEach(el => {
                 const fileTemplate = el.getAttribute('data-file');
                 const label = el.getAttribute('data-label');
-                const filename = fileTemplate.replace('VERSION', '0.0.0');
+                const filename = fileTemplate.replace('VERSION', '{{VERSION}}');
                 
                 const a = document.createElement('a');
                 a.className = 'download-link';
-                a.href = `https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v0.0.0/${filename}`;
+                a.href = `https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v{{VERSION}}/${filename}`;
                 a.textContent = label;
                 
                 el.parentNode.replaceChild(a, el);

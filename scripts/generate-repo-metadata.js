@@ -76,12 +76,11 @@ if (debFiles.length > 0) {
 			encoding: 'utf8',
 		});
 
-		// Replace Filename: ./filename.deb with absolute GitHub release URL
+		// Keep Filename relative to the repository base URL
 		const lines = packagesContent.split('\n');
 		const modifiedLines = lines.map((line) => {
 			if (line.startsWith('Filename: ./')) {
-				const filename = line.replace('Filename: ./', '');
-				return `Filename: https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v${version}/${filename}`;
+				return line.replace('Filename: ./', 'Filename: ');
 			}
 			return line;
 		});
@@ -130,14 +129,6 @@ SHA256:
 		}
 	} catch (err) {
 		console.error('Failed to process Debian repository:', err.message);
-	}
-
-	// Remove temporary deb files
-	for (const file of debFiles) {
-		const tempPath = path.join(debDistDir, path.basename(file));
-		if (fs.existsSync(tempPath)) {
-			fs.unlinkSync(tempPath);
-		}
 	}
 } else {
 	console.log('No .deb files found in artifacts.');
