@@ -255,23 +255,15 @@ jobs:
           echo "Removing bundled Wayland libraries..."
           find app-pkg/ -name "libwayland-*.so*" -print -delete
           
-          TOOL_PATH=$(find ~/.cache/tauri/ -name "appimagetool*" -type f -perm /111 | head -n 1)
-          if [ -n "$TOOL_PATH" ]; then
-            echo "Found appimagetool in cache: $TOOL_PATH"
-            cp "$TOOL_PATH" ./appimagetool
-            ./appimagetool --appimage-extract
-            APPIMAGETOOL="./squashfs-root/AppRun"
+          echo "Downloading appimagetool..."
+          if [ "$ARCH" = "aarch64" ]; then
+            curl -SfL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage -o appimagetool
           else
-            echo "appimagetool not in cache, downloading..."
-            if [ "$ARCH" = "aarch64" ]; then
-              wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage -O appimagetool
-            else
-              wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
-            fi
-            chmod +x appimagetool
-            ./appimagetool --appimage-extract
-            APPIMAGETOOL="./squashfs-root/AppRun"
+            curl -SfL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
           fi
+          chmod +x appimagetool
+          ./appimagetool --appimage-extract
+          APPIMAGETOOL="./squashfs-root/AppRun"
           
           rm -f "$APPIMAGE"
           "$APPIMAGETOOL" app-pkg "$APPIMAGE"
@@ -281,7 +273,7 @@ jobs:
           if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
             echo "Resigning AppImage..."
             rm -f "$APPIMAGE.sig"
-            pnpm tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" "$APPIMAGE"
+            pnpm tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" -p "" "$APPIMAGE"
           fi
 
 
