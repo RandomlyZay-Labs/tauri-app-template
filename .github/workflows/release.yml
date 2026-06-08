@@ -142,14 +142,9 @@ jobs:
         run: pnpm release
 
       - name: Import GPG Key
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        run: |
-          if [ -n "$GPG_PRIVATE_KEY" ]; then
-            echo "$GPG_PRIVATE_KEY" | gpg --batch --import
-          else
-            echo "Warning: GPG_PRIVATE_KEY is not set. Packages and repositories will not be signed."
-          fi
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Install Repo Tools
         run: |
