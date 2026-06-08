@@ -1,3 +1,9 @@
+## [0.12.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.11.1...v0.12.0) (2026-06-08)
+
+### Features
+
+* add GitHub Pages generation and update landing page with new design ([cfc1556](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/cfc1556baed08a281c46fb7a07d5b3e6306bad2f))
+
 ## [0.11.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.11.0...v0.11.1) (2026-06-08)
 
 ### Bug Fixes

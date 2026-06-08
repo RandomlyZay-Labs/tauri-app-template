@@ -154,7 +154,9 @@ jobs:
       - name: Generate Repo Metadata & Landing Page
         env:
           VERSION: ${{ needs.determine-version.outputs.version }}
-        run: node scripts/generate-repo-metadata.js
+        run: |
+          node scripts/generate-repo-metadata.js
+          node scripts/generate-github-pages.js
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
