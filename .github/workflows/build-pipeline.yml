@@ -224,7 +224,6 @@ jobs:
         env:
           SQLX_OFFLINE: true
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          AUTO_GDK_CORE_LIBS: 1
         shell: bash
         run: pnpm tauri build --config '{"build":{"beforeBuildCommand":""}}'
 
@@ -277,7 +276,6 @@ jobs:
             rm -f "$APPIMAGE.sig"
             pnpm tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" -p "" "$APPIMAGE"
           fi
-
 
       - name: Build CLI Binary
         env:
