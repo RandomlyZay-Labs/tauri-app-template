@@ -1,3 +1,10 @@
+## [0.11.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.10.3...v0.11.0) (2026-06-08)
+
+### Features
+
+* add GPG signing, repository metadata generation, and landing page for releases ([7c1110c](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/7c1110c3750f2e1a2e8fc30d83de24dbc3552a28))
+* deb and rpm management ([#72](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/72)) ([9f11411](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/9f11411446d55e907927a2158a8feb2e9690f71c))
+
 ## [0.10.3](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.10.2...v0.10.3) (2026-06-08)
 
 ### Bug Fixes
