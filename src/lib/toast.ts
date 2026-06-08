@@ -42,10 +42,9 @@ const notifyAndStore = (
 		if (typeof data.style === 'string') {
 			styleStr = `${data.style}; ${durationStyle}`;
 		} else if (typeof data.style === 'object') {
-			styleStr =
-				Object.entries(data.style)
-					.map(([k, v]) => `${k}: ${v};`)
-					.join(' ') + ` ${durationStyle}`;
+			styleStr = `${Object.entries(data.style)
+				.map(([k, v]) => `${k}: ${v};`)
+				.join(' ')} ${durationStyle}`;
 		}
 	}
 	mergedData.style = styleStr;
