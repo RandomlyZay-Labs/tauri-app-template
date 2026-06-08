@@ -27,7 +27,11 @@ jobs:
           config.fallback_models: '["gemini/gemini-3.5-flash"]'
           config.reasoning_effort: "high"
           config.model_reasoning: "gemini/gemini-3.5-flash"
+          config.custom_model_max_tokens: 250000
           GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          github_action_config.pr_actions: "['opened', 'reopened', 'ready_for_review', 'synchronize']"
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "true"
           github_action_config.auto_improve: "true"
+          config.ignore_pr_labels: '["skip-review"]'
+          ignore.glob: '["pnpm-lock.yaml", "package-lock.json", "CHANGELOG.md", "Cargo.lock"]'
