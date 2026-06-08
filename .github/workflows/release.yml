@@ -163,12 +163,16 @@ jobs:
           git checkout -b "$SYNC_BRANCH"
           git push origin "$SYNC_BRANCH"
           
+          # Ensure the label exists, or ignore if it already does
+          gh label create "skip-review" --color "FBCA04" --description "Skip PR Agent review" || true
+
           # Create pull request from the sync branch to dev
           gh pr create \
             --base dev \
             --head "$SYNC_BRANCH" \
             --title "chore: merge main back into dev" \
-            --body "Automated PR to sync dev with main after release. Code scanning and status checks must pass before merging. @coderabbitai ignore"
+            --body "Automated PR to sync dev with main after release. Code scanning and status checks must pass before merging." \
+            --label "skip-review"
 
           # Force merge using admin privileges to bypass checks that skip CI
           gh pr merge --admin --merge --delete-branch

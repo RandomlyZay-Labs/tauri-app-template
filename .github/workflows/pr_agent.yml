@@ -31,3 +31,5 @@ jobs:
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "true"
           github_action_config.auto_improve: "true"
+          config.ignore_pr_labels: '["skip-review"]'
+          ignore.glob: '["pnpm-lock.yaml", "package-lock.json", "CHANGELOG.md", "Cargo.lock"]'
