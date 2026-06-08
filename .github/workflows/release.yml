@@ -136,11 +136,6 @@ jobs:
           VERSION: ${{ needs.determine-version.outputs.version }}
         run: node scripts/generate-latest-json.js
 
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
-        run: pnpm release
-
       - name: Import GPG Key
         uses: crazy-max/ghaction-import-gpg@v7
         with:
@@ -149,7 +144,22 @@ jobs:
       - name: Install Repo Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev createrepo-c
+          sudo apt-get install -y dpkg-dev createrepo-c rpm
+
+      - name: Sign RPM Packages
+        run: |
+          echo "%_signature gpg" > ~/.rpmmacros
+          echo "%_gpg_name Tauri App Template" >> ~/.rpmmacros
+          echo "%_gpgbin /usr/bin/gpg" >> ~/.rpmmacros
+          find artifacts -name "*.rpm" | while read -r rpm_file; do
+            echo "Signing $rpm_file..."
+            rpmsign --addsign "$rpm_file"
+          done
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: pnpm release
 
       - name: Generate Repo Metadata & Landing Page
         env:

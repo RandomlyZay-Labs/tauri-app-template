@@ -1,3 +1,9 @@
+## [0.12.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.0...v0.12.1) (2026-06-08)
+
+### Bug Fixes
+
+* update release workflow and improve package signing process ([b3bca6e](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/b3bca6e53142384932ac108b93b13929cd70b22e))
+
 ## [0.12.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.11.1...v0.12.0) (2026-06-08)
 
 ### Features
