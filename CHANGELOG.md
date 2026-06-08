@@ -1,3 +1,14 @@
+## [0.10.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.9.0...v0.10.0) (2026-06-08)
+
+### Features
+
+* **ci:** enhance AppImage compatibility and update CI configurations ([#60](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/60)) ([8ad3f62](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/8ad3f62ff6937fa2e52650a07e7a09be16ce8a32))
+* update CI runners to Ubuntu 24.04 ([#63](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/63)) ([9531b70](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/9531b70a57900f4fe2b27c6e10f171a0c8729ca8))
+
+### Bug Fixes
+
+* remove CSS override breaking toast spacing ([#61](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/61)) ([f7687e4](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/f7687e40ace66f30057f5bc719007614c098bc4b))
+
 ## [0.9.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.8.0...v0.9.0) (2026-06-06)
 
 ### Features
