@@ -29,6 +29,18 @@
 		],
 		"windows": {
 			"nsis": {}
+		},
+		"linux": {
+			"deb": {
+				"files": {
+					"/etc/apt/sources.list.d/tauri-app-template.list": "resources/tauri-app-template.list"
+				}
+			},
+			"rpm": {
+				"files": {
+					"/etc/yum.repos.d/tauri-app-template.repo": "resources/tauri-app-template.repo"
+				}
+			}
 		}
 	},
 	"plugins": {
