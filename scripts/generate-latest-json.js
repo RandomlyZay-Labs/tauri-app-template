@@ -56,13 +56,14 @@ function scanDir(dir) {
 				pathLower.includes('/bundle/nsis/') ||
 				pathLower.includes('\\bundle\\nsis\\');
 
+			const fileLower = file.toLowerCase();
 			const isUpdaterBundle =
-				(file.endsWith('.exe') && isWindowsBundle) ||
-				file.endsWith('.AppImage');
+				(fileLower.endsWith('.exe') && isWindowsBundle) ||
+				fileLower.endsWith('.appimage');
 
 			const isUpdaterSignature =
-				(file.endsWith('.exe.sig') && isWindowsBundle) ||
-				file.endsWith('.AppImage.sig');
+				(fileLower.endsWith('.exe.sig') && isWindowsBundle) ||
+				fileLower.endsWith('.appimage.sig');
 
 			if (isUpdaterBundle) {
 				const platform = getPlatformKey(file, fullPath);
