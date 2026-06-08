@@ -170,6 +170,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ghcr.io/randomlyzay-labs/tauri-builder:latest
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
       - uses: actions/checkout@v6
@@ -222,9 +224,58 @@ jobs:
         env:
           SQLX_OFFLINE: true
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          AUTO_GDK_CORE_LIBS: 1
         shell: bash
         run: pnpm tauri build --config '{"build":{"beforeBuildCommand":""}}'
+
+      - name: Patch AppImage (Remove Wayland libs)
+        env:
+          ARCH_NAME: ${{ matrix.arch }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          APPIMAGE=$(find src-tauri/target/release/bundle/appimage/ -name "*.AppImage" | head -n 1)
+          if [ -z "$APPIMAGE" ]; then
+            echo "No AppImage found"
+            exit 1
+          fi
+          echo "Found AppImage: $APPIMAGE"
+          
+          if [ "$ARCH_NAME" = "amd64" ]; then
+            export ARCH="x86_64"
+          elif [ "$ARCH_NAME" = "arm64" ]; then
+            export ARCH="aarch64"
+          else
+            export ARCH="$ARCH_NAME"
+          fi
+          echo "ARCH is $ARCH"
+          
+          chmod +x "$APPIMAGE"
+          "$APPIMAGE" --appimage-extract
+          mv squashfs-root app-pkg
+          
+          echo "Removing bundled Wayland libraries..."
+          find app-pkg/ -name "libwayland-*.so*" -print -delete
+          
+          echo "Downloading appimagetool..."
+          if [ "$ARCH" = "aarch64" ]; then
+            curl -SfL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage -o appimagetool
+          else
+            curl -SfL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
+          fi
+          chmod +x appimagetool
+          ./appimagetool --appimage-extract
+          APPIMAGETOOL="./squashfs-root/AppRun"
+          
+          rm -f "$APPIMAGE"
+          "$APPIMAGETOOL" app-pkg "$APPIMAGE"
+          
+          rm -rf app-pkg squashfs-root appimagetool
+          
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "Resigning AppImage..."
+            rm -f "$APPIMAGE.sig"
+            pnpm tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" -p "" "$APPIMAGE"
+          fi
 
       - name: Build CLI Binary
         env:

@@ -109,6 +109,42 @@ impl CliVerifier for RealCliVerifier {
     }
 }
 
+fn decode_base64(s: &str) -> Option<String> {
+    let mut bytes = Vec::new();
+    let mut value = 0u32;
+    let mut bits = 0;
+    for c in s.chars() {
+        if c == '=' {
+            break;
+        }
+        let val = match c {
+            'A'..='Z' => c as u32 - 'A' as u32,
+            'a'..='z' => c as u32 - 'a' as u32 + 26,
+            '0'..='9' => c as u32 - '0' as u32 + 52,
+            '+' => 62,
+            '/' => 63,
+            _ => continue,
+        };
+        value = (value << 6) | val;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            bytes.push((value >> bits) as u8);
+        }
+    }
+    String::from_utf8(bytes).ok()
+}
+
+pub fn parse_minisign_pubkey(pubkey_str: &str) -> String {
+    if let Some(decoded) = decode_base64(pubkey_str).filter(|d| d.starts_with("untrusted comment")) {
+        let lines: Vec<&str> = decoded.lines().collect();
+        if lines.len() >= 2 {
+            return lines[1].trim().to_string();
+        }
+    }
+    pubkey_str.trim().to_string()
+}
+
 pub fn verify_checksum(
     file_path: &Path,
     expected_sha: &str,
@@ -129,7 +165,8 @@ pub fn verify_checksum(
     if should_verify {
         let sig_text = std::str::from_utf8(signature_bytes)
             .map_err(|e| Error::Unknown(format!("Signature is not valid UTF-8: {}", e)))?;
-        let public_key = minisign_verify::PublicKey::from_base64(public_key_str)
+        let parsed_pubkey = parse_minisign_pubkey(public_key_str);
+        let public_key = minisign_verify::PublicKey::from_base64(&parsed_pubkey)
             .map_err(|e| Error::Unknown(format!("Invalid public key: {}", e)))?;
         let signature = minisign_verify::Signature::decode(sig_text)
             .map_err(|e| Error::Unknown(format!("Invalid signature format: {}", e)))?;
@@ -430,6 +467,62 @@ mod tests {
 
         let result = verify_checksum(temp_file.path(), expected_sha, signature.as_bytes(), public_key);
         assert!(result.is_ok(), "result was Err: {:?}", result.err());
+        Ok(())
+    }
+
+    fn encode_base64(bytes: &[u8]) -> String {
+        const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut s = String::new();
+        let mut i = 0;
+        while i < bytes.len() {
+            let b0 = bytes[i] as usize;
+            let b1 = if i + 1 < bytes.len() { bytes[i + 1] as usize } else { 0 };
+            let b2 = if i + 2 < bytes.len() { bytes[i + 2] as usize } else { 0 };
+            
+            let c0 = b0 >> 2;
+            let c1 = ((b0 & 3) << 4) | (b1 >> 4);
+            let c2 = ((b1 & 15) << 2) | (b2 >> 6);
+            let c3 = b2 & 63;
+            
+            s.push(CHARS[c0] as char);
+            s.push(CHARS[c1] as char);
+            if i + 1 < bytes.len() {
+                s.push(CHARS[c2] as char);
+            } else {
+                s.push('=');
+            }
+            if i + 2 < bytes.len() {
+                s.push(CHARS[c3] as char);
+            } else {
+                s.push('=');
+            }
+            i += 3;
+        }
+        s
+    }
+
+    #[test]
+    fn test_parse_minisign_pubkey() {
+        let raw_pubkey = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+        assert_eq!(parse_minisign_pubkey(raw_pubkey), raw_pubkey);
+
+        let file_content = format!(
+            "untrusted comment: minisign public key: 6765A163484144DF\n{}\n",
+            raw_pubkey
+        );
+        let double_encoded = encode_base64(file_content.as_bytes());
+        assert_eq!(parse_minisign_pubkey(&double_encoded), raw_pubkey);
+    }
+
+    #[test]
+    fn test_real_config_pubkey_validity() -> Result<(), Box<dyn std::error::Error>> {
+        let config_str = include_str!("../../tauri.conf.json");
+        let config: serde_json::Value = serde_json::from_str(config_str)?;
+        let pubkey_str = config["plugins"]["updater"]["pubkey"]
+            .as_str()
+            .ok_or("No pubkey in config")?;
+        let parsed = parse_minisign_pubkey(pubkey_str);
+        let _public_key = minisign_verify::PublicKey::from_base64(&parsed)?;
         Ok(())
     }
 

@@ -1,10 +1,9 @@
 name: PR Agent (Gemini)
 
 on:
-  pull_request:
-    types: [opened, reopened, ready_for_review, synchronize]
   issue_comment:
     types: [created, edited]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -12,7 +11,7 @@ concurrency:
 
 jobs:
   pr_agent_job:
-    if: ${{ github.event.sender.type != 'Bot' && (github.event_name == 'pull_request' || (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/'))) }}
+    if: ${{ github.event.sender.type != 'Bot' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/'))) }}
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -27,7 +26,11 @@ jobs:
           config.fallback_models: '["gemini/gemini-3.5-flash"]'
           config.reasoning_effort: "high"
           config.model_reasoning: "gemini/gemini-3.5-flash"
+          config.custom_model_max_tokens: 250000
           GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          github_action_config.pr_actions: "['opened', 'reopened', 'ready_for_review', 'synchronize']"
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "true"
           github_action_config.auto_improve: "true"
+          config.ignore_pr_labels: '["skip-review"]'
+          ignore.glob: '["pnpm-lock.yaml", "package-lock.json", "CHANGELOG.md", "Cargo.lock"]'
