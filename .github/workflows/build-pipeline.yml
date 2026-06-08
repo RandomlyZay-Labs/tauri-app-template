@@ -170,6 +170,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ghcr.io/randomlyzay-labs/tauri-builder:latest
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
       - uses: actions/checkout@v6
