@@ -145,6 +145,13 @@ pub fn parse_minisign_pubkey(pubkey_str: &str) -> String {
     pubkey_str.trim().to_string()
 }
 
+pub fn parse_minisign_signature(sig_str: &str) -> String {
+    if let Some(decoded) = decode_base64(sig_str).filter(|d| d.starts_with("untrusted comment")) {
+        return decoded;
+    }
+    sig_str.trim().to_string()
+}
+
 pub fn verify_checksum(
     file_path: &Path,
     expected_sha: &str,
@@ -168,13 +175,15 @@ pub fn verify_checksum(
         let parsed_pubkey = parse_minisign_pubkey(public_key_str);
         let public_key = minisign_verify::PublicKey::from_base64(&parsed_pubkey)
             .map_err(|e| Error::Unknown(format!("Invalid public key: {}", e)))?;
-        let signature = minisign_verify::Signature::decode(sig_text)
+        let parsed_sig = parse_minisign_signature(sig_text);
+        let signature = minisign_verify::Signature::decode(&parsed_sig)
             .map_err(|e| Error::Unknown(format!("Invalid signature format: {}", e)))?;
         let content = std::fs::read(file_path)?;
         public_key
             .verify(&content, &signature, true)
             .map_err(|e| Error::Unknown(format!("Signature verification failed: {}", e)))?;
     }
+
 
     // 2. Fall back/additionally check SHA-256
     let mut file = File::open(file_path)?;
@@ -512,6 +521,15 @@ mod tests {
         );
         let double_encoded = encode_base64(file_content.as_bytes());
         assert_eq!(parse_minisign_pubkey(&double_encoded), raw_pubkey);
+    }
+
+    #[test]
+    fn test_parse_minisign_signature() {
+        let raw_sig = "untrusted comment: signature from minisign secret key\nRWQf6LRCGA9i59SLOFxz6NxvASXDJeRtuZykwQepbDEGt87ig1BNpWaVWuNrm73YiIiJbq71Wi+dP9eKL8OC351vwIasSSbXxwA=\ntrusted comment: timestamp:1555779966\tfile:test\nQtKMXWyYcwdpZAlPF7tE2ENJkRd1ujvKjlj1m9RtHTBnZPa5WKU5uWRs5GoP5M/VqE81QFuMKI5k/SfNQUaOAA==\n";
+        assert_eq!(parse_minisign_signature(raw_sig), raw_sig.trim());
+
+        let encoded_sig = encode_base64(raw_sig.as_bytes());
+        assert_eq!(parse_minisign_signature(&encoded_sig), raw_sig);
     }
 
     #[test]
