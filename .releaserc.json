@@ -23,7 +23,7 @@
 		[
 			"@semantic-release/exec",
 			{
-				"prepareCmd": "node -e \"const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = p.version; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\\n'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\\s*=\\s*\\\"[^\\\"]+\\\"/m, 'version = \\\"' + p.version + '\\\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);\" && cd src-tauri && cargo generate-lockfile"
+				"prepareCmd": "node -e \"const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = p.version; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\\n'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\\s*=\\s*\\\"[^\\\"]+\\\"/m, 'version = \\\"' + p.version + '\\\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);\" && npx biome format --write src-tauri/tauri.conf.json package.json && cd src-tauri && cargo generate-lockfile"
 			}
 		],
 		[

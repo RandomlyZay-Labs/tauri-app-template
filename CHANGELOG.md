@@ -1,3 +1,9 @@
+## [0.10.3](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.10.2...v0.10.3) (2026-06-08)
+
+### Bug Fixes
+
+* update download method and enhance update installation process ([1262628](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/12626287b0f710ae7b82d6e26dc1f57af1aad21c))
+
 ## [0.10.2](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.10.1...v0.10.2) (2026-06-08)
 
 ### Bug Fixes

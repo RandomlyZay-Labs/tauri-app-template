@@ -143,7 +143,7 @@ class UpdateStore {
 					console.error('Failed to create pre-update backup:', backupErr);
 				}
 
-				await update.downloadAndInstall((progress: DownloadEvent) => {
+				await update.download((progress: DownloadEvent) => {
 					switch (progress.event) {
 						case 'Started':
 							this.contentLength = progress.data.contentLength;
@@ -196,8 +196,12 @@ class UpdateStore {
 	}
 
 	async applyUpdate() {
+		const update = this.activeUpdate;
 		await executeSafeAction(
 			async () => {
+				if (update) {
+					await update.install();
+				}
 				await relaunch();
 			},
 			{
