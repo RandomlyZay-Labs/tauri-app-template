@@ -101,8 +101,8 @@ jobs:
               new_base=$(echo "$base" | sed -E 's/-([0-9]+\.[0-9]+\.[0-9]+)-1\.([a-zA-Z0-9_]+)\.rpm$/-\1-\2.rpm/')
             fi
             
-            # 2. Replace spaces with hyphens in all filenames
-            new_base=$(echo "$new_base" | tr ' ' '-')
+            # 2. Replace spaces with hyphens and lowercase all filenames
+            new_base=$(echo "$new_base" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
             
             if [ "$base" != "$new_base" ]; then
               mv "$file" "$dir/$new_base"

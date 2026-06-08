@@ -1,3 +1,9 @@
+## [0.12.2](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.1...v0.12.2) (2026-06-08)
+
+### Bug Fixes
+
+* standardize file extensions to lowercase in scripts and HTML ([fbc3969](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/fbc39697db0e8ab5e3a5bed01a6edde3ed78bf56))
+
 ## [0.12.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.0...v0.12.1) (2026-06-08)
 
 ### Bug Fixes
