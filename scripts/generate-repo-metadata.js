@@ -71,7 +71,7 @@ if (debFiles.length > 0) {
 	// Run dpkg-scanpackages
 	try {
 		console.log('Running dpkg-scanpackages...');
-		const packagesContent = execSync('dpkg-scanpackages . /dev/null', {
+		const packagesContent = execSync('dpkg-scanpackages -m . /dev/null', {
 			cwd: debDistDir,
 			encoding: 'utf8',
 		});

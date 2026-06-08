@@ -64,7 +64,7 @@ const winUrl = fileMap[`tauri-app-template_${version}_x64-setup.exe`] || '#';
 const debUrl = fileMap[`tauri-app-template_${version}_amd64.deb`] || '#';
 const rpmUrl = fileMap[`tauri-app-template-${version}-x86_64.rpm`] || '#';
 const appImageUrl =
-	fileMap[`tauri-app-template_${version}_amd64.AppImage`] || '#';
+	fileMap[`tauri-app-template_${version}_amd64.appimage`] || '#';
 
 // Replace base placeholders
 html = html
