@@ -1,8 +1,8 @@
+import { execSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execSync } from 'node:child_process';
-import crypto from 'node:crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,10 +45,15 @@ try {
 	execSync('gpg --list-keys "Tauri App Template"', { stdio: 'ignore' });
 	hasGpg = true;
 	console.log('Found GPG key "Tauri App Template". Exporting public key...');
-	execSync('gpg --armor --export "Tauri App Template" > dist/tauri-app-template.gpg', { cwd: rootDir });
+	execSync(
+		'gpg --armor --export "Tauri App Template" > dist/tauri-app-template.gpg',
+		{ cwd: rootDir },
+	);
 	console.log('Public key exported to dist/tauri-app-template.gpg');
 } catch {
-	console.log('Warning: GPG key "Tauri App Template" not found. Repositories will not be signed.');
+	console.log(
+		'Warning: GPG key "Tauri App Template" not found. Repositories will not be signed.',
+	);
 }
 
 // 1. Process Debian repository
@@ -113,8 +118,14 @@ SHA256:
 		// Sign Release files if GPG is available
 		if (hasGpg) {
 			console.log('Signing Debian Release files...');
-			execSync('gpg --yes --clearsign --default-key "Tauri App Template" -o InRelease Release', { cwd: debDistDir });
-			execSync('gpg --yes -abs --default-key "Tauri App Template" -o Release.gpg Release', { cwd: debDistDir });
+			execSync(
+				'gpg --yes --clearsign --default-key "Tauri App Template" -o InRelease Release',
+				{ cwd: debDistDir },
+			);
+			execSync(
+				'gpg --yes -abs --default-key "Tauri App Template" -o Release.gpg Release',
+				{ cwd: debDistDir },
+			);
 			console.log('Debian Release signatures generated.');
 		}
 	} catch (err) {
@@ -133,9 +144,15 @@ SHA256:
 }
 
 // Copy list file to debDistDir
-const sourceListPath = path.join(rootDir, 'src-tauri/resources/tauri-app-template.list');
+const sourceListPath = path.join(
+	rootDir,
+	'src-tauri/resources/tauri-app-template.list',
+);
 if (fs.existsSync(sourceListPath)) {
-	fs.copyFileSync(sourceListPath, path.join(debDistDir, 'tauri-app-template.list'));
+	fs.copyFileSync(
+		sourceListPath,
+		path.join(debDistDir, 'tauri-app-template.list'),
+	);
 }
 
 // 2. Process RPM repository
@@ -157,21 +174,30 @@ if (rpmFiles.length > 0) {
 
 	try {
 		console.log('Running createrepo_c...');
-		execSync(`createrepo_c --baseurl https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v${version}/ .`, {
-			cwd: tempRpmDir,
-		});
+		execSync(
+			`createrepo_c --baseurl https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v${version}/ .`,
+			{
+				cwd: tempRpmDir,
+			},
+		);
 
 		// Move repodata to rpmDistDir
 		if (fs.existsSync(path.join(tempRpmDir, 'repodata'))) {
-			fs.renameSync(path.join(tempRpmDir, 'repodata'), path.join(rpmDistDir, 'repodata'));
+			fs.renameSync(
+				path.join(tempRpmDir, 'repodata'),
+				path.join(rpmDistDir, 'repodata'),
+			);
 			console.log('RPM repository metadata generated.');
 
 			// Sign repomd.xml if GPG is available
 			if (hasGpg) {
 				console.log('Signing RPM repomd.xml...');
-				execSync('gpg --yes --detach-sign --armor --default-key "Tauri App Template" -o repodata/repomd.xml.asc repodata/repomd.xml', {
-					cwd: rpmDistDir,
-				});
+				execSync(
+					'gpg --yes --detach-sign --armor --default-key "Tauri App Template" -o repodata/repomd.xml.asc repodata/repomd.xml',
+					{
+						cwd: rpmDistDir,
+					},
+				);
 				console.log('RPM repomd.xml signature created.');
 			}
 		}
@@ -186,20 +212,30 @@ if (rpmFiles.length > 0) {
 }
 
 // Copy repo file to rpmDistDir
-const sourceRepoPath = path.join(rootDir, 'src-tauri/resources/tauri-app-template.repo');
+const sourceRepoPath = path.join(
+	rootDir,
+	'src-tauri/resources/tauri-app-template.repo',
+);
 if (fs.existsSync(sourceRepoPath)) {
-	fs.copyFileSync(sourceRepoPath, path.join(rpmDistDir, 'tauri-app-template.repo'));
+	fs.copyFileSync(
+		sourceRepoPath,
+		path.join(rpmDistDir, 'tauri-app-template.repo'),
+	);
 }
 
 // 3. Generate Landing Page HTML
 console.log('Generating download landing page...');
 
 // Collect all uploaded artifact names
-const allFiles = findFiles(artifactsDir, (f) => !f.endsWith('.sig') && !f.endsWith('.json') && !f.endsWith('.sha256'));
+const allFiles = findFiles(
+	artifactsDir,
+	(f) => !f.endsWith('.sig') && !f.endsWith('.json') && !f.endsWith('.sha256'),
+);
 const fileMap = {};
 for (const file of allFiles) {
 	const baseName = path.basename(file);
-	fileMap[baseName] = `https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v${version}/${baseName}`;
+	fileMap[baseName] =
+		`https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v${version}/${baseName}`;
 }
 
 const landingHtml = `<!DOCTYPE html>
