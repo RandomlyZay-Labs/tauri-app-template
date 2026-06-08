@@ -257,9 +257,9 @@ jobs:
           
           echo "Downloading appimagetool..."
           if [ "$ARCH" = "aarch64" ]; then
-            wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage -O appimagetool
+            curl -SfL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage -o appimagetool
           else
-            wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+            curl -SfL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
           fi
           chmod +x appimagetool
           ./appimagetool --appimage-extract
