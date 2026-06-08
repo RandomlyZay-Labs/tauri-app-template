@@ -6807,7 +6807,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-app-template"
-version = "0.10.2"
+version = "0.10.3"
 dependencies = [
  "async-trait",
  "better-posthog",
