@@ -281,12 +281,13 @@ describe('updateStore', () => {
 		const store = await getStore();
 		const mockUpdate = {
 			version: '2.0.0',
-			downloadAndInstall: vi.fn().mockImplementation(async (cb) => {
+			download: vi.fn().mockImplementation(async (cb) => {
 				cb({ event: 'Started', data: { contentLength: 1000 } });
 				cb({ event: 'Progress', data: { chunkLength: 250 } });
 				cb({ event: 'Progress', data: { chunkLength: 500 } });
 				cb({ event: 'Finished' });
 			}),
+			install: vi.fn().mockResolvedValue(undefined),
 		};
 		store.activeUpdate = mockUpdate as unknown as Update;
 		store.installType = 'nsis'; // Bundled
@@ -338,11 +339,12 @@ describe('updateStore', () => {
 		const store = await getStore();
 		const mockUpdate = {
 			version: '2.0.0',
-			downloadAndInstall: vi.fn().mockImplementation(async (cb) => {
+			download: vi.fn().mockImplementation(async (cb) => {
 				cb({ event: 'Started', data: { contentLength: 1000 } });
 				cb({ event: 'Progress', data: { chunkLength: 250 } });
 				cb({ event: 'Finished' });
 			}),
+			install: vi.fn().mockResolvedValue(undefined),
 		};
 		store.activeUpdate = mockUpdate as unknown as Update;
 		store.installType = 'deb'; // Package-managed
@@ -384,7 +386,7 @@ describe('updateStore', () => {
 		const store = await getStore();
 		const mockUpdate = {
 			version: '2.0.0',
-			downloadAndInstall: vi.fn().mockRejectedValue(new Error('Disk full')),
+			download: vi.fn().mockRejectedValue(new Error('Disk full')),
 		};
 		store.activeUpdate = mockUpdate as unknown as Update;
 
@@ -400,6 +402,20 @@ describe('updateStore', () => {
 	it('invokes relaunch when applying update', async () => {
 		const store = await getStore();
 		await store.applyUpdate();
+		expect(mockRelaunch).toHaveBeenCalled();
+	});
+
+	it('invokes install and relaunch when applying update with active update', async () => {
+		const store = await getStore();
+		const mockUpdate = {
+			version: '2.0.0',
+			install: vi.fn().mockResolvedValue(undefined),
+		};
+		store.activeUpdate = mockUpdate as unknown as Update;
+
+		await store.applyUpdate();
+
+		expect(mockUpdate.install).toHaveBeenCalled();
 		expect(mockRelaunch).toHaveBeenCalled();
 	});
 
