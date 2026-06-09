@@ -33,12 +33,13 @@
 		"linux": {
 			"deb": {
 				"files": {
-					"/etc/apt/sources.list.d/tauri-app-template.list": "resources/tauri-app-template.list"
+					"/etc/apt/sources.list.d/tauri-app-template.list": "resources/tauri-app-template.list",
+					"/etc/apt/keyrings/tauri-app-template.gpg": "resources/tauri-app-template.gpg"
 				}
 			},
 			"rpm": {
 				"files": {
-					"/etc/yum.repos.d/tauri-app-template.repo": "resources/tauri-app-template.repo"
+					"/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:randomlyzay:tauri-app-template.repo": "resources/tauri-app-template.repo"
 				}
 			}
 		}
