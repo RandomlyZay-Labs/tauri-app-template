@@ -338,8 +338,8 @@ sudo apt-get install tauri-app-template</pre>
         </div>
         <div id="code-fedora" class="code-container hidden">
             <button type="button" class="copy-btn" onclick="copyCode('code-fedora')">Copy</button>
-<pre># Add repository config directly
-sudo curl -sLo /etc/yum.repos.d/tauri-app-template.repo https://randomlyzay-labs.github.io/tauri-app-template/rpm/tauri-app-template.repo
+<pre># Enable COPR repository
+sudo dnf copr enable randomlyzay/tauri-app-template -y
 
 # Install package
 sudo dnf install tauri-app-template</pre>
