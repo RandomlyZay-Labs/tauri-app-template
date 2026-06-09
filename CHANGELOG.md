@@ -1,3 +1,9 @@
+## [0.12.3](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.2...v0.12.3) (2026-06-09)
+
+### Bug Fixes
+
+* update repository configuration and metadata for RPM packaging ([a6b8521](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/a6b852154a56719479d0366bff0793884e16ad29))
+
 ## [0.12.2](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.1...v0.12.2) (2026-06-08)
 
 ### Bug Fixes
