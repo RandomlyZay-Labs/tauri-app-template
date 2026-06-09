@@ -144,7 +144,7 @@ jobs:
       - name: Install Repo Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev createrepo-c rpm
+          sudo apt-get install -y dpkg-dev rpm
 
       - name: Sign RPM Packages
         run: |
