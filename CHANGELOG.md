@@ -1,3 +1,9 @@
+## [0.12.4](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.3...v0.12.4) (2026-06-10)
+
+### Bug Fixes
+
+* streamline installation process and file listing in RPM spec ([15be360](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/15be36037f7481144cd779eff3b67fce81778d46))
+
 ## [0.12.3](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.2...v0.12.3) (2026-06-09)
 
 ### Bug Fixes

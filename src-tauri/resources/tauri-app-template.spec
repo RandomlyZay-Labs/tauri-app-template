@@ -1,5 +1,5 @@
 Name:           tauri-app-template
-Version: 0.12.3
+Version: 0.12.4
 Release:        1%{?dist}
 Summary:        Tauri App Template
 License:        MIT
@@ -26,15 +26,13 @@ rpm2cpio %{SOURCE1} | cpio -idmv
 # No build required for prebuilt binary.
 
 %install
-mkdir -p %{buildroot}
-cp -a usr %{buildroot}/
-cp -a etc %{buildroot}/
+cp -a . %{buildroot}/
+# Generate file list from everything installed, excluding buildroot prefix itself
+find %{buildroot} -type f -o -type l | \
+    sed "s|%{buildroot}||" | \
+    sort > %{_builddir}/filelist.txt
 
-%files
-%{_bindir}/tauri-app-template
-%{_datadir}/applications/tauri-app-template.desktop
-%{_datadir}/icons/hicolor/*/apps/*
-%{_sysconfdir}/yum.repos.d/_copr:copr.fedorainfracloud.org:randomlyzay:tauri-app-template.repo
+%files -f %{_builddir}/filelist.txt
 
 %changelog
 * Mon Jun 08 2026 RandomlyZay Labs - %{version}-1
