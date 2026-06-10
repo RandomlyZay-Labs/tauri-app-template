@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           tauri-app-template
-Version: 0.12.5
+Version: 0.12.6
 Release:        1%{?dist}
 Summary:        Tauri App Template
 License:        MIT
@@ -33,9 +33,10 @@ for d in usr etc; do
     [ -d "$d" ] && cp -a "$d" %{buildroot}/
 done
 
-# Generate file list from files and symlinks only
+# Generate file list from files and symlinks only; filter to absolute paths
 find %{buildroot} \( -type f -o -type l \) \
     | sed "s|%{buildroot}||g" \
+    | grep "^/" \
     | sort > %{_builddir}/filelist.txt
 
 %files -f %{_builddir}/filelist.txt
