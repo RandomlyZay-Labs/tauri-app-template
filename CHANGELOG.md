@@ -1,3 +1,9 @@
+## [0.12.9](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.8...v0.12.9) (2026-06-10)
+
+### Bug Fixes
+
+* remove Source directives and update RPM fetching method ([7521ed3](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/7521ed39e574053fd63cf542c4ef22087d0c06d9))
+
 ## [0.12.8](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.7...v0.12.8) (2026-06-10)
 
 ### Bug Fixes
