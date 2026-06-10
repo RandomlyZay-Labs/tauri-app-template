@@ -1,5 +1,7 @@
+%global debug_package %{nil}
+
 Name:           tauri-app-template
-Version: 0.12.4
+Version:        0.12.4
 Release:        1%{?dist}
 Summary:        Tauri App Template
 License:        MIT
@@ -26,11 +28,15 @@ rpm2cpio %{SOURCE1} | cpio -idmv
 # No build required for prebuilt binary.
 
 %install
-cp -a . %{buildroot}/
-# Generate file list from everything installed, excluding buildroot prefix itself
-find %{buildroot} -type f -o -type l | \
-    sed "s|%{buildroot}||" | \
-    sort > %{_builddir}/filelist.txt
+# Only copy known FHS directories extracted from the upstream RPM
+for d in usr etc; do
+    [ -d "$d" ] && cp -a "$d" %{buildroot}/
+done
+
+# Generate file list from files and symlinks only
+find %{buildroot} \( -type f -o -type l \) \
+    | sed "s|%{buildroot}||g" \
+    | sort > %{_builddir}/filelist.txt
 
 %files -f %{_builddir}/filelist.txt
 
