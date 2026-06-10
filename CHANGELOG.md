@@ -1,3 +1,9 @@
+## [0.12.8](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.7...v0.12.8) (2026-06-10)
+
+### Bug Fixes
+
+* update NoSource directives in RPM spec for proper source handling ([f339b1e](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/f339b1e16f5496f0790e5ce1fdb7adbc04863205))
+
 ## [0.12.7](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.6...v0.12.7) (2026-06-10)
 
 ### Bug Fixes
