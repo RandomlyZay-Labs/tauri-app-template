@@ -33,9 +33,10 @@ for d in usr etc; do
     [ -d "$d" ] && cp -a "$d" %{buildroot}/
 done
 
-# Generate file list from files and symlinks only
+# Generate file list from files and symlinks only; filter to absolute paths
 find %{buildroot} \( -type f -o -type l \) \
     | sed "s|%{buildroot}||g" \
+    | grep "^/" \
     | sort > %{_builddir}/filelist.txt
 
 %files -f %{_builddir}/filelist.txt
