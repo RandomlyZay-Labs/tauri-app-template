@@ -1,3 +1,9 @@
+## [0.12.6](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.5...v0.12.6) (2026-06-10)
+
+### Bug Fixes
+
+* enhance file list generation in RPM spec for absolute path filtering ([d194ffa](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/d194ffa246ad644c7f13934280b3a7205634d787))
+
 ## [0.12.5](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.4...v0.12.5) (2026-06-10)
 
 ### Bug Fixes
