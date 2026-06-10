@@ -7,12 +7,9 @@ Summary: Tauri App Template
 License: MIT
 URL: https://github.com/RandomlyZay-Labs/tauri-app-template
 
-Source0: https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-x86_64.rpm
-Source1: https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-aarch64.rpm
-# NoSource prevents rpmbuild -bs from downloading/bundling large RPM blobs
-# into the SRPM. Binary build workers re-download via %_disable_source_fetch 0.
-NoSource: 0
-NoSource: 1
+# No Source0/Source1 — avoids rpmbuild -bs trying to fetch/validate URLs.
+# Binary RPMs are downloaded in %%prep via curl instead.
+BuildRequires: curl
 
 ExclusiveArch: x86_64 aarch64
 
@@ -22,17 +19,19 @@ Tauri App Template repackaged from prebuilt binary releases.
 %prep
 %setup -c -T
 %ifarch x86_64
-rpm2cpio %{SOURCE0} | cpio -idmv
+curl -fLO "https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-x86_64.rpm"
+rpm2cpio tauri-app-template-%{version}-x86_64.rpm | cpio -idmv
 %endif
 %ifarch aarch64
-rpm2cpio %{SOURCE1} | cpio -idmv
+curl -fLO "https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-aarch64.rpm"
+rpm2cpio tauri-app-template-%{version}-aarch64.rpm | cpio -idmv
 %endif
 
 %build
 # No build required for prebuilt binary.
 
 %install
-# Only copy known FHS directories extracted from the upstream RPM
+# Copy FHS directories extracted from the upstream RPM into buildroot.
 for d in usr etc; do
     [ -d "$d" ] && cp -a "$d" %{buildroot}/
 done
