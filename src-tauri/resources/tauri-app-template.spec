@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name: tauri-app-template
-Version: 0.12.7
+Version: 0.12.8
 Release: 1%{?dist}
 Summary: Tauri App Template
 License: MIT
@@ -9,6 +9,10 @@ URL: https://github.com/RandomlyZay-Labs/tauri-app-template
 
 Source0: https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-x86_64.rpm
 Source1: https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-aarch64.rpm
+# NoSource prevents rpmbuild -bs from downloading/bundling large RPM blobs
+# into the SRPM. Binary build workers re-download via %_disable_source_fetch 0.
+NoSource: 0
+NoSource: 1
 
 ExclusiveArch: x86_64 aarch64
 
