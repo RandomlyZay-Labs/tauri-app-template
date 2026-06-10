@@ -1,16 +1,16 @@
 %global debug_package %{nil}
 
-Name:           tauri-app-template
+Name: tauri-app-template
 Version: 0.12.6
-Release:        1%{?dist}
-Summary:        Tauri App Template
-License:        MIT
-URL:            https://github.com/RandomlyZay-Labs/tauri-app-template
+Release: 1%{?dist}
+Summary: Tauri App Template
+License: MIT
+URL: https://github.com/RandomlyZay-Labs/tauri-app-template
 
-Source0:        https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-x86_64.rpm
-Source1:        https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-aarch64.rpm
+Source0: https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-x86_64.rpm
+Source1: https://github.com/RandomlyZay-Labs/tauri-app-template/releases/download/v%{version}/tauri-app-template-%{version}-aarch64.rpm
 
-ExclusiveArch:  x86_64 aarch64
+ExclusiveArch: x86_64 aarch64
 
 %description
 Tauri App Template repackaged from prebuilt binary releases.
@@ -33,10 +33,9 @@ for d in usr etc; do
     [ -d "$d" ] && cp -a "$d" %{buildroot}/
 done
 
-# Generate file list from files and symlinks only; filter to absolute paths
-find %{buildroot} \( -type f -o -type l \) \
-    | sed "s|%{buildroot}||g" \
-    | grep "^/" \
+# -printf "/%P\n" emits path relative to buildroot prefixed with /,
+# guaranteeing every entry is absolute without sed stripping.
+find %{buildroot} \( -type f -o -type l \) -printf "/%P\n" \
     | sort > %{_builddir}/filelist.txt
 
 %files -f %{_builddir}/filelist.txt
