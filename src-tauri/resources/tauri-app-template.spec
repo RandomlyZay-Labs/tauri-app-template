@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name: tauri-app-template
-Version: 0.12.7
+Version: 0.12.8
 Release: 1%{?dist}
 Summary: Tauri App Template
 License: MIT
