@@ -1,3 +1,9 @@
+## [0.12.7](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.6...v0.12.7) (2026-06-10)
+
+### Bug Fixes
+
+* standardize formatting in RPM spec file for better readability ([9ea3e74](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/9ea3e741489794eaa5764bf96ec1c457b85d152b))
+
 ## [0.12.6](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.5...v0.12.6) (2026-06-10)
 
 ### Bug Fixes
