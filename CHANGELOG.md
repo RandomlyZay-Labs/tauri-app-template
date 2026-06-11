@@ -1,3 +1,9 @@
+## [0.12.10](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.9...v0.12.10) (2026-06-11)
+
+### Bug Fixes
+
+* update RPM spec to use Source directives for fetching binaries ([4ae60ce](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/4ae60ce6aa772749d65698f89ad240bf4e0bbef7))
+
 ## [0.12.9](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.8...v0.12.9) (2026-06-10)
 
 ### Bug Fixes
