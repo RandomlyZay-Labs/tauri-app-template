@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::error::{CResult, Error};
 use crate::services::download_service::{DownloadRequest, ProgressCallback};
 use crate::services::events::AppEmitter;

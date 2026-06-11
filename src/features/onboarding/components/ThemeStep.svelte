@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import { Button } from '@/components/ui/button';
 import { t } from '@/lib/i18n';

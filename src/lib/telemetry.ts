@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { invoke } from '@tauri-apps/api/core';
 import { executeSafeAction } from '@/lib/async-utils';
 import { uiStore } from '@/stores/uiStore.svelte';

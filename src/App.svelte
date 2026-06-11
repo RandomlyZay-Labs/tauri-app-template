@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import ActivityCenter from '@/components/ActivityCenter.svelte';
 import CommandPalette from '@/components/CommandPalette.svelte';

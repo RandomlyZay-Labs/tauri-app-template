@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::error::CResult;
 use crate::services::backup_service::{self, BackupMetadata};
 use crate::state::AppState;
@@ -50,12 +51,13 @@ pub async fn restore_backup(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn prune_backups(state: State<'_, AppState>, max_backups: u32) -> CResult<usize> {
+pub async fn prune_backups(state: State<'_, AppState>, max_backups: u32) -> CResult<u32> {
     let data_dir = state
         .app_data_dir
         .as_ref()
         .ok_or_else(|| crate::error::Error::Unknown("Data directory not initialized".into()))?;
-    backup_service::prune_backups(data_dir, max_backups).await
+    let count = backup_service::prune_backups(data_dir, max_backups).await?;
+    Ok(count as u32)
 }
 
 #[tauri::command]

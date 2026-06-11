@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 	import { ScrollArea as ScrollAreaPrimitive } from "bits-ui";
 	import { cn, type WithoutChild } from "@/lib/utils.js";

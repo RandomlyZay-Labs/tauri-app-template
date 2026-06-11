@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { cleanup } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, vi } from 'vitest';

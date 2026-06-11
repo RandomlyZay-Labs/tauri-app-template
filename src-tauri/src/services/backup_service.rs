@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::error::CResult;
 use crate::util::{RESTORE_STAGING_NAME, schedule_restore};
 use chrono::{DateTime, Local};
@@ -14,6 +15,7 @@ pub struct BackupMetadata {
     pub id: String,
     pub name: String,
     pub path: String,
+    #[specta(type = specta_typescript::BigInt)]
     pub size_bytes: u64,
     pub created_at: String, // ISO String
     pub is_manual: bool,

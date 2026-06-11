@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { expect, test } from '@playwright/test';
 import { injectMockIpc } from './mock-ipc';
 

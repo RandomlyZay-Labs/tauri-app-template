@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pub mod backup_service;
 pub mod cli_mgmt_service;
 pub mod cli_update_service;

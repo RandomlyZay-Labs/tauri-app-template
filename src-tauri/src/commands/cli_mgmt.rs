@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::error::CResult;
 use crate::services::cli_mgmt_service::{CliMgmtService, CliStatus};
 use tauri::AppHandle;

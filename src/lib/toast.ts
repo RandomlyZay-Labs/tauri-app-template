@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { type ExternalToast, toast as sonnerToast } from 'svelte-sonner';
 import { logger } from '@/lib/logger';
 

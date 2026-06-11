@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { commands } from '@/lib/ipc';
 import {
 	loadPersistedState,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { listen } from '@tauri-apps/api/event';
 import { platform } from '@tauri-apps/plugin-os';
 import { commands } from '@/bindings';

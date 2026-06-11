@@ -41,9 +41,9 @@ clap = { version = "4", features = ["derive"] }
 dirs = "6"
 
 # --- Specta (Typescript Generation) ---
-specta = { version = "=2.0.0-rc.22", features = ["serde", "serde_json"] }
-tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
-specta-typescript = "=0.0.9"
+specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
+specta-typescript = "=0.0.12"
 
 # --- Async & Runtime ---
 futures-util = "0.3"
@@ -56,7 +56,7 @@ better-posthog = "0.2"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "sqlite", "chrono", "macros", "migrate"] }
+sqlx = { version = "0.9", features = ["runtime-tokio", "tls-native-tls", "sqlite", "chrono", "macros", "migrate"] }
 
 # --- Utilities & Logging ---
 dotenvy = "0.15"
@@ -64,14 +64,14 @@ fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 keyring = "4"
 keyring-core = "1"
 log = "0.4"
-env_logger = "0.10"
+env_logger = "0.11"
 thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
 notify = "8"
 notify-debouncer-mini = "0.7"
-async-trait = "0.1.89"
-bytes = "1.11.1"
-wait-timeout = "0.2.1"
+async-trait = "0.1"
+bytes = "1"
+wait-timeout = "0.2"
 sha2 = "0.11"
 minisign-verify = "0.2"
 
@@ -83,9 +83,9 @@ opt-level = 3
 debug = false
 
 [dev-dependencies]
-tempfile = "3.27.0"
+tempfile = "3"
 tauri = { version = "2", features = ["test"] }
-mockito = "1.7.2"
+mockito = "1"
 
 [lints.rust]
 unsafe_code = "deny"

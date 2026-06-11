@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as telemetryLib from '@/lib/telemetry';

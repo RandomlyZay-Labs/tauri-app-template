@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import type { WithElementRef } from "@/lib/utils.js";
 import type {
 	EmblaCarouselSvelteType,

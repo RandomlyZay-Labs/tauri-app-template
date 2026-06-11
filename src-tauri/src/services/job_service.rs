@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use super::download_service::ProgressCallback;
 use super::events::{AppEmitter, emit};
 use crate::error::{CResult, Error};
@@ -75,7 +76,9 @@ pub struct JobProgress {
     pub status: JobStatus,
     /// 0.0 – 100.0; `None` when progress is indeterminate
     pub percent: Option<f64>,
+    #[specta(type = Option<specta_typescript::BigInt>)]
     pub speed_bps: Option<u64>,
+    #[specta(type = Option<specta_typescript::BigInt>)]
     pub eta_secs: Option<u64>,
     pub message: Option<String>,
 }

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
 
 let isIpcLoggingAvailable = true;

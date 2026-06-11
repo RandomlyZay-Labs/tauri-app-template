@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import Root from "./carousel.svelte";
 import Content from "./carousel-content.svelte";
 import Item from "./carousel-item.svelte";

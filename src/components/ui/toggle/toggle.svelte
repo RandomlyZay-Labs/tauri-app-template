@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts" module>
 	import { type VariantProps, tv } from "tailwind-variants";
 

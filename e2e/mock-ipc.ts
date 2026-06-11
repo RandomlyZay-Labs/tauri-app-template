@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import type { Page } from '@playwright/test';
 import type { Commands } from '../src/lib/ipc';
 

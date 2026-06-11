@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use super::events::{AppEmitter, emit};
 use super::network::{NetworkClient, RealNetworkClient};
 use crate::error::{CResult, Error};
@@ -20,11 +21,15 @@ use tokio_util::sync::CancellationToken;
 pub struct DownloadProgress {
     pub download_id: String,
     pub url: String,
+    #[specta(type = specta_typescript::BigInt)]
     pub bytes_downloaded: u64,
+    #[specta(type = Option<specta_typescript::BigInt>)]
     pub total_bytes: Option<u64>,
     /// 0.0 – 100.0; `None` when content-length is unknown
     pub percent: Option<f64>,
+    #[specta(type = Option<specta_typescript::BigInt>)]
     pub speed_bps: Option<u64>,
+    #[specta(type = Option<specta_typescript::BigInt>)]
     pub eta_secs: Option<u64>,
     pub status: DownloadStatus,
 }
@@ -52,6 +57,7 @@ pub struct DownloadRequest {
 pub struct DownloadResult {
     pub download_id: String,
     pub file_path: String,
+    #[specta(type = specta_typescript::BigInt)]
     pub total_bytes: u64,
 }
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { t } from '@/lib/i18n';
 import { toast } from '@/lib/toast';
 import { networkStore } from '@/stores/networkStore.svelte';
