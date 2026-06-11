@@ -161,6 +161,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: pnpm release
 
+      - name: Trigger COPR Build
+        if: success()
+        env:
+          COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
+        run: |
+          if [ -n "$COPR_WEBHOOK_URL" ]; then
+            echo "Triggering COPR build..."
+            curl -sS -X POST -H "Content-Type: application/json" -d '{}' "$COPR_WEBHOOK_URL"
+          else
+            echo "COPR_WEBHOOK_URL secret not set, skipping COPR build trigger."
+          fi
+
       - name: Generate Repo Metadata & Landing Page
         env:
           VERSION: ${{ needs.determine-version.outputs.version }}
