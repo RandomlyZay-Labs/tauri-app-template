@@ -1,3 +1,9 @@
+## [0.15.1](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.15.0...v0.15.1) (2026-06-14)
+
+### Bug Fixes
+
+* replace direct command calls with utility function for better management ([88e182e](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/88e182ea339e6a4f6ced6eb93055f77edc02b819))
+
 ## [0.15.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.14.0...v0.15.0) (2026-06-14)
 
 ### Features
