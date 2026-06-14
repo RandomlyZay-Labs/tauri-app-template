@@ -5,6 +5,27 @@ import { toast } from '@/lib/toast';
 import { animationStore } from '@/stores/animationStore.svelte';
 import { themeStore } from '@/stores/themeStore.svelte';
 import TestWrapper from '@/test/TestWrapper.svelte';
+
+const capturedCallbacks: Array<(val: string) => void> = [];
+
+// Mock the Select component to capture onValueChange callbacks in order
+vi.mock('@/components/ui/select', () => {
+	const Root = (
+		_anchor: unknown,
+		props: { onValueChange?: (val: string) => void },
+	) => {
+		if (props.onValueChange) {
+			capturedCallbacks.push(props.onValueChange);
+		}
+	};
+	return {
+		Root,
+		Trigger: () => {},
+		Content: () => {},
+		Item: () => {},
+	};
+});
+
 import AppearanceSettings from './AppearanceSettings.svelte';
 
 // Mock i18n
@@ -24,6 +45,7 @@ describe('AppearanceSettings', () => {
 	beforeEach(() => {
 		themeStore.setTheme('system');
 		animationStore.setAnimationsEnabled(true);
+		capturedCallbacks.length = 0;
 		vi.clearAllMocks();
 	});
 
@@ -39,16 +61,13 @@ describe('AppearanceSettings', () => {
 
 		const setThemeSpy = vi.spyOn(themeStore, 'setTheme');
 
-		// The Select component can be tricky to test with fireEvent.click
-		// Let's try to find the select trigger
-		const selectTrigger = screen.getByText('appearanceSettings.themeMode');
-		await fireEvent.click(selectTrigger);
+		// The theme select is the first select component instantiated
+		const themeCallback = capturedCallbacks[0];
+		expect(themeCallback).toBeDefined();
+		if (themeCallback) {
+			themeCallback('dark');
+		}
 
-		// In a real environment, this would open the content.
-		// Since we're using Bit UI/Shadcn, it might be complex.
-		// Let's assume the handleSettingChange is called correctly.
-
-		themeStore.setTheme('dark');
 		expect(setThemeSpy).toHaveBeenCalledWith('dark');
 	});
 
@@ -84,8 +103,7 @@ describe('AppearanceSettings', () => {
 		);
 		await fireEvent.click(resetButton);
 
-		// Default is usually true in tests (or based on getSystemAnimationPreference which we should mock)
-		// Here we just check it was updated
+		expect(animationStore.animationsEnabled).toBe(true);
 	});
 
 	it('renders toast position controls', () => {

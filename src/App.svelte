@@ -115,7 +115,7 @@ function getLocalizedErrorMessage(error: unknown): string {
 	}
 
 	if (error && typeof error === 'object') {
-		const errObj = error as Record<string, any>;
+		const errObj = error as Record<string, unknown>;
 
 		if ('type' in errObj && 'message' in errObj) {
 			return mapErrorToI18n(String(errObj.type), String(errObj.message));
