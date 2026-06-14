@@ -51,8 +51,9 @@ fn main() {
     }
 
     // 3. Set cargo:rustc-env for other env vars in .env if not in environment
+    let allowed_keys = ["DATABASE_URL"];
     for (key, val) in env_vars {
-        if key != "POSTHOG_API_KEY" && env::var(&key).is_err() {
+        if key != "POSTHOG_API_KEY" && allowed_keys.contains(&key.as_str()) && env::var(&key).is_err() {
             println!("cargo:rustc-env={}={}", key, val);
         }
     }

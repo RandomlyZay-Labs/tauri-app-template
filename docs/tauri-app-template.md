@@ -4,9 +4,7 @@
 
 - Template Finalization
   - Codebase audit
-    - Audit code for security vulnerabilities
-    - Audit code for best practices
-    - Audit tests for coverage and quality
+    - Audit tests for coverage and quality. Are any of them useless that can/should be removed?
     - Audit CI/CD pipeline for speed and reliability
   - Reset Repository
     - Squash all commits

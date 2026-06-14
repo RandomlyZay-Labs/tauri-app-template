@@ -36,7 +36,6 @@ const IGNORED_PATHS = [
 	'test-results',
 	'.env',
 	'setup.js',
-	'pr_agent.yml',
 ];
 
 function isIgnored(relativePath) {
@@ -839,9 +838,11 @@ async function main() {
 							);
 							continue;
 						}
-						console.log(
-							`\nAPI Key: ${colors.cyan}${posthogKey}${colors.reset}`,
-						);
+						const maskedKey =
+							posthogKey.length > 8
+								? `${posthogKey.substring(0, 4)}...${posthogKey.substring(posthogKey.length - 4)}`
+								: '***';
+						console.log(`\nAPI Key: ${colors.cyan}${maskedKey}${colors.reset}`);
 						const confirmAns = await askQuestion(
 							`${colors.bright}Is this correct? (Y/n) [default: y]: ${colors.reset}`,
 						);

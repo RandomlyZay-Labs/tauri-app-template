@@ -25,8 +25,10 @@ jobs:
       build_linux: ${{ steps.set-config.outputs.build_linux }}
     steps:
       - id: set-config
+        env:
+          PLATFORM_INPUT: ${{ inputs.platform }}
         run: |
-          INPUT="${{ inputs.platform }}"
+          INPUT="$PLATFORM_INPUT"
           if [ -z "$INPUT" ]; then INPUT="all"; fi
           
           echo "Selected Platform: $INPUT"
@@ -123,18 +125,20 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          TARGET: ${{ matrix.target }}
         run: |
           $config = '{\"build\":{\"beforeBuildCommand\":\"\"}}'
-          pnpm tauri build --target ${{ matrix.target }} --config $config
+          pnpm tauri build --target $env:TARGET --config $config
 
       - name: Build CLI Binary
         shell: pwsh
         env:
           SQLX_OFFLINE: true
           RUSTFLAGS: "-C linker=rust-lld -C target-feature=+crt-static"
+          TARGET: ${{ matrix.target }}
         run: |
           Push-Location src-tauri
-          cargo build --bin tauri-app-template-cli --release --target ${{ matrix.target }}
+          cargo build --bin tauri-app-template-cli --release --target $env:TARGET
           Pop-Location
 
       - name: Upload GUI Artifacts
