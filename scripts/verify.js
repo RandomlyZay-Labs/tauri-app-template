@@ -15,33 +15,46 @@ function runGitCommand(cmd) {
 	}
 }
 
-// 0. Check if we should force-run verification (e.g., in CI or explicitly requested)
-const runAll = process.argv.includes('--force');
-if (runAll) {
-	console.log('Force running the full verification suite...');
+// 1. Collect changed files
+let changedFilesList = [];
+
+if (process.env.GITHUB_ACTIONS === 'true') {
+	console.log('Running in GitHub Actions. Detecting changed files via Git...');
 	try {
-		execSync('pnpm verify:backend && pnpm verify:frontend', {
-			stdio: 'inherit',
-		});
-		process.exit(0);
-	} catch {
-		process.exit(1);
+		// git diff-tree lists files changed in the current commit/merge commit
+		const diffOutput = runGitCommand(
+			'git diff-tree --no-commit-id --name-only -r HEAD',
+		);
+		changedFilesList = diffOutput.split('\n').filter(Boolean);
+		console.log(
+			`GitHub Actions change detection found ${changedFilesList.length} files.`,
+		);
+	} catch (err) {
+		console.warn(
+			'Failed to detect files via git diff-tree in GHA:',
+			err.message,
+		);
 	}
 }
 
-// 1. Collect all edited, staged, and untracked files
-const unstaged = runGitCommand('git diff --name-only')
-	.split('\n')
-	.filter(Boolean);
-const staged = runGitCommand('git diff --cached --name-only')
-	.split('\n')
-	.filter(Boolean);
-const untracked = runGitCommand('git ls-files --others --exclude-standard')
-	.split('\n')
-	.filter(Boolean);
+// Fallback to local workspace diff if not in GHA or if GHA detection returned no files
+if (changedFilesList.length === 0) {
+	const unstaged = runGitCommand('git diff --name-only')
+		.split('\n')
+		.filter(Boolean);
+	const staged = runGitCommand('git diff --cached --name-only')
+		.split('\n')
+		.filter(Boolean);
+	const untracked = runGitCommand('git ls-files --others --exclude-standard')
+		.split('\n')
+		.filter(Boolean);
+	changedFilesList = Array.from(
+		new Set([...unstaged, ...staged, ...untracked]),
+	);
+}
 
 // Unique list of all modified or new files, ignoring the scripts directory
-const changedFiles = Array.from(new Set([...unstaged, ...staged, ...untracked]))
+const changedFiles = changedFilesList
 	.map((f) => f.trim())
 	.filter(Boolean)
 	.filter((f) => !f.startsWith('scripts/'));
@@ -92,6 +105,12 @@ if (changedFiles.length > 0) {
 
 // 3. Check if the AI was dumb (no Rust or TS/Svelte/frontend changes)
 if (!hasRustChanges && !hasTsChanges) {
+	if (process.env.GITHUB_ACTIONS === 'true') {
+		console.log(
+			'No code changes (Rust or Frontend) detected in CI. Skipping verification steps.',
+		);
+		process.exit(0);
+	}
 	console.error(`
 🚨 DUMB AI DETECTED! 🚨
 

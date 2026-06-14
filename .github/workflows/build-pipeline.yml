@@ -65,6 +65,13 @@ jobs:
             runner: windows-11-arm
     
     steps:
+      - name: Disable Windows Defender
+        shell: pwsh
+        run: |
+          Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE
+          Add-MpPreference -ExclusionPath "$env:USERPROFILE\.cargo"
+          Write-Host "Excluded workspace and Cargo home from Windows Defender"
+
       - uses: actions/checkout@v6
       
       # -- Tooling Setup --
@@ -97,10 +104,8 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: 'src-tauri -> target'
+          workspaces: 'src-tauri -> src-tauri/target'
           key: windows-${{ matrix.target }}-${{ matrix.arch }}
-          # Prevents PRs/branches from poisoning the main cache, but always caches on act
-          save-if: ${{ github.ref == 'refs/heads/main' || github.actor == 'nektos/act' }}
       
       # -- Build --
       - name: Install Dependencies
@@ -108,14 +113,6 @@ jobs:
 
       - name: Build Frontend & Prune
         run: pnpm run build:prod
-
-      - name: Disable Windows Defender for Rust target
-        if: ${{ matrix.arch == 'arm64' }}
-        shell: pwsh
-        run: |
-          $TargetPath = Join-Path -Path $env:GITHUB_WORKSPACE -ChildPath "src-tauri\target"
-          Add-MpPreference -ExclusionPath $TargetPath
-          Write-Host "Excluded $TargetPath from Windows Defender scans"
       
       - name: Build App
         shell: pwsh
@@ -178,20 +175,24 @@ jobs:
       image: ghcr.io/randomlyzay-labs/tauri-builder:latest
     env:
       APPIMAGE_EXTRACT_AND_RUN: 1
+      CARGO_HOME: /github/home/.cargo
 
     steps:
       - uses: actions/checkout@v6
 
       # -- Tooling Setup --
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - name: Cache pnpm store
+        uses: actions/cache@v5
         with:
-          node-version: 24
-          cache: 'pnpm'
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Update Version
         if: ${{ inputs.version != '' }}
@@ -206,9 +207,8 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: 'src-tauri -> target'
+          workspaces: 'src-tauri -> src-tauri/target'
           key: linux-${{ matrix.arch }}
-          save-if: ${{ github.ref == 'refs/heads/main' || github.actor == 'nektos/act' }}
 
       - name: Cache Tauri Tools
         uses: actions/cache@v5

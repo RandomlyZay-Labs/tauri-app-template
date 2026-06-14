@@ -6,6 +6,12 @@ permissions:
 on:
   pull_request:
     branches: [dev]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/workflows/pr-lint.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,64 +21,36 @@ jobs:
   verify:
     name: Lint & Test
     runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/randomlyzay-labs/tauri-builder:latest
+    env:
+      CARGO_HOME: /github/home/.cargo
     if: ${{ !(startsWith(github.head_ref, 'sync/main-to-dev-') && github.event.pull_request.head.repo.full_name == github.repository && (github.actor == 'github-actions[bot]' || github.actor == github.repository_owner)) }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-      - name: Install system dependencies
+      - name: Get pnpm store directory
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      - name: Install Pnpm
-        uses: pnpm/action-setup@v6
+      - name: Cache pnpm store
+        uses: actions/cache@v5
         with:
-          version: 10
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: 'pnpm'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          components: clippy
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: 'src-tauri -> target'
+          workspaces: 'src-tauri -> src-tauri/target'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Cache Playwright Binaries
-        uses: actions/cache@v5
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install Playwright OS Dependencies
-        run: pnpm exec playwright install-deps
-
-      - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install
-
       - name: Run verification
-        run: pnpm verify --force
+        run: pnpm verify

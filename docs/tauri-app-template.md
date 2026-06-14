@@ -5,7 +5,6 @@
 - Template Finalization
   - Codebase audit
     - Audit tests for coverage and quality. Are any of them useless that can/should be removed?
-    - Audit CI/CD pipeline for speed and reliability
   - Reset Repository
     - Squash all commits
     - Clear all tags
