@@ -21,10 +21,16 @@ let changedFilesList = [];
 if (process.env.GITHUB_ACTIONS === 'true') {
 	console.log('Running in GitHub Actions. Detecting changed files via Git...');
 	try {
-		// git diff-tree lists files changed in the current commit/merge commit
-		const diffOutput = runGitCommand(
-			'git diff-tree --no-commit-id --name-only -r HEAD',
+		// Try comparing against first parent (handles merge commits in PRs)
+		let diffOutput = runGitCommand(
+			'git diff-tree --no-commit-id --name-only -r HEAD^1 HEAD',
 		);
+		// Fallback to single commit diff if parent comparison fails
+		if (!diffOutput) {
+			diffOutput = runGitCommand(
+				'git diff-tree --no-commit-id --name-only -r HEAD',
+			);
+		}
 		changedFilesList = diffOutput.split('\n').filter(Boolean);
 		console.log(
 			`GitHub Actions change detection found ${changedFilesList.length} files.`,
