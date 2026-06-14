@@ -38,8 +38,13 @@ let changedFilesList = [];
 
 if (process.env.GITHUB_ACTIONS === 'true') {
 	console.log('Running in GitHub Actions. Detecting changed files via Git...');
-	// Fix dubious ownership issue in containerized environment
-	if (runGitCommand('git config --global --add safe.directory "*"') === null) {
+	// Fix dubious ownership issue in containerized environment (scope to this workspace)
+	const safeDir = process.env.GITHUB_WORKSPACE ?? process.cwd();
+	const safeDirArg = JSON.stringify(safeDir);
+	if (
+		runGitCommand(`git config --global --add safe.directory ${safeDirArg}`) ===
+		null
+	) {
 		console.error('Fatal: Failed to configure git safe.directory');
 		process.exit(1);
 	}
