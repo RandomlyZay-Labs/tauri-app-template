@@ -123,6 +123,20 @@ pub fn format_bytes(bytes: u64) -> String {
     format!("{:.2} {}", size, units[unit_index])
 }
 
+/// Creates a new system command, restoring the original LD_LIBRARY_PATH if running on Linux inside an AppImage.
+pub fn new_system_command(program: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new(program);
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(orig) = std::env::var("LD_LIBRARY_PATH_ORIG") {
+            cmd.env("LD_LIBRARY_PATH", orig);
+        } else {
+            cmd.env_remove("LD_LIBRARY_PATH");
+        }
+    }
+    cmd
+}
+
 #[cfg(test)]
 #[allow(unsafe_code, clippy::unwrap_used, clippy::expect_used)]
 mod tests {

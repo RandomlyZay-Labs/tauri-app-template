@@ -124,6 +124,10 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
                 cli_verifier: std::sync::Arc::new(services::cli_update_service::RealCliVerifier),
             });
 
+            app.manage(services::theme_service::ThemeWatcherState {
+                child: std::sync::Mutex::new(None),
+            });
+
             // 7. Webview Window Setup
             let state = app.state::<AppState>();
             let context_data_dir = state.app_data_dir.as_ref().unwrap();
@@ -178,8 +182,19 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             Ok(())
         })
         .on_window_event(handle_window_event)
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event
+                && let Some(state) = app_handle.try_state::<services::theme_service::ThemeWatcherState>()
+                && let Ok(mut lock) = state.child.lock()
+                && let Some(mut child) = lock.take()
+            {
+                log::info!("Killing theme watcher child process");
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        });
 }
 
 fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
@@ -212,7 +227,8 @@ fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
 
                     #[cfg(target_os = "linux")]
                     {
-                        if let Err(e) = std::process::Command::new("notify-send")
+                        let mut cmd = crate::util::new_system_command("notify-send");
+                        if let Err(e) = cmd
                             .arg("Tauri App Template")
                             .arg("Application minimized to tray")
                             .spawn()
