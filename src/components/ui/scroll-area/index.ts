@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import Scrollbar from "./scroll-area-scrollbar.svelte";
 import Root from "./scroll-area.svelte";
 

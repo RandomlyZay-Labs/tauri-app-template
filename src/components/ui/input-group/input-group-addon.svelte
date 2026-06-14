@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts" module>
 	import { tv, type VariantProps } from "tailwind-variants";
 	export const inputGroupAddonVariants = tv({

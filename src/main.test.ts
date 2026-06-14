@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { mount } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

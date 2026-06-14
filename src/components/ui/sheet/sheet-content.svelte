@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts" module>
 	export type Side = "top" | "right" | "bottom" | "left";
 </script>

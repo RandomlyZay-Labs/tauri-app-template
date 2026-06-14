@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import Root from "./sheet.svelte";
 import Portal from "./sheet-portal.svelte";
 import Trigger from "./sheet-trigger.svelte";

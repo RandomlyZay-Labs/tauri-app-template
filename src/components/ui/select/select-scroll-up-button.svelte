@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 	import { Select as SelectPrimitive } from "bits-ui";
 	import { cn, type WithoutChildrenOrChild } from "@/lib/utils.js";

@@ -1,3 +1,9 @@
+## [0.14.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.13.0...v0.14.0) (2026-06-14)
+
+### Features
+
+* add interactive setup.js script and update build configurations ([d27e5db](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/d27e5db380d785ad6dc85adfbe53f8ddd72bf1fd))
+
 ## [0.13.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.12.10...v0.13.0) (2026-06-11)
 
 ### Features

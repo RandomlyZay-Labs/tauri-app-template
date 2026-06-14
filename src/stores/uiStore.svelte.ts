@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { executeSafeAction } from '@/lib/async-utils';
 import { commands } from '@/lib/ipc';
 import {

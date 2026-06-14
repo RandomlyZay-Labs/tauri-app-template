@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';

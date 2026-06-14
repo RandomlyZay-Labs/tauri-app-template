@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 	import { cn } from "@/lib/utils.js";
 	import type { ComponentProps } from "svelte";

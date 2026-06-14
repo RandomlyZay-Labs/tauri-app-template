@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { listen } from '@tauri-apps/api/event';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

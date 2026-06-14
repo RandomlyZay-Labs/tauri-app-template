@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import * as Command from '@/components/ui/command';
 import { t } from '@/lib/i18n';

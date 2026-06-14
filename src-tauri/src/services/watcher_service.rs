@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::{DebounceEventResult, Debouncer, new_debouncer};
 use std::collections::HashMap;

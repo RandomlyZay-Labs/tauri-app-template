@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::commands;
 use crate::services::backup_service::BackupMetadata;
 use crate::services::download_service::{
@@ -7,8 +8,8 @@ use crate::services::job_service::{JobKind, JobProgress, JobRow, JobStatus};
 use tauri_specta::{Builder, ErrorHandlingMode, collect_commands};
 
 /// Collects all commands and types for Specta to generate TypeScript bindings.
-pub fn collect() -> Builder {
-    Builder::new()
+pub fn collect() -> Builder<tauri::Wry> {
+    Builder::<tauri::Wry>::new()
         .error_handling(ErrorHandlingMode::Throw)
         .commands(collect_commands![
             commands::system::get_log_path,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { logger } from '@/lib/logger';
 import {
 	loadPersistedState,

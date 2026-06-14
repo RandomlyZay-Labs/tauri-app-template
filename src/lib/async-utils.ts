@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { t } from '@/lib/i18n';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';

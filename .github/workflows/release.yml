@@ -64,6 +64,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      pages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -113,6 +114,7 @@ jobs:
       - name: Sign CLI Binaries
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
             for file in \
@@ -122,7 +124,7 @@ jobs:
               artifacts/cli-linux-arm64/tauri-app-template-cli; do
               if [ -f "$file" ]; then
                 echo "Signing $file..."
-                pnpm tauri signer sign -p "" "$file"
+                pnpm tauri signer sign -p "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$file"
               else
                 echo "Warning: $file not found, skipping signature."
               fi
@@ -188,6 +190,13 @@ jobs:
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
 
+      - name: Enable GitHub Pages
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Enabling GitHub Pages on gh-pages branch..."
+          echo '{"source":{"branch":"gh-pages","path":"/"}}' | gh api -X POST "repos/${{ github.repository }}/pages" --input - || echo "Pages is already enabled or failed to initialize, skipping."
+
       - name: Merge main back into dev
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
@@ -216,7 +225,6 @@ jobs:
             --head "$SYNC_BRANCH" \
             --title "chore: merge main back into dev" \
             --body "Automated PR to sync dev with main after release. Code scanning and status checks must pass before merging." \
-            --label "skip-review"
 
           # Force merge using admin privileges to bypass checks that skip CI
           gh pr merge --admin --merge --delete-branch

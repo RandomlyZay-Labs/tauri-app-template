@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import Root from "./select.svelte";
 import Group from "./select-group.svelte";
 import Label from "./select-label.svelte";

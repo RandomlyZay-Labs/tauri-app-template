@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::error::{CResult, Error};
 use keyring_core::Entry;
 

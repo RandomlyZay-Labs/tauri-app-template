@@ -25,7 +25,7 @@ fn main() {
     // ---------------------------------------------------------
     #[cfg(debug_assertions)]
     {
-        use specta_typescript::{BigIntExportBehavior, Typescript};
+        use specta_typescript::Typescript;
         use std::fs;
         use std::path::PathBuf;
         use tauri_app_template_lib::api;
@@ -33,14 +33,22 @@ fn main() {
         let builder = api::collect();
         let ts_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../src/bindings.ts");
 
-        let ts_config = Typescript::default().bigint(BigIntExportBehavior::BigInt);
-
-        match builder.export_str(&ts_config) {
-            Ok(mut content) => {
-                content.push_str("\n;(() => { TAURI_CHANNEL; __makeEvents__; })();");
-                let _ = fs::write(&ts_path, content);
+        match builder.export(Typescript::default(), &ts_path) {
+            Ok(_) => {
+                match fs::read_to_string(&ts_path) {
+                    Ok(content) => {
+                        let mut output = "// SPDX-License-Identifier: MIT\n".to_string();
+                        output.push_str(&content);
+                        if let Err(e) = fs::write(&ts_path, output) {
+                            println!("ERROR WRITING BINDINGS: {:?}", e);
+                        }
+                    }
+                    Err(e) => {
+                        println!("ERROR READING BINDINGS: {:?}", e);
+                    }
+                }
             }
-            Err(e) => log::error!("Bindings gen error: {}", e),
+            Err(e) => println!("Bindings gen error: {:?}", e),
         }
 
         // Catch the env var and kill the process right after generating the bindings

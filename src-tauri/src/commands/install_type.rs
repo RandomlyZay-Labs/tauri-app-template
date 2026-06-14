@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::error::{CResult, Error as CError};
 
 #[tauri::command]

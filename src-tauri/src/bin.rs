@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use clap::Parser;
 use tauri_app_template_lib::cli::{CliArgs, CliResult, StandaloneContext, run_cli};
 use tauri_app_template_lib::services::job_service::JobManager;

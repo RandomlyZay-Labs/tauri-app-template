@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import fs from 'node:fs';
 import path from 'node:path';
 import i18n from 'i18next';

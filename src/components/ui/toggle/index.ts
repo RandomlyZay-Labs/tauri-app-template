@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import Root from "./toggle.svelte";
 export {
 	toggleVariants,

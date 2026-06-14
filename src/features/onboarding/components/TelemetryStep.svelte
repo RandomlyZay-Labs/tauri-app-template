@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';

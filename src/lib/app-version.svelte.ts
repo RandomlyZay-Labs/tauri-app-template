@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { commands } from '@/lib/ipc';
 
 let appVersion = $state('0.0.0');

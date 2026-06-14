@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { push } from 'svelte-spa-router';

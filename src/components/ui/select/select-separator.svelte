@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 	import type { Separator as SeparatorPrimitive } from "bits-ui";
 	import { Separator } from "@/components/ui/separator/index.js";

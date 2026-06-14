@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 	import type { WithoutChildren } from "bits-ui";
 	import { getEmblaContext } from "./context.js";

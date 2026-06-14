@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { describe, expect, it } from 'vitest';
 import { commands as tauriCommands } from '@/bindings';
 import { MOCK_IPC_DEFAULTS } from '../../e2e/mock-ipc';

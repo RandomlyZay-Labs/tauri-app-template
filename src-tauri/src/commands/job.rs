@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::error::CResult;
 use crate::services::job_service::JobRow;
 use crate::state::AppState;

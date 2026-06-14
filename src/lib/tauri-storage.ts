@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { isTauri } from '@tauri-apps/api/core';
 import { join } from '@tauri-apps/api/path';
 import { Store } from '@tauri-apps/plugin-store';

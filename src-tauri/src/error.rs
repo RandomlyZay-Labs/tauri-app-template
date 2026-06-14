@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use serde::Serialize;
 use specta::Type;
 use thiserror::Error;

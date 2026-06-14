@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import UpdateBanner from '@/components/UpdateBanner.svelte';
 import { t } from '@/lib/i18n';

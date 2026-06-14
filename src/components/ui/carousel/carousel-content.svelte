@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 	import emblaCarouselSvelte from "embla-carousel-svelte";
 	import type { HTMLAttributes } from "svelte/elements";
