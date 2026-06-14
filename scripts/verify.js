@@ -35,7 +35,7 @@ if (runAll) {
 
 // 1. Collect changed files
 let changedFilesList = [];
-let gitFailed = false;
+const gitFailed = false;
 
 if (process.env.GITHUB_ACTIONS === 'true') {
 	console.log('Running in GitHub Actions. Detecting changed files via Git...');
