@@ -8,10 +8,14 @@ function runGitCommand(cmd) {
 	try {
 		return execSync(cmd, {
 			encoding: 'utf8',
-			stdio: ['pipe', 'pipe', 'ignore'],
+			stdio: ['pipe', 'pipe', 'pipe'],
 		}).trim();
-	} catch {
-		return '';
+	} catch (err) {
+		const stderr = err.stderr ? err.stderr.toString().trim() : '';
+		if (stderr) {
+			console.warn(`Git command failed: ${cmd}\nError details: ${stderr}`);
+		}
+		return null; // Return null on failure
 	}
 }
 
@@ -29,22 +33,64 @@ if (runAll) {
 	}
 }
 
-// 1. Collect all edited, staged, and untracked files
-const unstaged = runGitCommand('git diff --name-only')
-	.split('\n')
-	.filter(Boolean);
-const staged = runGitCommand('git diff --cached --name-only')
-	.split('\n')
-	.filter(Boolean);
-const untracked = runGitCommand('git ls-files --others --exclude-standard')
-	.split('\n')
-	.filter(Boolean);
+// 1. Collect changed files
+let changedFilesList = [];
 
-// Unique list of all modified or new files, ignoring the scripts directory
-const changedFiles = Array.from(new Set([...unstaged, ...staged, ...untracked]))
-	.map((f) => f.trim())
-	.filter(Boolean)
-	.filter((f) => !f.startsWith('scripts/'));
+if (process.env.GITHUB_ACTIONS === 'true') {
+	console.log('Running in GitHub Actions. Detecting changed files via Git...');
+	// Fix dubious ownership issue in containerized environment (scope to this workspace)
+	const safeDir = process.env.GITHUB_WORKSPACE ?? process.cwd();
+	const safeDirArg = JSON.stringify(safeDir);
+	if (
+		runGitCommand(`git config --global --add safe.directory ${safeDirArg}`) ===
+		null
+	) {
+		console.error('Fatal: Failed to configure git safe.directory');
+		process.exit(1);
+	}
+
+	// Try comparing against first parent (handles merge commits in PRs)
+	let diffOutput = runGitCommand(
+		'git diff-tree --no-commit-id --name-only -r HEAD^1 HEAD',
+	);
+	// Fallback to single commit diff if parent comparison fails
+	if (diffOutput === null) {
+		diffOutput = runGitCommand(
+			'git diff-tree --no-commit-id --name-only -r HEAD',
+		);
+	}
+
+	if (diffOutput === null) {
+		console.error('Fatal: Git change detection failed in GitHub Actions.');
+		process.exit(1);
+	}
+
+	changedFilesList = diffOutput.split('\n').filter(Boolean);
+	console.log(
+		`GitHub Actions change detection found ${changedFilesList.length} files.`,
+	);
+} else {
+	// Local workspace diff
+	const unstaged = runGitCommand('git diff --name-only');
+	const staged = runGitCommand('git diff --cached --name-only');
+	const untracked = runGitCommand('git ls-files --others --exclude-standard');
+
+	if (unstaged === null || staged === null || untracked === null) {
+		console.error('Fatal: Git command failed while collecting local changes.');
+		process.exit(1);
+	}
+
+	changedFilesList = Array.from(
+		new Set([
+			...unstaged.split('\n').filter(Boolean),
+			...staged.split('\n').filter(Boolean),
+			...untracked.split('\n').filter(Boolean),
+		]),
+	);
+}
+
+// Unique list of all modified or new files
+const changedFiles = changedFilesList.map((f) => f.trim()).filter(Boolean);
 
 // 2. Classify changed files
 const backendConfigs = [
@@ -92,6 +138,12 @@ if (changedFiles.length > 0) {
 
 // 3. Check if the AI was dumb (no Rust or TS/Svelte/frontend changes)
 if (!hasRustChanges && !hasTsChanges) {
+	if (process.env.GITHUB_ACTIONS === 'true') {
+		console.log(
+			'No code changes (Rust or Frontend) detected in CI. Skipping verification steps.',
+		);
+		process.exit(0);
+	}
 	console.error(`
 🚨 DUMB AI DETECTED! 🚨
 

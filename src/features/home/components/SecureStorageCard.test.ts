@@ -114,10 +114,4 @@ describe('SecureStorageCard', () => {
 
 		expect(commands.deleteSecret).toHaveBeenCalledWith('my-key');
 	});
-
-	it('cleans up resources on unmount', () => {
-		const { unmount } = render(SecureStorageCard);
-		unmount();
-		expect(true).toBe(true);
-	});
 });

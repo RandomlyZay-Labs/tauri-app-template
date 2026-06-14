@@ -6395,7 +6395,6 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
- "dotenvy",
  "env_logger",
  "fix-path-env",
  "futures-util",

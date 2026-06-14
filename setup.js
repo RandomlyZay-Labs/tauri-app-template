@@ -36,7 +36,6 @@ const IGNORED_PATHS = [
 	'test-results',
 	'.env',
 	'setup.js',
-	'pr_agent.yml',
 ];
 
 function isIgnored(relativePath) {
@@ -839,9 +838,11 @@ async function main() {
 							);
 							continue;
 						}
-						console.log(
-							`\nAPI Key: ${colors.cyan}${posthogKey}${colors.reset}`,
-						);
+						const maskedKey =
+							posthogKey.length > 8
+								? `${posthogKey.substring(0, 4)}...${posthogKey.substring(posthogKey.length - 4)}`
+								: '***';
+						console.log(`\nAPI Key: ${colors.cyan}${maskedKey}${colors.reset}`);
 						const confirmAns = await askQuestion(
 							`${colors.bright}Is this correct? (Y/n) [default: y]: ${colors.reset}`,
 						);
@@ -1187,6 +1188,11 @@ Expire-Date: 0
 		targetDir,
 		'Failed to create main branch',
 	);
+	await runCommandOrThrow(
+		'git tag v0.0.9',
+		targetDir,
+		'Failed to create tag v0.0.9',
+	);
 	console.log(
 		`${colors.green}✅ Git repository committed on dev and main branch created.${colors.reset}`,
 	);
@@ -1234,6 +1240,18 @@ Expire-Date: 0
 			);
 			console.log(
 				`${colors.green}✅ Pushed main branch to GitHub.${colors.reset}`,
+			);
+
+			console.log(
+				`\n${colors.cyan}🚀 Pushing tag v0.0.9 to GitHub...${colors.reset}`,
+			);
+			await runCommandOrThrow(
+				'git push origin v0.0.9',
+				targetDir,
+				'Failed to push tag v0.0.9 to GitHub',
+			);
+			console.log(
+				`${colors.green}✅ Pushed tag v0.0.9 to GitHub.${colors.reset}`,
 			);
 
 			console.log(
