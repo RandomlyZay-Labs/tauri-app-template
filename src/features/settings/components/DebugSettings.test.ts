@@ -8,6 +8,7 @@ import {
 	waitFor,
 } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/lib/toast';
 import { uiStore } from '@/stores/uiStore.svelte';
 import TestWrapper from '@/test/TestWrapper.svelte';
 import DebugSettings from './DebugSettings.svelte';
@@ -100,7 +101,6 @@ describe('DebugSettings', () => {
 	});
 
 	it('exports diagnostics when button is clicked', async () => {
-		const { toast } = await import('@/lib/toast');
 		let capturedExport = false;
 		mockIPC((cmd) => {
 			if (cmd === 'export_diagnostics') {
@@ -135,5 +135,11 @@ describe('DebugSettings', () => {
 		render(TestWrapper, { props: { component: DebugSettings } });
 		const btn = screen.getByText('debugSettings.exportLogs');
 		await fireEvent.click(btn);
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith(
+				'debugSettings.exportLogsFailed: Export failed',
+			);
+		});
 	});
 });

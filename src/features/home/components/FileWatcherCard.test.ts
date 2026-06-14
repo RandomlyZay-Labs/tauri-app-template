@@ -141,10 +141,4 @@ describe('FileWatcherCard', () => {
 			expect(watcherStore.addPath).not.toHaveBeenCalled();
 		});
 	});
-
-	it('cleans up resources on unmount', () => {
-		const { unmount } = render(FileWatcherCard);
-		unmount();
-		expect(true).toBe(true);
-	});
 });

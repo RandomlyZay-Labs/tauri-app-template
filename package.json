@@ -23,7 +23,6 @@
 		"test": "run-s test:backend test:frontend",
 		"test:vitest": "vitest run",
 		"test:frontend": "run-p test:vitest test:e2e",
-		"test:watch": "vitest",
 		"test:backend": "cd src-tauri && cargo test --no-fail-fast",
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui",

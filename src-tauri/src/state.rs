@@ -26,26 +26,4 @@ pub struct AppState {
     pub cli_verifier: Arc<dyn CliVerifier>,
 }
 
-#[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn test_tray_settings_mutex() {
-        let settings = TraySettings {
-            minimize_to_tray: false,
-            notify_on_minimize: true,
-        };
-        let mutex = Mutex::new(settings.clone());
-
-        {
-            let mut guard = mutex.lock().unwrap();
-            guard.minimize_to_tray = true;
-        }
-
-        let final_settings = mutex.lock().unwrap();
-        assert!(final_settings.minimize_to_tray);
-        assert!(final_settings.notify_on_minimize);
-    }
-}
