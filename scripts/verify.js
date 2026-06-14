@@ -35,7 +35,6 @@ if (runAll) {
 
 // 1. Collect changed files
 let changedFilesList = [];
-const gitFailed = false;
 
 if (process.env.GITHUB_ACTIONS === 'true') {
 	console.log('Running in GitHub Actions. Detecting changed files via Git...');
@@ -85,11 +84,8 @@ if (process.env.GITHUB_ACTIONS === 'true') {
 	);
 }
 
-// Unique list of all modified or new files, ignoring the scripts directory
-const changedFiles = changedFilesList
-	.map((f) => f.trim())
-	.filter(Boolean)
-	.filter((f) => !f.startsWith('scripts/'));
+// Unique list of all modified or new files
+const changedFiles = changedFilesList.map((f) => f.trim()).filter(Boolean);
 
 // 2. Classify changed files
 const backendConfigs = [
