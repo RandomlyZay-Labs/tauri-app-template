@@ -121,6 +121,8 @@ jobs:
           SQLX_OFFLINE: true
           RUSTFLAGS: "-C linker=rust-lld -C target-feature=+crt-static"
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           $config = '{\"build\":{\"beforeBuildCommand\":\"\"}}'
           pnpm tauri build --target ${{ matrix.target }} --config $config
@@ -197,7 +199,6 @@ jobs:
           node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('package.json')); p.version = process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n');"
           node -e "const fs = require('fs'); const t = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); t.version = process.env.VERSION; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(t, null, '\t') + '\n');"
           node -e "const fs = require('fs'); let c = fs.readFileSync('src-tauri/Cargo.toml', 'utf8'); c = c.replace(/^version\s*=\s*\"[^\"]+\"/m, 'version = \"' + process.env.VERSION + '\"'); fs.writeFileSync('src-tauri/Cargo.toml', c);"
-
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -224,6 +225,8 @@ jobs:
         env:
           SQLX_OFFLINE: true
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
         shell: bash
         run: pnpm tauri build --config '{"build":{"beforeBuildCommand":""}}'
 
@@ -231,6 +234,7 @@ jobs:
         env:
           ARCH_NAME: ${{ matrix.arch }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: bash
         run: |
           APPIMAGE=$(find src-tauri/target/release/bundle/appimage/ -name "*.AppImage" | head -n 1)
@@ -274,7 +278,7 @@ jobs:
           if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
             echo "Resigning AppImage..."
             rm -f "$APPIMAGE.sig"
-            pnpm tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" -p "" "$APPIMAGE"
+            pnpm tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" -p "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$APPIMAGE"
           fi
 
       - name: Build CLI Binary

@@ -37,11 +37,17 @@ fn handle_single_instance<R: tauri::Runtime>(
 pub fn run_app(dev_data_dir: Option<PathBuf>) {
     let specta_builder = api::collect();
 
-    // Initialize PostHog analytics (Rust-side HTTP, bypasses WebView CORS).
-    let _posthog_guard = better_posthog::init(better_posthog::ClientOptions {
-        api_key: Some("phc_nAKTTsOrVMFGq9yakG0UNEyQemz1UvPRueal5dvkaD5".into()),
-        ..Default::default()
-    });
+    // Initialize PostHog analytics (Rust-side HTTP, bypasses WebView CORS) if key is set.
+    if let Some(api_key) = option_env!("POSTHOG_API_KEY") {
+        let trimmed_key = api_key.trim();
+        if !trimmed_key.is_empty() {
+            let guard = better_posthog::init(better_posthog::ClientOptions {
+                api_key: Some(trimmed_key.into()),
+                ..Default::default()
+            });
+            Box::leak(Box::new(guard));
+        }
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
@@ -92,6 +98,7 @@ pub fn run_app(dev_data_dir: Option<PathBuf>) {
             log::info!("OS: {} ({})", std::env::consts::OS, std::env::consts::ARCH);
             log::info!("Resolved Data Directory: {}", app_data_dir.display());
             log::info!("Resolved Log Directory: {}", app_log_dir.display());
+            log::info!("PostHog API Key present: {}", option_env!("POSTHOG_API_KEY").map(|k| !k.trim().is_empty()).unwrap_or(false));
             log::info!("==================================");
 
             // 3. Lifecycle Checks (Reset / Restore)

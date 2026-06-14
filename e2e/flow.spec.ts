@@ -7,7 +7,7 @@ test.describe('App Flow', () => {
 		await injectMockIpc(page);
 		// 1. Initial Load & Onboarding
 		await page.goto('/');
-		await expect(page).toHaveTitle(/Tauri/);
+		await expect(page).toHaveTitle(/Tauri App Template/);
 		await expect(
 			page.getByRole('heading', { name: 'Welcome to Tauri App Template' }),
 		).toBeVisible();

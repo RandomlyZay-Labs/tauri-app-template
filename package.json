@@ -9,6 +9,7 @@
 		"url": "https://github.com/RandomlyZay-Labs/tauri-app-template.git"
 	},
 	"scripts": {
+		"setup": "node setup.js",
 		"bootstrap": "pnpm dlx shx mkdir -p dev_data && cd src-tauri && pnpm dlx shx cp -n .env.example .env && (sqlx database create || true) && sqlx migrate run && cd ..",
 		"verify": "node scripts/verify.js",
 		"verify:frontend": "run-s check:frontend test:frontend",

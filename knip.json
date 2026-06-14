@@ -8,5 +8,5 @@
 		"@semantic-release/release-notes-generator",
 		"conventional-changelog-conventionalcommits"
 	],
-	"ignoreBinaries": ["sqlx", "gpg", "dpkg-scanpackages"]
+	"ignoreBinaries": ["sqlx", "gpg", "dpkg-scanpackages", "gh", "copr-cli"]
 }
