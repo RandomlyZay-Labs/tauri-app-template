@@ -1,3 +1,10 @@
+## [0.15.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.14.0...v0.15.0) (2026-06-14)
+
+### Features
+
+* merge main into dev for release preparation ([#88](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/88)) ([caca601](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/caca601683daeb17d799fa43f5e4bc9b99a02718))
+* release prep ([#87](https://github.com/RandomlyZay-Labs/tauri-app-template/issues/87)) ([f9cefc7](https://github.com/RandomlyZay-Labs/tauri-app-template/commit/f9cefc7c9e01d7d7534901b11188b455cb05a8cc))
+
 ## [0.14.0](https://github.com/RandomlyZay-Labs/tauri-app-template/compare/v0.13.0...v0.14.0) (2026-06-14)
 
 ### Features
