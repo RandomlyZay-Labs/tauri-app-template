@@ -1,6 +1,5 @@
 # Tauri App Template
 
-[![Build Status](https://github.com/RandomlyZay-Labs/tauri-app-template/actions/workflows/build.yml/badge.svg)](https://github.com/RandomlyZay-Labs/tauri-app-template/actions)
 [![Release](https://img.shields.io/github/v/release/RandomlyZay-Labs/tauri-app-template)](https://github.com/RandomlyZay-Labs/tauri-app-template/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri-24c8db.svg)](https://tauri.app/)

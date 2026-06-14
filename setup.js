@@ -1187,6 +1187,11 @@ Expire-Date: 0
 		targetDir,
 		'Failed to create main branch',
 	);
+	await runCommandOrThrow(
+		'git tag v0.0.9',
+		targetDir,
+		'Failed to create tag v0.0.9',
+	);
 	console.log(
 		`${colors.green}✅ Git repository committed on dev and main branch created.${colors.reset}`,
 	);
@@ -1234,6 +1239,18 @@ Expire-Date: 0
 			);
 			console.log(
 				`${colors.green}✅ Pushed main branch to GitHub.${colors.reset}`,
+			);
+
+			console.log(
+				`\n${colors.cyan}🚀 Pushing tag v0.0.9 to GitHub...${colors.reset}`,
+			);
+			await runCommandOrThrow(
+				'git push origin v0.0.9',
+				targetDir,
+				'Failed to push tag v0.0.9 to GitHub',
+			);
+			console.log(
+				`${colors.green}✅ Pushed tag v0.0.9 to GitHub.${colors.reset}`,
 			);
 
 			console.log(

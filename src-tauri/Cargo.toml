@@ -59,7 +59,6 @@ serde_json = "1"
 sqlx = { version = "0.9", features = ["runtime-tokio", "tls-native-tls", "sqlite", "chrono", "macros", "migrate"] }
 
 # --- Utilities & Logging ---
-dotenvy = "0.15"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 keyring = "4"
 keyring-core = "1"
