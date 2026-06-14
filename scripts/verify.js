@@ -15,51 +15,73 @@ function runGitCommand(cmd) {
 		if (stderr) {
 			console.warn(`Git command failed: ${cmd}\nError details: ${stderr}`);
 		}
-		return '';
+		return null; // Return null on failure
+	}
+}
+
+// 0. Check if we should force-run verification (e.g., in CI or explicitly requested)
+const runAll = process.argv.includes('--force');
+if (runAll) {
+	console.log('Force running the full verification suite...');
+	try {
+		execSync('pnpm verify:backend && pnpm verify:frontend', {
+			stdio: 'inherit',
+		});
+		process.exit(0);
+	} catch {
+		process.exit(1);
 	}
 }
 
 // 1. Collect changed files
 let changedFilesList = [];
+let gitFailed = false;
 
 if (process.env.GITHUB_ACTIONS === 'true') {
 	console.log('Running in GitHub Actions. Detecting changed files via Git...');
-	try {
-		// Try comparing against first parent (handles merge commits in PRs)
-		let diffOutput = runGitCommand(
-			'git diff-tree --no-commit-id --name-only -r HEAD^1 HEAD',
-		);
-		// Fallback to single commit diff if parent comparison fails
-		if (!diffOutput) {
-			diffOutput = runGitCommand(
-				'git diff-tree --no-commit-id --name-only -r HEAD',
-			);
-		}
-		changedFilesList = diffOutput.split('\n').filter(Boolean);
-		console.log(
-			`GitHub Actions change detection found ${changedFilesList.length} files.`,
-		);
-	} catch (err) {
-		console.warn(
-			'Failed to detect files via git diff-tree in GHA:',
-			err.message,
+	// Fix dubious ownership issue in containerized environment
+	if (runGitCommand('git config --global --add safe.directory "*"') === null) {
+		console.error('Fatal: Failed to configure git safe.directory');
+		process.exit(1);
+	}
+
+	// Try comparing against first parent (handles merge commits in PRs)
+	let diffOutput = runGitCommand(
+		'git diff-tree --no-commit-id --name-only -r HEAD^1 HEAD',
+	);
+	// Fallback to single commit diff if parent comparison fails
+	if (diffOutput === null) {
+		diffOutput = runGitCommand(
+			'git diff-tree --no-commit-id --name-only -r HEAD',
 		);
 	}
-}
 
-// Fallback to local workspace diff if not in GHA or if GHA detection returned no files
-if (changedFilesList.length === 0) {
-	const unstaged = runGitCommand('git diff --name-only')
-		.split('\n')
-		.filter(Boolean);
-	const staged = runGitCommand('git diff --cached --name-only')
-		.split('\n')
-		.filter(Boolean);
-	const untracked = runGitCommand('git ls-files --others --exclude-standard')
-		.split('\n')
-		.filter(Boolean);
+	if (diffOutput === null) {
+		console.error('Fatal: Git change detection failed in GitHub Actions.');
+		process.exit(1);
+	}
+
+	changedFilesList = diffOutput.split('\n').filter(Boolean);
+	console.log(
+		`GitHub Actions change detection found ${changedFilesList.length} files.`,
+	);
+} else {
+	// Local workspace diff
+	const unstaged = runGitCommand('git diff --name-only');
+	const staged = runGitCommand('git diff --cached --name-only');
+	const untracked = runGitCommand('git ls-files --others --exclude-standard');
+
+	if (unstaged === null || staged === null || untracked === null) {
+		console.error('Fatal: Git command failed while collecting local changes.');
+		process.exit(1);
+	}
+
 	changedFilesList = Array.from(
-		new Set([...unstaged, ...staged, ...untracked]),
+		new Set([
+			...unstaged.split('\n').filter(Boolean),
+			...staged.split('\n').filter(Boolean),
+			...untracked.split('\n').filter(Boolean),
+		]),
 	);
 }
 
