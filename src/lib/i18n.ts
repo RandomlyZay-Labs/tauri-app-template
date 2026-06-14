@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { locale } from '@tauri-apps/plugin-os';
 import i18n from 'i18next';
 import en from '@/locales/en.json';

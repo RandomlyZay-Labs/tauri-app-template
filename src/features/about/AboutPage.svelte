@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import AppLayout from '@/components/layout/AppLayout.svelte';
 import { Button } from '@/components/ui/button';

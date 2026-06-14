@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import AppLayout from './AppLayout.svelte';
 </script>

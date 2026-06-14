@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import * as Tooltip from '@/components/ui/tooltip';
 import { executeSafeAction } from '@/lib/async-utils';

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import Root from "./command.svelte";
 import Loading from "./command-loading.svelte";
 import Dialog from "./command-dialog.svelte";

@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';

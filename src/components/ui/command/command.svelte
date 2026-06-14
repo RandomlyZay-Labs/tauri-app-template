@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: MIT -->
 <script lang="ts">
 	import { cn } from "@/lib/utils.js";
 	import { Command as CommandPrimitive } from "bits-ui";

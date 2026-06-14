@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import {
 	type ActivityStatus,

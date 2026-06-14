@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pub mod backup;
 pub mod cli_mgmt;
 pub mod install_type;

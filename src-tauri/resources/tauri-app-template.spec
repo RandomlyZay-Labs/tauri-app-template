@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name: tauri-app-template
-Version: 0.13.0
+Version: 0.14.0
 Release: 1%{?dist}
 Summary: Tauri App Template
 License: MIT
@@ -42,5 +42,5 @@ find %{buildroot} \( -type f -o -type l \) -printf '"/%%P"\n' \
 %files -f %{_builddir}/filelist.txt
 
 %changelog
-* Mon Jun 08 2026 RandomlyZay Labs - %{version}-1
+* Mon Jun 08 2026 RandomlyZay-Labs - %{version}-1
 - Automatic build from prebuilt RPM releases.

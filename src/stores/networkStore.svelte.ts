@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 const getInitialOfflineState = (): boolean => {
 	if (typeof navigator !== 'undefined' && 'onLine' in navigator) {
 		return !navigator.onLine;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use std::path::Path;
 
 /// Updates the log level in the `config.json` file.

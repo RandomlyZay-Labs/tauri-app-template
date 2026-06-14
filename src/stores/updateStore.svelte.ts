@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { relaunch } from '@tauri-apps/plugin-process';
 import {
 	check,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { toast as sonnerToast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { logger } from './logger';

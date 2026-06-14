@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 

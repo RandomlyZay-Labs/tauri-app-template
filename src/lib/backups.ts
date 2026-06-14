@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import type { BackupMetadata } from '@/bindings';
 import { commands } from '@/lib/ipc';
 

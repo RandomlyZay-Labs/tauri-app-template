@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import Root from "./dialog.svelte";
 import Portal from "./dialog-portal.svelte";
 import Title from "./dialog-title.svelte";

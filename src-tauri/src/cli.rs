@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::services::backup_service::BackupMetadata;
 use crate::services::job_service::{JobRow, JobStatus};
 use async_trait::async_trait;

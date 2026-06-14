@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use serde_json::Value;
 use std::path::Path;
 use tauri_plugin_log::log::LevelFilter;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

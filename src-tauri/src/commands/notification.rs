@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use crate::error::CResult;
 use async_trait::async_trait;
 use tauri::Manager;

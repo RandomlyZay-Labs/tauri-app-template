@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { commands } from '@/lib/ipc';

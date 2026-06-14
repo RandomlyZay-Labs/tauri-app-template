@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { isTauri } from '@tauri-apps/api/core';
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
