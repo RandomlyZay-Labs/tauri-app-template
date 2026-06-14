@@ -8,9 +8,13 @@ function runGitCommand(cmd) {
 	try {
 		return execSync(cmd, {
 			encoding: 'utf8',
-			stdio: ['pipe', 'pipe', 'ignore'],
+			stdio: ['pipe', 'pipe', 'pipe'],
 		}).trim();
-	} catch {
+	} catch (err) {
+		const stderr = err.stderr ? err.stderr.toString().trim() : '';
+		if (stderr) {
+			console.warn(`Git command failed: ${cmd}\nError details: ${stderr}`);
+		}
 		return '';
 	}
 }
