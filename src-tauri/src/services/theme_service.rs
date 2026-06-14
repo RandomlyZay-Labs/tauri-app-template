@@ -32,10 +32,15 @@ impl ColorScheme {
     }
 }
 
+/// Thread-safe state to hold the theme watcher child process for cleanup on exit.
+pub struct ThemeWatcherState {
+    pub child: std::sync::Mutex<Option<std::process::Child>>,
+}
+
 /// Queries the Freedesktop portal for the current color-scheme preference.
 /// Returns `None` if the portal is unavailable (non-Linux, no D-Bus, etc.).
 pub fn query_freedesktop_color_scheme() -> Option<ColorScheme> {
-    let mut cmd = Command::new("gdbus");
+    let mut cmd = crate::util::new_system_command("gdbus");
     cmd.args([
         "call",
         "--session",
@@ -112,15 +117,17 @@ fn parse_color_scheme_response(response: &str) -> Option<ColorScheme> {
 /// (`system-theme-changed`) whenever the value changes.
 pub fn spawn_theme_watcher<R: tauri::Runtime>(app_handle: tauri::AppHandle<R>) {
     use tauri::Emitter;
+    use tauri::Manager;
 
     std::thread::spawn(move || {
-        let child = Command::new("gdbus")
-            .args([
-                "monitor",
-                "--session",
-                "--dest=org.freedesktop.portal.Desktop",
-                "--object-path=/org/freedesktop/portal/desktop",
-            ])
+        let mut cmd = crate::util::new_system_command("gdbus");
+        cmd.args([
+            "monitor",
+            "--session",
+            "--dest=org.freedesktop.portal.Desktop",
+            "--object-path=/org/freedesktop/portal/desktop",
+        ]);
+        let child = cmd
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::null())
             .spawn();
@@ -140,6 +147,12 @@ pub fn spawn_theme_watcher<R: tauri::Runtime>(app_handle: tauri::AppHandle<R>) {
                 return;
             }
         };
+
+        if let Some(state) = app_handle.try_state::<ThemeWatcherState>()
+            && let Ok(mut lock) = state.child.lock()
+        {
+            *lock = Some(child);
+        }
 
         use std::io::BufRead;
         let reader = std::io::BufReader::new(stdout);
@@ -162,8 +175,13 @@ pub fn spawn_theme_watcher<R: tauri::Runtime>(app_handle: tauri::AppHandle<R>) {
         }
 
         // Clean up the child process
-        let _ = child.kill();
-        let _ = child.wait();
+        if let Some(state) = app_handle.try_state::<ThemeWatcherState>()
+            && let Ok(mut lock) = state.child.lock()
+            && let Some(mut c) = lock.take()
+        {
+            let _ = c.kill();
+            let _ = c.wait();
+        }
     });
 }
 

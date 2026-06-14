@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-use crate::error::{CResult, Error as CError};
+use crate::error::CResult;
+#[cfg(target_os = "linux")]
+use crate::error::Error as CError;
 
 #[tauri::command]
 #[specta::specta]
@@ -17,7 +19,8 @@ pub fn get_install_type() -> CResult<String> {
             let exe_path = std::env::current_exe().map_err(CError::from)?;
             let path_str = exe_path.to_string_lossy();
             if path_str.starts_with("/usr") {
-                let is_deb = match std::process::Command::new("dpkg")
+                let mut cmd_dpkg = crate::util::new_system_command("dpkg");
+                let is_deb = match cmd_dpkg
                     .args(["-S", &path_str])
                     .output()
                 {
@@ -29,7 +32,8 @@ pub fn get_install_type() -> CResult<String> {
                     return Ok("deb".to_string());
                 }
 
-                let is_rpm = match std::process::Command::new("rpm")
+                let mut cmd_rpm = crate::util::new_system_command("rpm");
+                let is_rpm = match cmd_rpm
                     .args(["-qf", &path_str])
                     .output()
                 {

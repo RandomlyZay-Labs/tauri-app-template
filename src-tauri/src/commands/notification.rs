@@ -57,7 +57,8 @@ impl<R: tauri::Runtime> NotificationService for RealNotificationService<R> {
                 .replace(">", "&gt;");
 
             tauri::async_runtime::spawn_blocking(move || {
-                match std::process::Command::new("notify-send")
+                let mut cmd = crate::util::new_system_command("notify-send");
+                match cmd
                     .arg("-a")
                     .arg("Tauri App Template")
                     .arg("--")
