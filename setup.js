@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-import { execSync, spawnSync } from 'node:child_process';
+import { execSync, spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -35,6 +35,7 @@ const IGNORED_PATHS = [
 	'playwright-report',
 	'test-results',
 	'.env',
+	'CHANGELOG.md',
 	'setup.js',
 ];
 
@@ -52,6 +53,15 @@ const rl = readline.createInterface({
 
 const askQuestion = (query) =>
 	new Promise((resolve) => rl.question(query, resolve));
+
+async function askBooleanQuestion(query, defaultValue, label = 'default') {
+	const defStr = defaultValue ? 'Y/n' : 'y/N';
+	const prompt = `${query} (${defStr}) [${label}: ${defaultValue ? 'y' : 'n'}]: `;
+	const ans = await askQuestion(prompt);
+	const trimmed = ans.trim().toLowerCase();
+	if (!trimmed) return defaultValue;
+	return trimmed === 'y' || trimmed === 'yes';
+}
 
 // Helper to run a command and capture output, printing only on failure
 function runCommand(command, cwd = process.cwd(), options = {}) {
@@ -160,23 +170,22 @@ function copyFolderRecursive(srcDir, destDir) {
 	}
 }
 
-// Derive casing variants from name input
+// Derive casing variants from name
 function getCasingVariants(input) {
 	const words = input
 		.replace(/[-_]+/g, ' ')
-		.replace(/([A-Z][a-z])/g, ' $1')
 		.trim()
 		.split(/\s+/)
 		.filter(Boolean);
 
-	const title = words
-		.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-		.join(' ');
+	const title = /[-_\s]/.test(input)
+		? words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+		: input;
 	const kebab = words.map((w) => w.toLowerCase()).join('-');
 	const snake = words.map((w) => w.toLowerCase()).join('_');
 	const constant = words.map((w) => w.toUpperCase()).join('_');
 	const pascal = words
-		.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+		.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
 		.join('');
 	const camel = pascal.charAt(0).toLowerCase() + pascal.slice(1);
 
@@ -197,6 +206,7 @@ function getGhUsername() {
 
 async function main() {
 	const isLinux = process.platform === 'linux';
+	const skippedConfigs = [];
 	console.log(
 		`\n${colors.magenta}${colors.bright}🔮 Tauri App Initializer & Setup${colors.reset}\n`,
 	);
@@ -233,117 +243,382 @@ async function main() {
 		}
 	} else {
 		console.log(
-			`${colors.green}✅ Core environment checks passed.${colors.reset}\n`,
+			`${colors.green}✅ Core environment checks passed.${colors.reset}`,
 		);
 	}
 
 	// --- 2. GATHER CONFIGURATION ---
 	let appNameInput = '';
-	while (true) {
-		appNameInput = await askQuestion(
-			`${colors.bright}What will the app name be? ${colors.reset}`,
-		);
-		if (!appNameInput.trim()) {
-			console.error(
-				`${colors.red}❌ Error: Project name cannot be empty. Please enter a name.${colors.reset}`,
-			);
-		} else {
-			break;
-		}
-	}
-
-	const casings = getCasingVariants(appNameInput);
-	console.log(`\n${colors.cyan}Derived Casing Variants:${colors.reset}`);
-	console.log(`  - Title:    ${colors.green}${casings.title}${colors.reset}`);
-	console.log(`  - Kebab:    ${colors.green}${casings.kebab}${colors.reset}`);
-	console.log(`  - Snake:    ${colors.green}${casings.snake}${colors.reset}`);
-	console.log(`  - Pascal:   ${colors.green}${casings.pascal}${colors.reset}`);
-	console.log(`  - Camel:    ${colors.green}${casings.camel}${colors.reset}`);
-	console.log(
-		`  - Constant: ${colors.green}${casings.constant}${colors.reset}\n`,
-	);
-
-	// Casing selection for project folder
-	console.log(
-		`${colors.bright}Choose casing style for the project folder name:${colors.reset}`,
-	);
-	console.log(
-		`  1. kebab-case (${colors.green}${casings.kebab}${colors.reset})`,
-	);
-	console.log(
-		`  2. snake_case (${colors.green}${casings.snake}${colors.reset})`,
-	);
-	console.log(
-		`  3. PascalCase (${colors.green}${casings.pascal}${colors.reset})`,
-	);
-	console.log(
-		`  4. camelCase (${colors.green}${casings.camel}${colors.reset})`,
-	);
-	console.log(
-		`  5. CONSTANT_CASE (${colors.green}${casings.constant}${colors.reset})`,
-	);
-	const casingChoiceInput = await askQuestion(
-		`${colors.bright}Enter choice (1/2/3/4/5) [default: 1]: ${colors.reset}`,
-	);
-
-	let folderName = casings.kebab;
-	if (casingChoiceInput.trim() === '2') {
-		folderName = casings.snake;
-	} else if (casingChoiceInput.trim() === '3') {
-		folderName = casings.pascal;
-	} else if (casingChoiceInput.trim() === '4') {
-		folderName = casings.camel;
-	} else if (casingChoiceInput.trim() === '5') {
-		folderName = casings.constant;
-	}
-
-	// Target Directory Setup
+	let casings = null;
+	let folderName = '';
 	let targetDir = '';
-	while (true) {
-		const defaultTargetDir = path.join(os.homedir(), 'Projects', folderName);
-		const targetInput = await askQuestion(
-			`${colors.bright}Enter target directory [default: ${defaultTargetDir}]: ${colors.reset}`,
-		);
-		targetDir = path.resolve(targetInput.trim() || defaultTargetDir);
+	let setupGithub = true;
+	let addRemoteLocally = true;
+	let owner = '';
+	let repoName = '';
+	let isPrivate = false;
+	let setupTauriKeys = true;
+	let setupGpg = true;
+	let setupCopr = true;
+	let setupPostHog = true;
+	let setupRulesets = true;
+	let coprUsername = '';
+	const promptedSettings = new Set();
+	const getLabel = (key) =>
+		promptedSettings.has(key) ? 'previous' : 'default';
+	let casingChoice = '1';
 
-		if (fs.existsSync(targetDir)) {
-			console.error(
-				`${colors.red}❌ Error: Directory already exists at: ${targetDir}. Please choose another path.${colors.reset}`,
+	while (true) {
+		console.log(
+			`\n${colors.cyan}📝 Let's configure your application...${colors.reset}\n`,
+		);
+
+		while (true) {
+			const label = getLabel('appName');
+			const appNamePrompt = appNameInput
+				? `${colors.bright}What will the app name be? [${label}: ${appNameInput}]: ${colors.reset}`
+				: `${colors.bright}What will the app name be? ${colors.reset}`;
+			const appNameResult = await askQuestion(appNamePrompt);
+			const trimmed = appNameResult.trim();
+			if (trimmed) {
+				appNameInput = trimmed;
+				promptedSettings.add('appName');
+				break;
+			} else if (appNameInput) {
+				promptedSettings.add('appName');
+				break;
+			} else {
+				console.error(
+					`${colors.red}❌ Error: Project name cannot be empty. Please enter a name.${colors.reset}`,
+				);
+			}
+		}
+
+		casings = getCasingVariants(appNameInput);
+
+		// Casing selection for project folder
+		console.log(
+			`\n${colors.bright}Choose casing style for the project folder name:${colors.reset}`,
+		);
+		console.log(
+			`  1. Title Case (${colors.green}${casings.title}${colors.reset})`,
+		);
+		console.log(
+			`  2. kebab-case (${colors.green}${casings.kebab}${colors.reset})`,
+		);
+		console.log(
+			`  3. snake_case (${colors.green}${casings.snake}${colors.reset})`,
+		);
+		console.log(
+			`  4. PascalCase (${colors.green}${casings.pascal}${colors.reset})`,
+		);
+		console.log(
+			`  5. camelCase (${colors.green}${casings.camel}${colors.reset})`,
+		);
+		console.log(
+			`  6. CONSTANT_CASE (${colors.green}${casings.constant}${colors.reset})`,
+		);
+		const casingLabel = getLabel('casingChoice');
+		const casingChoiceInput = await askQuestion(
+			`${colors.bright}Enter choice (1/2/3/4/5/6) [${casingLabel}: ${casingChoice}]: ${colors.reset}`,
+		);
+
+		const chosenCasing = casingChoiceInput.trim() || casingChoice;
+		casingChoice = chosenCasing;
+		promptedSettings.add('casingChoice');
+
+		folderName = casings.title;
+		if (chosenCasing === '2') {
+			folderName = casings.kebab;
+		} else if (chosenCasing === '3') {
+			folderName = casings.snake;
+		} else if (chosenCasing === '4') {
+			folderName = casings.pascal;
+		} else if (chosenCasing === '5') {
+			folderName = casings.camel;
+		} else if (chosenCasing === '6') {
+			folderName = casings.constant;
+		}
+
+		// Target Directory Setup
+		while (true) {
+			const label = getLabel('targetDir');
+			const defaultTargetDir =
+				targetDir || path.join(os.homedir(), 'Projects', folderName);
+			const targetInput = await askQuestion(
+				`${colors.bright}Enter target directory [${label}: ${defaultTargetDir}]: ${colors.reset}`,
+			);
+			const chosenDir = path.resolve(targetInput.trim() || defaultTargetDir);
+
+			if (chosenDir !== targetDir && fs.existsSync(chosenDir)) {
+				console.error(
+					`${colors.red}❌ Error: Directory already exists at: ${chosenDir}. Please choose another path.${colors.reset}`,
+				);
+			} else {
+				targetDir = chosenDir;
+				promptedSettings.add('targetDir');
+				break;
+			}
+		}
+
+		// Interactive Integrations Selection
+		setupGithub = await askBooleanQuestion(
+			`\n${colors.bright}Create remote GitHub repository & push code?${colors.reset}`,
+			setupGithub,
+			getLabel('setupGithub'),
+		);
+		promptedSettings.add('setupGithub');
+
+		addRemoteLocally = false;
+		if (!setupGithub) {
+			addRemoteLocally = await askBooleanQuestion(
+				`${colors.bright}Add GitHub remote origin locally anyway?${colors.reset}`,
+				addRemoteLocally,
+				getLabel('addRemoteLocally'),
+			);
+			promptedSettings.add('addRemoteLocally');
+		}
+
+		// Gather GitHub/Owner details only if needed
+		const ghUser = getGhUsername();
+		const defaultOwner = owner || ghUser || os.userInfo().username;
+		const defaultRepo = repoName || casings.title; // Title-case default
+
+		if (setupGithub || addRemoteLocally) {
+			const ownerLabel = getLabel('owner');
+			const ownerInput = await askQuestion(
+				`\n${colors.bright}Enter GitHub Owner/Org [${ownerLabel}: ${defaultOwner}]: ${colors.reset}`,
+			);
+			owner = ownerInput.trim() || defaultOwner;
+			promptedSettings.add('owner');
+
+			const repoLabel = getLabel('repoName');
+			const repoInput = await askQuestion(
+				`${colors.bright}Enter GitHub Repository Name [${repoLabel}: ${defaultRepo}]: ${colors.reset}`,
+			);
+			repoName = repoInput.trim() || defaultRepo;
+			promptedSettings.add('repoName');
+		} else {
+			owner = defaultOwner;
+			repoName = repoName || casings.title;
+		}
+
+		if (setupGithub) {
+			isPrivate = await askBooleanQuestion(
+				`\n${colors.bright}Make the remote GitHub repository private?${colors.reset}`,
+				isPrivate,
+				getLabel('isPrivate'),
+			);
+			promptedSettings.add('isPrivate');
+
+			setupRulesets = await askBooleanQuestion(
+				`\n${colors.bright}Configure GitHub branch rulesets (dev/main)?\n   (Protects branches, prevents force-pushes, and requires passing tests before merge)${colors.reset}`,
+				setupRulesets,
+				getLabel('setupRulesets'),
+			);
+			promptedSettings.add('setupRulesets');
+
+			setupTauriKeys = await askBooleanQuestion(
+				`\n${colors.bright}Configure Tauri updater signing keys?\n   (Signs builds so your app can download and install updates securely)${colors.reset}`,
+				setupTauriKeys,
+				getLabel('setupTauriKeys'),
+			);
+			promptedSettings.add('setupTauriKeys');
+
+			setupGpg = await askBooleanQuestion(
+				`\n${colors.bright}Configure GPG package signing key?\n   (Signs Debian/RPM packages for secure repository hosting)${colors.reset}`,
+				setupGpg,
+				getLabel('setupGpg'),
+			);
+			promptedSettings.add('setupGpg');
+
+			if (isLinux) {
+				setupCopr = await askBooleanQuestion(
+					`\n${colors.bright}Configure Fedora COPR integration?\n   (Fedora's repository hosting to package and distribute your app as an RPM)${colors.reset}`,
+					setupCopr,
+					getLabel('setupCopr'),
+				);
+				promptedSettings.add('setupCopr');
+			}
+
+			setupPostHog = await askBooleanQuestion(
+				`\n${colors.bright}Configure PostHog telemetry?\n   (Open-source product analytics to track app usage and events)${colors.reset}`,
+				setupPostHog,
+				getLabel('setupPostHog'),
+			);
+			promptedSettings.add('setupPostHog');
+		} else {
+			isPrivate = false;
+			setupRulesets = false;
+			setupTauriKeys = false;
+			setupGpg = false;
+			setupCopr = false;
+			setupPostHog = false;
+		}
+
+		coprUsername = coprUsername || owner.toLowerCase();
+		if (setupCopr) {
+			const coprLabel = getLabel('coprUsername');
+			const coprUserInput = await askQuestion(
+				`\n${colors.bright}Enter Fedora COPR Username [${coprLabel}: ${coprUsername}]: ${colors.reset}`,
+			);
+			coprUsername = coprUserInput.trim() || coprUsername;
+			promptedSettings.add('coprUsername');
+		} else {
+			coprUsername = owner.toLowerCase();
+		}
+
+		// Present summary of the configuration for review
+		console.log(
+			`\n${colors.cyan}${colors.bright}📋 Proposed Configuration Review:${colors.reset}`,
+		);
+		console.log(`  - App Name: ${colors.green}${appNameInput}${colors.reset}`);
+		console.log(
+			`  - Target Directory: ${colors.green}${targetDir}${colors.reset}`,
+		);
+
+		// 1. GitHub Repo
+		if (setupGithub) {
+			console.log(
+				`  - GitHub Repository & Push: ${colors.green}Enabled (${isPrivate ? 'Private' : 'Public'})${colors.reset}`,
+			);
+		} else {
+			console.log(
+				`  - GitHub Repository & Push: ${colors.yellow}Skipped (you chose local-only setup)${colors.reset}`,
+			);
+		}
+
+		// 2. Local Remote Origin
+		if (setupGithub || addRemoteLocally) {
+			console.log(
+				`  - Add Git Remote Locally: ${colors.green}Enabled (origin: https://github.com/${owner}/${repoName}.git)${colors.reset}`,
+			);
+		} else {
+			console.log(
+				`  - Add Git Remote Locally: ${colors.yellow}Skipped (you chose local-only setup without remote url)${colors.reset}`,
+			);
+		}
+
+		// 3. Branch Rulesets
+		if (setupGithub) {
+			if (setupRulesets) {
+				console.log(
+					`  - GitHub Branch Rulesets: ${colors.green}Enabled${colors.reset}`,
+				);
+			} else {
+				console.log(
+					`  - GitHub Branch Rulesets: ${colors.yellow}Skipped (you chose not to configure rulesets)${colors.reset}`,
+				);
+			}
+		} else {
+			console.log(
+				`  - GitHub Branch Rulesets: ${colors.yellow}Skipped (GitHub remote creation disabled)${colors.reset}`,
+			);
+		}
+
+		// 4. Tauri Keys
+		if (setupGithub) {
+			if (setupTauriKeys) {
+				console.log(
+					`  - Tauri Updater Keys: ${colors.green}Enabled${colors.reset}`,
+				);
+			} else {
+				console.log(
+					`  - Tauri Updater Keys: ${colors.yellow}Skipped (you chose not to configure Tauri keys)${colors.reset}`,
+				);
+			}
+		} else {
+			console.log(
+				`  - Tauri Updater Keys: ${colors.yellow}Skipped (GitHub remote creation disabled)${colors.reset}`,
+			);
+		}
+
+		// 5. GPG Keys
+		if (setupGithub) {
+			if (setupGpg) {
+				console.log(
+					`  - GPG Package Signing Keys: ${colors.green}Enabled${colors.reset}`,
+				);
+			} else {
+				console.log(
+					`  - GPG Package Signing Keys: ${colors.yellow}Skipped (you chose not to configure GPG key)${colors.reset}`,
+				);
+			}
+		} else {
+			console.log(
+				`  - GPG Package Signing Keys: ${colors.yellow}Skipped (GitHub remote creation disabled)${colors.reset}`,
+			);
+		}
+
+		// 6. Fedora COPR
+		if (!isLinux) {
+			console.log(
+				`  - Fedora COPR Integration: ${colors.yellow}Skipped (not running Linux)${colors.reset}`,
+			);
+		} else if (!setupGithub) {
+			console.log(
+				`  - Fedora COPR Integration: ${colors.yellow}Skipped (GitHub remote creation disabled)${colors.reset}`,
+			);
+		} else if (setupCopr) {
+			console.log(
+				`  - Fedora COPR Integration: ${colors.green}Enabled (username: ${coprUsername})${colors.reset}`,
+			);
+		} else {
+			console.log(
+				`  - Fedora COPR Integration: ${colors.yellow}Skipped (you chose not to configure Fedora COPR)${colors.reset}`,
+			);
+		}
+
+		// 7. PostHog Telemetry
+		if (setupGithub) {
+			if (setupPostHog) {
+				console.log(
+					`  - PostHog Telemetry: ${colors.green}Enabled${colors.reset}`,
+				);
+			} else {
+				console.log(
+					`  - PostHog Telemetry: ${colors.yellow}Skipped (you chose not to configure PostHog)${colors.reset}`,
+				);
+			}
+		} else {
+			console.log(
+				`  - PostHog Telemetry: ${colors.yellow}Skipped (GitHub remote creation disabled)${colors.reset}`,
+			);
+		}
+
+		console.log();
+		const confirmation = await askQuestion(
+			`${colors.bright}Proceed with setup? (Y/n) [default: y]: ${colors.reset}`,
+		);
+		const confTrim = confirmation.trim().toLowerCase();
+
+		if (confTrim === 'n') {
+			console.log(
+				`\n${colors.cyan}🔄 Restarting configuration...${colors.reset}`,
 			);
 		} else {
 			break;
 		}
 	}
 
-	// Detect git remote & GitHub username
-	const ghUser = getGhUsername();
-	const defaultOwner = ghUser || os.userInfo().username;
-	const defaultRepo = casings.kebab;
+	const setupSecrets = setupTauriKeys || setupGpg || setupCopr || setupPostHog;
 
-	const ownerInput = await askQuestion(
-		`${colors.bright}Enter GitHub Owner/Org [default: ${defaultOwner}]: ${colors.reset}`,
-	);
-	const owner = ownerInput.trim() || defaultOwner;
-
-	const repoInput = await askQuestion(
-		`${colors.bright}Enter GitHub Repository Name [default: ${defaultRepo}]: ${colors.reset}`,
-	);
-	const repoName = repoInput.trim() || defaultRepo;
-
-	let coprUsername = owner.toLowerCase();
-	if (isLinux) {
-		const coprUserInput = await askQuestion(
-			`${colors.bright}Enter Fedora COPR Username [default: ${owner.toLowerCase()}]: ${colors.reset}`,
-		);
-		coprUsername = coprUserInput.trim() || owner.toLowerCase();
+	// Record skipped configurations for the end summary
+	if (!setupGithub) {
+		skippedConfigs.push('Remote GitHub Repository & Push');
+		skippedConfigs.push('Tauri updater signing keys');
+		skippedConfigs.push('GPG package signing key');
+		skippedConfigs.push('Fedora COPR integration');
+		skippedConfigs.push('PostHog telemetry');
+		skippedConfigs.push('GitHub branch rulesets (dev/main)');
+	} else {
+		if (!setupRulesets)
+			skippedConfigs.push('GitHub branch rulesets (dev/main)');
+		if (!setupTauriKeys) skippedConfigs.push('Tauri updater signing keys');
+		if (!setupGpg) skippedConfigs.push('GPG package signing key');
+		if (!setupCopr) skippedConfigs.push('Fedora COPR integration');
+		if (!setupPostHog) skippedConfigs.push('PostHog telemetry');
 	}
-
-	// CI/CD Option
-	const ciPrompt = isLinux
-		? `\n${colors.bright}Do you want to automate GitHub Secrets and Fedora COPR configuration? (y/N) [default: n]: ${colors.reset}`
-		: `\n${colors.bright}Do you want to automate GitHub Secrets configuration? (y/N) [default: n]: ${colors.reset}`;
-	const ciSetupInput = await askQuestion(ciPrompt);
-	const setupCi = ciSetupInput.trim().toLowerCase() === 'y';
 
 	// --- 3. COPY FILES ---
 	console.log(
@@ -493,29 +768,38 @@ async function main() {
 		targetDir,
 		'Failed to switch to dev branch',
 	);
-	await runCommandOrThrow(
-		`git remote add origin https://github.com/${owner}/${repoName}.git`,
-		targetDir,
-		'Failed to add git remote origin',
-	);
-	console.log(
-		`${colors.green}✅ Git repository initialized with dev branch and remote origin set.${colors.reset}`,
-	);
+	if (setupGithub || addRemoteLocally) {
+		await runCommandOrThrow(
+			`git remote add origin https://github.com/${owner}/${repoName}.git`,
+			targetDir,
+			'Failed to add git remote origin',
+		);
+		console.log(
+			`${colors.green}✅ Git repository initialized with dev branch and remote origin set.${colors.reset}`,
+		);
+	} else {
+		console.log(
+			`${colors.green}✅ Git repository initialized with dev branch.${colors.reset}`,
+		);
+	}
 
 	// --- 6. AUTOMATED CI/CD SETUP ---
-	if (setupCi) {
+	if (setupGithub) {
 		console.log(
-			`\n${colors.cyan}🔑 Configuring Keys & Secrets...${colors.reset}`,
+			`\n${colors.cyan}🔑 Configuring Keys, Secrets, & Integrations...${colors.reset}`,
 		);
-		const ciTools = isLinux ? ['gh', 'gpg', 'copr-cli'] : ['gh', 'gpg'];
-		const missingCi = ciTools.filter((t) => !isToolInstalled(t));
+		const missingOptional = [];
+		if (!isToolInstalled('gh')) missingOptional.push('gh');
+		if (setupGpg && !isToolInstalled('gpg')) missingOptional.push('gpg');
+		if (setupCopr && !isToolInstalled('copr-cli'))
+			missingOptional.push('copr-cli');
 
-		if (missingCi.length > 0) {
+		if (missingOptional.length > 0) {
 			console.error(
-				`\n${colors.red}❌ Error: Missing required CI/CD tools: ${missingCi.join(', ')}${colors.reset}`,
+				`\n${colors.red}❌ Error: Missing required tools for your selected options: ${missingOptional.join(', ')}${colors.reset}`,
 			);
 			console.error(`Please install them before running setup again:`);
-			for (const tool of missingCi) {
+			for (const tool of missingOptional) {
 				if (tool === 'gh') {
 					console.error(
 						`  - gh: Install GitHub CLI (e.g., 'sudo apt install gh', 'sudo dnf install gh', or 'brew install gh')`,
@@ -530,7 +814,7 @@ async function main() {
 					);
 				}
 			}
-			throw new Error('Missing required CI/CD tools');
+			throw new Error('Missing required integration tools');
 		} else {
 			// 1. Verify GitHub CLI authentication
 			let ghAuthed = false;
@@ -555,7 +839,7 @@ async function main() {
 
 			// 2. Verify Fedora COPR CLI authentication
 			let skipCopr = false;
-			if (isLinux) {
+			if (setupCopr) {
 				let coprAuthed = false;
 				while (!coprAuthed && !skipCopr) {
 					try {
@@ -588,11 +872,6 @@ async function main() {
 			}
 
 			if (ghAuthed) {
-				// GitHub Repository Visibility
-				const visibilityInput = await askQuestion(
-					`Should the GitHub repository be public or private? (public/private) [default: public]: `,
-				);
-				const isPrivate = visibilityInput.trim().toLowerCase() === 'private';
 				const visibilityFlag = isPrivate ? '--private' : '--public';
 
 				// Check if remote repo exists, if not create it
@@ -663,165 +942,169 @@ async function main() {
 					}
 				}
 
-				// Configure GitHub Release Token
-				try {
-					console.log(
-						`\n${colors.cyan}🔑 Configuring GitHub Release Token (RELEASE_TOKEN)...${colors.reset}`,
-					);
-					const token = execSync('gh auth token', {
-						encoding: 'utf8',
-						stdio: ['ignore', 'pipe', 'pipe'],
-					}).trim();
-					if (token) {
-						console.log(`Uploading RELEASE_TOKEN secret...`);
-						execSync('gh secret set RELEASE_TOKEN', {
-							input: token,
-							cwd: targetDir,
-						});
+				if (setupSecrets) {
+					// Configure GitHub Release Token
+					try {
 						console.log(
-							`${colors.green}✅ RELEASE_TOKEN secret set.${colors.reset}`,
+							`\n${colors.cyan}🔑 Configuring GitHub Release Token (RELEASE_TOKEN)...${colors.reset}`,
 						);
-					} else {
-						throw new Error('No authentication token returned by gh CLI');
-					}
-				} catch (err) {
-					console.warn(
-						`${colors.yellow}⚠️ Warning: Failed to automatically set RELEASE_TOKEN secret: ${err.message}${colors.reset}`,
-					);
-				}
-
-				// Generate Tauri Signing Key
-				console.log(
-					`\n${colors.cyan}🔑 Configuring Tauri Signing Keys...${colors.reset}`,
-				);
-				const keyPassword = await askQuestion(
-					`Enter a password/passphrase for the Tauri private key (leave empty for no password): `,
-				);
-
-				try {
-					const pnpmCmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-					const keyGenResult = spawnSync(
-						pnpmCmd,
-						['tauri', 'signer', 'generate', '-p', keyPassword],
-						{
+						const token = execSync('gh auth token', {
 							encoding: 'utf8',
 							stdio: ['ignore', 'pipe', 'pipe'],
-						},
-					);
-
-					if (keyGenResult.status !== 0) {
-						throw new Error(keyGenResult.stderr || 'Signer generation failed');
-					}
-
-					const keyGenOut = keyGenResult.stdout || '';
-
-					let privateBase64 = '';
-					let publicBase64 = '';
-					let currentSection = null;
-
-					const lines = keyGenOut.split(/\r?\n/);
-					for (const line of lines) {
-						const trimmed = line.trim();
-						if (trimmed === 'Private: (Keep it secret!)') {
-							currentSection = 'private';
-							continue;
-						} else if (trimmed === 'Public:') {
-							currentSection = 'public';
-							continue;
-						} else if (
-							trimmed.startsWith('Environment variables used to sign:')
-						) {
-							currentSection = null;
-							continue;
-						}
-
-						if (currentSection === 'private' && trimmed) {
-							privateBase64 += trimmed;
-						} else if (currentSection === 'public' && trimmed) {
-							publicBase64 += trimmed;
-						}
-					}
-
-					if (privateBase64 && publicBase64) {
-						const pubkey = publicBase64;
-						const privkey = privateBase64;
-
-						if (pubkey && privkey) {
-							// Update tauri.conf.json
-							const confPath = path.join(
-								targetDir,
-								'src-tauri',
-								'tauri.conf.json',
-							);
-							if (fs.existsSync(confPath)) {
-								const conf = JSON.parse(fs.readFileSync(confPath, 'utf8'));
-								if (conf.plugins?.updater) {
-									conf.plugins.updater.pubkey = pubkey;
-									fs.writeFileSync(
-										confPath,
-										JSON.stringify(conf, null, 2),
-										'utf8',
-									);
-									console.log(
-										`${colors.green}✅ Updated Tauri public key in tauri.conf.json.${colors.reset}`,
-									);
-								}
-							}
-							// Upload Secret
-							console.log(`Uploading TAURI_SIGNING_PRIVATE_KEY secret...`);
-							execSync('gh secret set TAURI_SIGNING_PRIVATE_KEY', {
-								input: privkey,
+						}).trim();
+						if (token) {
+							console.log(`Uploading RELEASE_TOKEN secret...`);
+							execSync('gh secret set RELEASE_TOKEN', {
+								input: token,
 								cwd: targetDir,
 							});
 							console.log(
-								`${colors.green}✅ TAURI_SIGNING_PRIVATE_KEY secret set.${colors.reset}`,
+								`${colors.green}✅ RELEASE_TOKEN secret set.${colors.reset}`,
 							);
+						} else {
+							throw new Error('No authentication token returned by gh CLI');
+						}
+					} catch (err) {
+						console.warn(
+							`${colors.yellow}⚠️ Warning: Failed to automatically set RELEASE_TOKEN secret: ${err.message}${colors.reset}`,
+						);
+					}
+				}
 
-							if (keyPassword) {
-								console.log(
-									`Uploading TAURI_SIGNING_PRIVATE_KEY_PASSWORD secret...`,
+				if (setupTauriKeys) {
+					// Generate Tauri Signing Key
+					console.log(
+						`\n${colors.cyan}🔑 Configuring Tauri Signing Keys...${colors.reset}`,
+					);
+					const keyPassword = await askQuestion(
+						`Enter a password/passphrase for the Tauri private key (leave empty for no password): `,
+					);
+
+					try {
+						const pnpmCmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+						const keyGenResult = spawnSync(
+							pnpmCmd,
+							['tauri', 'signer', 'generate', '-p', keyPassword],
+							{
+								encoding: 'utf8',
+								stdio: ['ignore', 'pipe', 'pipe'],
+							},
+						);
+
+						if (keyGenResult.status !== 0) {
+							throw new Error(
+								keyGenResult.stderr || 'Signer generation failed',
+							);
+						}
+
+						const keyGenOut = keyGenResult.stdout || '';
+
+						let privateBase64 = '';
+						let publicBase64 = '';
+						let currentSection = null;
+
+						const lines = keyGenOut.split(/\r?\n/);
+						for (const line of lines) {
+							const trimmed = line.trim();
+							if (trimmed === 'Private: (Keep it secret!)') {
+								currentSection = 'private';
+								continue;
+							} else if (trimmed === 'Public:') {
+								currentSection = 'public';
+								continue;
+							} else if (
+								trimmed.startsWith('Environment variables used to sign:')
+							) {
+								currentSection = null;
+								continue;
+							}
+
+							if (currentSection === 'private' && trimmed) {
+								privateBase64 += trimmed;
+							} else if (currentSection === 'public' && trimmed) {
+								publicBase64 += trimmed;
+							}
+						}
+
+						if (privateBase64 && publicBase64) {
+							const pubkey = publicBase64;
+							const privkey = privateBase64;
+
+							if (pubkey && privkey) {
+								// Update tauri.conf.json
+								const confPath = path.join(
+									targetDir,
+									'src-tauri',
+									'tauri.conf.json',
 								);
-								execSync('gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD', {
-									input: keyPassword,
+								if (fs.existsSync(confPath)) {
+									const conf = JSON.parse(fs.readFileSync(confPath, 'utf8'));
+									if (conf.plugins?.updater) {
+										conf.plugins.updater.pubkey = pubkey;
+										fs.writeFileSync(
+											confPath,
+											JSON.stringify(conf, null, 2),
+											'utf8',
+										);
+										console.log(
+											`${colors.green}✅ Updated Tauri public key in tauri.conf.json.${colors.reset}`,
+										);
+									}
+								}
+								// Upload Secret
+								console.log(`Uploading TAURI_SIGNING_PRIVATE_KEY secret...`);
+								execSync('gh secret set TAURI_SIGNING_PRIVATE_KEY', {
+									input: privkey,
 									cwd: targetDir,
 								});
 								console.log(
-									`${colors.green}✅ TAURI_SIGNING_PRIVATE_KEY_PASSWORD secret set.${colors.reset}`,
+									`${colors.green}✅ TAURI_SIGNING_PRIVATE_KEY secret set.${colors.reset}`,
+								);
+
+								if (keyPassword) {
+									console.log(
+										`Uploading TAURI_SIGNING_PRIVATE_KEY_PASSWORD secret...`,
+									);
+									execSync('gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD', {
+										input: keyPassword,
+										cwd: targetDir,
+									});
+									console.log(
+										`${colors.green}✅ TAURI_SIGNING_PRIVATE_KEY_PASSWORD secret set.${colors.reset}`,
+									);
+								}
+							} else {
+								throw new Error(
+									'Could not parse pubkey or privkey from output',
 								);
 							}
 						} else {
-							throw new Error('Could not parse pubkey or privkey from output');
+							throw new Error(
+								'Key generation output format did not match expected patterns',
+							);
 						}
-					} else {
-						throw new Error(
-							'Key generation output format did not match expected patterns',
+					} catch (err) {
+						console.error(
+							`\n${colors.red}❌ Error: Failed to configure Tauri signing keys: ${err.message}${colors.reset}`,
+						);
+						const answer = await askQuestion(
+							`Do you want to skip Tauri signing key configuration and proceed? (y/N) [default: n]: `,
+						);
+						if (answer.trim().toLowerCase() !== 'y') {
+							throw new Error(
+								`Failed to configure Tauri signing keys: ${err.message}`,
+							);
+						}
+						console.log(
+							`${colors.yellow}⚠️ Skipping Tauri signing keys configuration.${colors.reset}`,
 						);
 					}
-				} catch (err) {
-					console.error(
-						`\n${colors.red}❌ Error: Failed to configure Tauri signing keys: ${err.message}${colors.reset}`,
-					);
-					const answer = await askQuestion(
-						`Do you want to skip Tauri signing key configuration and proceed? (y/N) [default: n]: `,
-					);
-					if (answer.trim().toLowerCase() !== 'y') {
-						throw new Error(
-							`Failed to configure Tauri signing keys: ${err.message}`,
-						);
-					}
-					console.log(
-						`${colors.yellow}⚠️ Skipping Tauri signing keys configuration.${colors.reset}`,
-					);
 				}
 
-				// Configure PostHog Analytics
-				console.log(
-					`\n${colors.cyan}🔑 Configuring PostHog Telemetry...${colors.reset}`,
-				);
-				const setupPostHogInput = await askQuestion(
-					`Do you want to set up PostHog telemetry? (y/N) [default: n]: `,
-				);
-				if (setupPostHogInput.trim().toLowerCase() === 'y') {
+				if (setupPostHog) {
+					console.log(
+						`\n${colors.cyan}🔑 Configuring PostHog Telemetry...${colors.reset}`,
+					);
 					console.log(
 						`\nGet your PostHog API Key from: https://app.posthog.com (Settings → Project API Key)`,
 					);
@@ -876,13 +1159,14 @@ async function main() {
 					);
 				}
 
-				// Generate GPG Key for Debian & RPM Signing
-				console.log(
-					`\n${colors.cyan}🔑 Generating GPG Key for package signing...${colors.reset}`,
-				);
-				const gpgHome = path.join(targetDir, '.gpg-temp');
-				const gpgConfPath = path.join(targetDir, 'gpg-gen.conf');
-				const gpgConf = `Key-Type: RSA
+				if (setupGpg) {
+					// Generate GPG Key for Debian & RPM Signing
+					console.log(
+						`\n${colors.cyan}🔑 Generating GPG Key for package signing...${colors.reset}`,
+					);
+					const gpgHome = path.join(targetDir, '.gpg-temp');
+					const gpgConfPath = path.join(targetDir, 'gpg-gen.conf');
+					const gpgConf = `Key-Type: RSA
 Key-Length: 4096
 Subkey-Type: RSA
 Subkey-Length: 4096
@@ -892,65 +1176,66 @@ Expire-Date: 0
 %no-protection
 %commit
 `;
-				try {
-					fs.mkdirSync(gpgHome, { recursive: true });
-					fs.chmodSync(gpgHome, 0o700);
-					fs.writeFileSync(gpgConfPath, gpgConf, 'utf8');
+					try {
+						fs.mkdirSync(gpgHome, { recursive: true });
+						fs.chmodSync(gpgHome, 0o700);
+						fs.writeFileSync(gpgConfPath, gpgConf, 'utf8');
 
-					const gpgEnv = { ...process.env, GNUPGHOME: gpgHome };
+						const gpgEnv = { ...process.env, GNUPGHOME: gpgHome };
 
-					execSync('gpg --batch --generate-key gpg-gen.conf', {
-						cwd: targetDir,
-						stdio: 'ignore',
-						env: gpgEnv,
-					});
-					const gpgKey = execSync(
-						`gpg --armor --export-secret-keys "${casings.title}"`,
-						{ encoding: 'utf8', cwd: targetDir, env: gpgEnv },
-					).trim();
-
-					if (gpgKey) {
-						console.log(`Uploading GPG_PRIVATE_KEY secret...`);
-						execSync('gh secret set GPG_PRIVATE_KEY', {
-							input: gpgKey,
+						execSync('gpg --batch --generate-key gpg-gen.conf', {
 							cwd: targetDir,
+							stdio: 'ignore',
+							env: gpgEnv,
 						});
-						console.log(
-							`${colors.green}✅ GPG_PRIVATE_KEY secret set.${colors.reset}`,
+						const gpgKey = execSync(
+							`gpg --armor --export-secret-keys "${casings.title}"`,
+							{ encoding: 'utf8', cwd: targetDir, env: gpgEnv },
+						).trim();
+
+						if (gpgKey) {
+							console.log(`Uploading GPG_PRIVATE_KEY secret...`);
+							execSync('gh secret set GPG_PRIVATE_KEY', {
+								input: gpgKey,
+								cwd: targetDir,
+							});
+							console.log(
+								`${colors.green}✅ GPG_PRIVATE_KEY secret set.${colors.reset}`,
+							);
+						}
+					} catch (err) {
+						console.error(
+							`\n${colors.red}❌ Error: Failed to configure GPG keys: ${err.message}${colors.reset}`,
 						);
-					}
-				} catch (err) {
-					console.error(
-						`\n${colors.red}❌ Error: Failed to configure GPG keys: ${err.message}${colors.reset}`,
-					);
-					const answer = await askQuestion(
-						`Do you want to skip GPG key configuration and proceed? (y/N) [default: n]: `,
-					);
-					if (answer.trim().toLowerCase() !== 'y') {
-						throw new Error(`Failed to configure GPG keys: ${err.message}`);
-					}
-					console.log(
-						`${colors.yellow}⚠️ Skipping GPG key configuration.${colors.reset}`,
-					);
-				} finally {
-					if (fs.existsSync(gpgConfPath)) {
-						fs.unlinkSync(gpgConfPath);
-					}
-					if (fs.existsSync(gpgHome)) {
-						try {
-							fs.rmSync(gpgHome, { recursive: true, force: true });
-						} catch {
-							if (process.platform !== 'win32') {
-								try {
-									execSync(`rm -rf "${gpgHome}"`);
-								} catch {}
+						const answer = await askQuestion(
+							`Do you want to skip GPG key configuration and proceed? (y/N) [default: n]: `,
+						);
+						if (answer.trim().toLowerCase() !== 'y') {
+							throw new Error(`Failed to configure GPG keys: ${err.message}`);
+						}
+						console.log(
+							`${colors.yellow}⚠️ Skipping GPG key configuration.${colors.reset}`,
+						);
+					} finally {
+						if (fs.existsSync(gpgConfPath)) {
+							fs.unlinkSync(gpgConfPath);
+						}
+						if (fs.existsSync(gpgHome)) {
+							try {
+								fs.rmSync(gpgHome, { recursive: true, force: true });
+							} catch {
+								if (process.platform !== 'win32') {
+									try {
+										execSync(`rm -rf "${gpgHome}"`);
+									} catch {}
+								}
 							}
 						}
 					}
 				}
 
 				// Create Fedora COPR Repository and Package
-				if (isLinux && !skipCopr) {
+				if (setupCopr && !skipCopr) {
 					console.log(
 						`\n${colors.cyan}🐧 Configuring Fedora COPR...${colors.reset}`,
 					);
@@ -1197,7 +1482,7 @@ Expire-Date: 0
 		`${colors.green}✅ Git repository committed on dev and main branch created.${colors.reset}`,
 	);
 
-	if (setupCi) {
+	if (setupGithub) {
 		console.log(
 			`\n${colors.cyan}🚀 Pushing initial commit to GitHub...${colors.reset}`,
 		);
@@ -1254,166 +1539,174 @@ Expire-Date: 0
 				`${colors.green}✅ Pushed tag v0.0.9 to GitHub.${colors.reset}`,
 			);
 
-			console.log(
-				`\n${colors.cyan}🔒 Configuring GitHub branch rulesets...${colors.reset}`,
-			);
-			const devFlowRuleset = {
-				name: 'dev flow',
-				target: 'branch',
-				enforcement: 'active',
-				conditions: {
-					ref_name: {
-						exclude: [],
-						include: ['refs/heads/dev'],
-					},
-				},
-				rules: [
-					{
-						type: 'deletion',
-					},
-					{
-						type: 'non_fast_forward',
-					},
-					{
-						type: 'required_status_checks',
-						parameters: {
-							strict_required_status_checks_policy: true,
-							do_not_enforce_on_create: false,
-							required_status_checks: [
-								{
-									context: 'Lint & Test',
-									integration_id: 15368,
-								},
-								{
-									context: 'Validate PR title',
-									integration_id: 15368,
-								},
-							],
+			if (setupRulesets) {
+				console.log(
+					`\n${colors.cyan}🔒 Configuring GitHub branch rulesets...${colors.reset}`,
+				);
+				const devFlowRuleset = {
+					name: 'dev flow',
+					target: 'branch',
+					enforcement: 'active',
+					conditions: {
+						ref_name: {
+							exclude: [],
+							include: ['refs/heads/dev'],
 						},
 					},
-					{
-						type: 'pull_request',
-						parameters: {
-							required_approving_review_count: 0,
-							dismiss_stale_reviews_on_push: false,
-							required_reviewers: [],
-							require_code_owner_review: false,
-							require_last_push_approval: false,
-							required_review_thread_resolution: false,
-							allowed_merge_methods: ['squash'],
+					rules: [
+						{
+							type: 'deletion',
 						},
-					},
-				],
-				bypass_actors: [
-					{
-						actor_id: 5,
-						actor_type: 'RepositoryRole',
-						bypass_mode: 'always',
-					},
-				],
-			};
+						{
+							type: 'non_fast_forward',
+						},
+						{
+							type: 'required_status_checks',
+							parameters: {
+								strict_required_status_checks_policy: true,
+								do_not_enforce_on_create: false,
+								required_status_checks: [
+									{
+										context: 'Lint & Test',
+										integration_id: 15368,
+									},
+									{
+										context: 'Validate PR title',
+										integration_id: 15368,
+									},
+								],
+							},
+						},
+						{
+							type: 'pull_request',
+							parameters: {
+								required_approving_review_count: 0,
+								dismiss_stale_reviews_on_push: false,
+								required_reviewers: [],
+								require_code_owner_review: false,
+								require_last_push_approval: false,
+								required_review_thread_resolution: false,
+								allowed_merge_methods: ['squash'],
+							},
+						},
+					],
+					bypass_actors: [
+						{
+							actor_id: 5,
+							actor_type: 'RepositoryRole',
+							bypass_mode: 'always',
+						},
+					],
+				};
 
-			const mainFlowRuleset = {
-				name: 'main flow',
-				target: 'branch',
-				enforcement: 'active',
-				conditions: {
-					ref_name: {
-						exclude: [],
-						include: ['refs/heads/main'],
-					},
-				},
-				rules: [
-					{
-						type: 'deletion',
-					},
-					{
-						type: 'non_fast_forward',
-					},
-					{
-						type: 'required_status_checks',
-						parameters: {
-							strict_required_status_checks_policy: true,
-							do_not_enforce_on_create: false,
-							required_status_checks: [
-								{
-									context: 'build / Test Fedora RPM (amd64)',
-									integration_id: 15368,
-								},
-								{
-									context: 'build / Test Fedora RPM (arm64)',
-									integration_id: 15368,
-								},
-								{
-									context: 'build / Test Ubuntu Artifacts (amd64)',
-									integration_id: 15368,
-								},
-								{
-									context: 'build / Test Ubuntu Artifacts (arm64)',
-									integration_id: 15368,
-								},
-								{
-									context: 'build / Test Windows Artifacts (arm64)',
-									integration_id: 15368,
-								},
-								{
-									context: 'build / Test Windows Artifacts (x64)',
-									integration_id: 15368,
-								},
-								{
-									context: 'Validate PR title',
-									integration_id: 15368,
-								},
-							],
+				const mainFlowRuleset = {
+					name: 'main flow',
+					target: 'branch',
+					enforcement: 'active',
+					conditions: {
+						ref_name: {
+							exclude: [],
+							include: ['refs/heads/main'],
 						},
 					},
-					{
-						type: 'code_scanning',
-						parameters: {
-							code_scanning_tools: [
-								{
-									tool: 'CodeQL',
-									security_alerts_threshold: 'high_or_higher',
-									alerts_threshold: 'errors',
-								},
-							],
+					rules: [
+						{
+							type: 'deletion',
 						},
-					},
-					{
-						type: 'pull_request',
-						parameters: {
-							required_approving_review_count: 0,
-							dismiss_stale_reviews_on_push: false,
-							required_reviewers: [],
-							require_code_owner_review: false,
-							require_last_push_approval: false,
-							required_review_thread_resolution: false,
-							allowed_merge_methods: ['merge'],
+						{
+							type: 'non_fast_forward',
 						},
-					},
-				],
-				bypass_actors: [
-					{
-						actor_id: 5,
-						actor_type: 'RepositoryRole',
-						bypass_mode: 'always',
-					},
-				],
-			};
+						{
+							type: 'required_status_checks',
+							parameters: {
+								strict_required_status_checks_policy: true,
+								do_not_enforce_on_create: false,
+								required_status_checks: [
+									{
+										context: 'build / Test Fedora RPM (amd64)',
+										integration_id: 15368,
+									},
+									{
+										context: 'build / Test Fedora RPM (arm64)',
+										integration_id: 15368,
+									},
+									{
+										context: 'build / Test Ubuntu Artifacts (amd64)',
+										integration_id: 15368,
+									},
+									{
+										context: 'build / Test Ubuntu Artifacts (arm64)',
+										integration_id: 15368,
+									},
+									{
+										context: 'build / Test Windows Artifacts (arm64)',
+										integration_id: 15368,
+									},
+									{
+										context: 'build / Test Windows Artifacts (x64)',
+										integration_id: 15368,
+									},
+									{
+										context: 'Validate PR title',
+										integration_id: 15368,
+									},
+								],
+							},
+						},
+						{
+							type: 'code_scanning',
+							parameters: {
+								code_scanning_tools: [
+									{
+										tool: 'CodeQL',
+										security_alerts_threshold: 'high_or_higher',
+										alerts_threshold: 'errors',
+									},
+								],
+							},
+						},
+						{
+							type: 'pull_request',
+							parameters: {
+								required_approving_review_count: 0,
+								dismiss_stale_reviews_on_push: false,
+								required_reviewers: [],
+								require_code_owner_review: false,
+								require_last_push_approval: false,
+								required_review_thread_resolution: false,
+								allowed_merge_methods: ['merge'],
+							},
+						},
+					],
+					bypass_actors: [
+						{
+							actor_id: 5,
+							actor_type: 'RepositoryRole',
+							bypass_mode: 'always',
+						},
+					],
+				};
 
-			execSync(`gh api -X POST repos/${owner}/${repoName}/rulesets --input -`, {
-				input: JSON.stringify(devFlowRuleset),
-				cwd: targetDir,
-				stdio: ['pipe', 'ignore', 'pipe'],
-			});
-			execSync(`gh api -X POST repos/${owner}/${repoName}/rulesets --input -`, {
-				input: JSON.stringify(mainFlowRuleset),
-				cwd: targetDir,
-				stdio: ['pipe', 'ignore', 'pipe'],
-			});
-			console.log(
-				`${colors.green}✅ Branch rulesets configured successfully.${colors.reset}`,
-			);
+				execSync(
+					`gh api -X POST repos/${owner}/${repoName}/rulesets --input -`,
+					{
+						input: JSON.stringify(devFlowRuleset),
+						cwd: targetDir,
+						stdio: ['pipe', 'ignore', 'pipe'],
+					},
+				);
+				execSync(
+					`gh api -X POST repos/${owner}/${repoName}/rulesets --input -`,
+					{
+						input: JSON.stringify(mainFlowRuleset),
+						cwd: targetDir,
+						stdio: ['pipe', 'ignore', 'pipe'],
+					},
+				);
+				console.log(
+					`${colors.green}✅ Branch rulesets configured successfully.${colors.reset}`,
+				);
+			}
 		} catch (err) {
 			console.warn(
 				`\n${colors.yellow}⚠️ Warning: Failed to complete GitHub repository push, settings, or ruleset setup: ${err.message}${colors.reset}`,
@@ -1433,10 +1726,62 @@ Expire-Date: 0
 		`\n${colors.green}${colors.bright}🎉 Project successfully initialized!${colors.reset}\n`,
 	);
 
-	rl.close();
+	// 1. Warnings & Skipped Configs
+	if (!isLinux) {
+		console.log(
+			`${colors.yellow}⚠️ Warning: Fedora COPR was not set up because you are not running Linux.${colors.reset}`,
+		);
+		console.log(
+			`   RPM packaging and distribution for Fedora/CentOS/RHEL is incomplete.\n` +
+				`   You can configure it manually later by following the instructions in README.md.\n`,
+		);
+	}
+
+	if (skippedConfigs.length > 0) {
+		console.log(
+			`${colors.cyan}ℹ️  Skipped configurations during setup:${colors.reset}`,
+		);
+		for (const config of skippedConfigs) {
+			console.log(`  - ${config}`);
+		}
+		console.log();
+	}
+
+	// 2. Intended Git Workflow Explanation
+	console.log(`${colors.bright}🧠 Intended Git Workflow:${colors.reset}`);
+	console.log(
+		`  - Develop features on separate branches, then merge them into the 'dev' branch.\n` +
+			`  - Pushing to/merging into 'dev' triggers the 'Lint & Test' verification pipeline.\n` +
+			`  - Merging 'dev' into 'main' triggers automated Semantic Release & production builds.\n` +
+			`  - Do not push directly to 'main' unless you want to trigger a production release.\n`,
+	);
 
 	console.log(`${colors.bright}To get started, run:${colors.reset}`);
 	console.log(`  cd ${targetDir} && pnpm tauri:dev\n`);
+
+	// 3. Clean Up Self Option
+	const deleteSelfInput = await askQuestion(
+		`${colors.yellow}${colors.bright}Do you want to delete this template directory from your computer to clean up? (y/N) [default: n]: ${colors.reset}`,
+	);
+	const shouldDeleteSelf = deleteSelfInput.trim().toLowerCase() === 'y';
+
+	rl.close();
+
+	if (shouldDeleteSelf) {
+		console.log(
+			`\n${colors.cyan}🧹 Cleaning up template directory...${colors.reset}`,
+		);
+		const isWin = process.platform === 'win32';
+		const cmd = isWin ? 'cmd.exe' : 'sh';
+		const args = isWin
+			? ['/c', `timeout /t 1 /nobreak >nul & rmdir /s /q "${__dirname}"`]
+			: ['-c', `sleep 1 && rm -rf "${__dirname}"`];
+
+		spawn(cmd, args, {
+			detached: true,
+			stdio: 'ignore',
+		}).unref();
+	}
 }
 
 main().catch((err) => {
