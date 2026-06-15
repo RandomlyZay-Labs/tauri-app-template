@@ -1,0 +1,30 @@
+Package: tauri-app-template
+Version: 0.1.0
+Architecture: amd64
+Maintainer: RandomlyZay
+Installed-Size: 89077
+Depends: libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: tauri-app-template_0.1.0_amd64.deb
+Size: 32829886
+MD5sum: 6b3a611a9f5c191d50c1a40af66bdb9a
+SHA1: 52442df54ec7966670d32d07c1dff2a8f5fa60ab
+SHA256: 4fddb9df5605dbb01741b66720d4fcb2d5e743953f1adec0e81a1a42e96a8eef
+Priority: optional
+Description: A Tauri App
+ (none)
+
+Package: tauri-app-template
+Version: 0.1.0
+Architecture: arm64
+Maintainer: RandomlyZay
+Installed-Size: 84869
+Depends: libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: tauri-app-template_0.1.0_arm64.deb
+Size: 32056198
+MD5sum: 1100a2ca4127e594a3d62325f1505605
+SHA1: e9cf4a8fbe7afb40a40785e4178c5da99e3313d6
+SHA256: 4e0ca9b4011b45a0fd936ad25b2153d691335680ebb0656395ef149aac12ec5e
+Priority: optional
+Description: A Tauri App
+ (none)
+

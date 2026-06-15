@@ -1,0 +1,29 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Archive: stable
+Component: main
+Origin: Tauri App Template
+Label: Tauri App Template
+Architecture: amd64 arm64
+Date: Mon, 15 Jun 2026 04:03:00 GMT
+SHA256:
+ 73d1deac5d0cf2307f76d8877a117f6ee8a40fae3565fb487da40fb311f6e176 904 Packages
+ 66d73b90b8371e2d0c98e9ddf8e0ba3477f4abef0666b130ffcad55f7d0c4f7a 469 Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQJQBAEBCgA6FiEEzT0zxwbRbp9JTITYSWVjW2d7bZ8FAmoveXQcHHJlbGVhc2VA
+cmFuZG9tbHl6YXktbGFicy5pbwAKCRBJZWNbZ3ttnxmiEACShYLqvfTL7Y6J8m1J
+ubHV8FIqjLi2wb88Co8KC+ilKOagZefu6lrIWFHeiyLH0s3RYrxz9ubRZl1ereJN
+ofaLWfU9P+p1sgXgPQ4hMnkFMdSKk8SG9TGwXKwhXGqHgIAlw9bpF2AHTtNKlZdC
+NdWhpy9KgQRqx/gm2C/fKpeu8bnE6AxVSk2nlHJVupAWke84yWG6w+NqzUn4vF8D
+0IEgVB4kGf+GREtIYT2moz51Mjd8eXFt9IaPZHkFCZa4lGXCxea8cjtztTiHXgy+
+Nce06mXxRhobi1TFTWmRNhReVJ+ig3IatuwJRuvjvvO9fHTmJdNzE14oq2voVPwI
+lIzYO16+xaWzlI3o2yUFPsXAPS7+/MQ9o+lE5WgMnXVizpJlA5miN2EOAK7Jm4Va
+PUARzIiX7HI6dtAI8F3qvnyDOtgLt/sEjnio3soCb2wE791HaaUxbDAKIQZ8mckP
+4orM8y+iO/arxUWqivQIrzGgZ+G8Qu9BC6kC3LP1rrVYMIhY/7kqG5kK7Q6Gf2Vh
+whQ5lPIr1KbG0XfPRXGG2HjUoK11mvyHDlroWPiPQ42jOyyqqgNcAGMsrYJnzdan
+4oSKxDRPu7KKBkVPClriXY7UI1JXB16y6pesg4CIm8wfSC9EIsUIKc/b2N8HQodQ
+yPaFdhKJ8vmxPHeZWukQUcMUpA==
+=zf18
+-----END PGP SIGNATURE-----

@@ -1,0 +1,9 @@
+Archive: stable
+Component: main
+Origin: Tauri App Template
+Label: Tauri App Template
+Architecture: amd64 arm64
+Date: Mon, 15 Jun 2026 04:03:00 GMT
+SHA256:
+ 73d1deac5d0cf2307f76d8877a117f6ee8a40fae3565fb487da40fb311f6e176 904 Packages
+ 66d73b90b8371e2d0c98e9ddf8e0ba3477f4abef0666b130ffcad55f7d0c4f7a 469 Packages.gz
